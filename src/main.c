@@ -1,9 +1,15 @@
 /*
- * main.c - RootStream main application
+ * main.c - RootStream main entry point
  * 
- * Usage:
- *   rootstream host [--display N] [--port PORT]
- *   rootstream client HOST [--port PORT]
+ * Usage modes:
+ *   rootstream                    # Start tray app (GUI mode)
+ *   rootstream --service          # Run as background service
+ *   rootstream --qr               # Show QR code and exit
+ *   rootstream connect <code>     # Connect to peer
+ *   rootstream host               # Host mode (for testing)
+ *   
+ * The tray app is the default and recommended way to use RootStream.
+ * Service mode is for headless systems or systemd integration.
  */
 
 #include "../include/rootstream.h"
@@ -12,326 +18,427 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
-#include <time.h>
+#include <getopt.h>
 
 static volatile bool keep_running = true;
 
+/*
+ * Signal handler for graceful shutdown
+ */
 static void signal_handler(int sig) {
-    (void)sig;
-    keep_running = false;
+    if (sig == SIGTERM || sig == SIGINT) {
+        printf("\nINFO: Shutting down gracefully...\n");
+        keep_running = false;
+    }
 }
 
 /*
- * Print banner
+ * Print usage information
  */
-static void print_banner(void) {
+static void print_usage(const char *progname) {
+    printf("Usage: %s [OPTIONS] [COMMAND]\n", progname);
     printf("\n");
-    printf("╔═══════════════════════════════════════════════╗\n");
-    printf("║         RootStream v%s                     ║\n", ROOTSTREAM_VERSION);
-    printf("║  Native Linux Game Streaming - No BS         ║\n");
-    printf("╚═══════════════════════════════════════════════╝\n");
+    printf("RootStream - Secure P2P Game Streaming\n");
+    printf("Version %s\n", ROOTSTREAM_VERSION);
+    printf("\n");
+    printf("Commands:\n");
+    printf("  (none)              Start system tray application (default)\n");
+    printf("  connect <code>      Connect to peer using RootStream code\n");
+    printf("  host                Run in host mode (streaming server)\n");
+    printf("  --qr                Display your QR code and exit\n");
+    printf("  --service           Run as background service (no GUI)\n");
+    printf("  --version           Show version and exit\n");
+    printf("  --help              Show this help\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  --port PORT         UDP port to use (default: 9876)\n");
+    printf("  --display N         Select display index (default: 0)\n");
+    printf("  --bitrate KBPS      Video bitrate in kbps (default: 10000)\n");
+    printf("  --no-discovery      Disable mDNS auto-discovery\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  %s                                    # Start tray app\n", progname);
+    printf("  %s --qr                               # Show your code\n", progname);
+    printf("  %s connect kXx7Y...@gaming-pc         # Connect to peer\n", progname);
+    printf("  %s host --display 1 --bitrate 15000   # Host on 2nd display\n", progname);
+    printf("\n");
+    printf("First time setup:\n");
+    printf("  1. Run 'rootstream --qr' to get your code\n");
+    printf("  2. Share the QR code or text with another device\n");
+    printf("  3. On the other device, run 'rootstream connect <your_code>'\n");
+    printf("  4. Devices will auto-connect when on same network\n");
+    printf("\n");
+    printf("Configuration: ~/.config/rootstream/\n");
+    printf("Documentation: https://github.com/yourusername/rootstream\n");
+}
+
+/*
+ * Print version and build info
+ */
+static void print_version(void) {
+    printf("RootStream %s\n", ROOTSTREAM_VERSION);
+    printf("Built: %s %s\n", __DATE__, __TIME__);
+    printf("\n");
+    printf("Features:\n");
+#ifdef HAVE_AVAHI
+    printf("  ✓ mDNS Discovery (Avahi)\n");
+#else
+    printf("  ✗ mDNS Discovery (disabled)\n");
+#endif
+    printf("  ✓ Ed25519 Encryption\n");
+    printf("  ✓ VA-API Encoding\n");
+    printf("  ✓ DRM/KMS Capture\n");
+    printf("  ✓ QR Code Sharing\n");
+    printf("  ✓ GTK3 System Tray\n");
     printf("\n");
 }
 
 /*
- * Host main loop
- */
-int rootstream_run_host(rootstream_ctx_t *ctx) {
-    if (!ctx) {
-        fprintf(stderr, "Invalid context\n");
-        return -1;
-    }
-
-    printf("\n🎮 Host mode - waiting for client...\n\n");
-
-    /* Allocate encoding buffer */
-    size_t enc_buf_size = ctx->display.width * ctx->display.height;
-    uint8_t *enc_buf = malloc(enc_buf_size);
-    if (!enc_buf) {
-        fprintf(stderr, "Cannot allocate encoding buffer\n");
-        return -1;
-    }
-
-    /* Stats */
-    time_t last_stats = time(NULL);
-    uint64_t last_frames = 0;
-
-    ctx->running = true;
-    
-    while (keep_running && ctx->running) {
-        /* Capture frame */
-        if (rootstream_capture_frame(ctx, &ctx->current_frame) < 0) {
-            fprintf(stderr, "Capture failed: %s\n", rootstream_get_error());
-            usleep(16000);  /* ~60 FPS */
-            continue;
-        }
-
-        /* Encode frame */
-        size_t enc_size = 0;
-        if (rootstream_encode_frame(ctx, &ctx->current_frame, 
-                                    enc_buf, &enc_size) < 0) {
-            fprintf(stderr, "Encoding failed: %s\n", rootstream_get_error());
-            continue;
-        }
-
-        /* Send encoded frame */
-        if (enc_size > 0) {
-            if (rootstream_net_send(ctx, PACKET_VIDEO, enc_buf, enc_size) < 0) {
-                /* Client might not be connected yet, that's okay */
-            }
-        }
-
-        /* Process input from client */
-        input_event_pkt_t input;
-        int recv = rootstream_net_recv(ctx, &input, sizeof(input), 1);
-        if (recv > 0) {
-            rootstream_input_process(ctx, &input);
-        }
-
-        /* Print stats every 5 seconds */
-        time_t now = time(NULL);
-        if (now - last_stats >= 5) {
-            uint64_t fps = (ctx->frames_captured - last_frames) / 5;
-            double mbps = (ctx->bytes_sent / 1024.0 / 1024.0 * 8) / 5;
-            
-            printf("📊 FPS: %lu | Bitrate: %.2f Mbps | Frames: %lu/%lu\n",
-                   fps, mbps, ctx->frames_captured, ctx->frames_encoded);
-            
-            last_frames = ctx->frames_captured;
-            ctx->bytes_sent = 0;
-            last_stats = now;
-        }
-
-        /* Rate limiting to target FPS */
-        usleep(1000000 / ctx->display.refresh_rate);
-    }
-
-    free(enc_buf);
-    printf("\n✓ Host stopped\n");
-    return 0;
-}
-
-/*
- * Client main loop
- */
-int rootstream_run_client(rootstream_ctx_t *ctx, const char *host_addr) {
-    if (!ctx || !host_addr) {
-        fprintf(stderr, "Invalid arguments\n");
-        return -1;
-    }
-
-    printf("\n📺 Client mode - connecting to %s...\n\n", host_addr);
-
-    /* TODO: Implement client (decoder + display) */
-    /* This would involve:
-     *   - Receiving video packets
-     *   - Decoding with VA-API
-     *   - Displaying with SDL2 or DRM/KMS
-     *   - Capturing local input
-     *   - Sending input to host
-     */
-
-    printf("Client mode not yet implemented\n");
-    printf("(Decoder + display code would go here)\n");
-
-    return 0;
-}
-
-/*
- * Initialize context
+ * Initialize RootStream context
  */
 int rootstream_init(rootstream_ctx_t *ctx) {
     if (!ctx) {
+        fprintf(stderr, "ERROR: NULL context\n");
         return -1;
     }
 
     memset(ctx, 0, sizeof(rootstream_ctx_t));
-    
+
+    /* Set defaults */
     ctx->capture_mode = CAPTURE_DRM_KMS;
     ctx->display.fd = -1;
     ctx->sock_fd = -1;
     ctx->uinput_kbd_fd = -1;
     ctx->uinput_mouse_fd = -1;
-    
+    ctx->running = true;
+    ctx->port = 0;  /* Will use default */
+
+    /* Initialize crypto library */
+    if (crypto_init() < 0) {
+        fprintf(stderr, "ERROR: Crypto initialization failed\n");
+        fprintf(stderr, "FIX: Ensure libsodium is installed\n");
+        return -1;
+    }
+
+    /* Load or generate keypair */
+    if (config_load(ctx) < 0) {
+        fprintf(stderr, "ERROR: Configuration load failed\n");
+        return -1;
+    }
+
+    printf("\n");
+    printf("╔════════════════════════════════════════════════╗\n");
+    printf("║  RootStream - Secure P2P Game Streaming       ║\n");
+    printf("║  Version %-38s║\n", ROOTSTREAM_VERSION);
+    printf("╚════════════════════════════════════════════════╝\n");
+    printf("\n");
+    printf("Device Identity: %s\n", ctx->keypair.identity);
+    printf("Your RootStream Code:\n");
+    printf("  %s\n", ctx->keypair.rootstream_code);
+    printf("\n");
+
     return 0;
 }
 
 /*
- * Cleanup context
+ * Cleanup all resources
  */
 void rootstream_cleanup(rootstream_ctx_t *ctx) {
-    if (!ctx)
-        return;
+    if (!ctx) return;
 
+    printf("\nINFO: Cleaning up...\n");
+
+    /* Stop streaming */
+    ctx->running = false;
+
+    /* Cleanup components */
+    tray_cleanup(ctx);
+    discovery_cleanup(ctx);
     rootstream_encoder_cleanup(ctx);
     rootstream_capture_cleanup(ctx);
     rootstream_input_cleanup(ctx);
 
+    /* Close network socket */
     if (ctx->sock_fd >= 0) {
         close(ctx->sock_fd);
         ctx->sock_fd = -1;
     }
+
+    printf("✓ Cleanup complete\n");
 }
 
 /*
- * Print statistics
+ * Print session statistics
  */
 void rootstream_print_stats(rootstream_ctx_t *ctx) {
-    if (!ctx)
-        return;
+    if (!ctx) return;
 
-    printf("\n📊 Session Statistics:\n");
-    printf("   Frames captured: %lu\n", ctx->frames_captured);
-    printf("   Frames encoded:  %lu\n", ctx->frames_encoded);
-    printf("   Data sent:       %.2f MB\n", ctx->bytes_sent / 1024.0 / 1024.0);
+    if (ctx->frames_captured == 0 && ctx->bytes_sent == 0) {
+        return;  /* No activity, skip stats */
+    }
+
+    printf("\n");
+    printf("╔════════════════════════════════════════════════╗\n");
+    printf("║  Session Statistics                            ║\n");
+    printf("╚════════════════════════════════════════════════╝\n");
+    printf("\n");
+    printf("  Frames captured: %lu\n", ctx->frames_captured);
+    printf("  Frames encoded:  %lu\n", ctx->frames_encoded);
+    printf("  Data sent:       %.2f MB\n", ctx->bytes_sent / 1024.0 / 1024.0);
+    printf("  Data received:   %.2f MB\n", ctx->bytes_received / 1024.0 / 1024.0);
+    printf("  Connected peers: %d\n", ctx->num_peers);
+    printf("\n");
 }
 
 /*
- * Select display
+ * Run in tray mode (default)
  */
-int rootstream_select_display(rootstream_ctx_t *ctx, int display_index) {
-    display_info_t displays[MAX_DISPLAYS];
-    
-    int count = rootstream_detect_displays(displays, MAX_DISPLAYS);
-    if (count < 0) {
-        fprintf(stderr, "Error: %s\n", rootstream_get_error());
+static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
+    printf("INFO: Starting system tray application\n");
+    printf("INFO: Right-click the tray icon for options\n");
+    printf("INFO: Left-click to show your QR code\n");
+    printf("\n");
+
+    /* Initialize network */
+    if (rootstream_net_init(ctx, ctx->port) < 0) {
+        fprintf(stderr, "ERROR: Network initialization failed\n");
         return -1;
     }
 
-    if (display_index >= count) {
-        fprintf(stderr, "Display %d not found (only %d available)\n", 
-                display_index, count);
+    /* Initialize discovery */
+    if (discovery_init(ctx) == 0) {
+        discovery_announce(ctx);
+        discovery_browse(ctx);
+    }
+
+    /* Initialize tray UI */
+    if (tray_init(ctx, argc, argv) < 0) {
+        fprintf(stderr, "ERROR: Tray initialization failed\n");
+        fprintf(stderr, "FIX: Ensure system tray is available\n");
         return -1;
     }
 
-    /* Copy selected display info */
-    memcpy(&ctx->display, &displays[display_index], sizeof(display_info_t));
-    
-    /* Close other display fds */
-    for (int i = 0; i < count; i++) {
-        if (i != display_index && displays[i].fd >= 0) {
-            close(displays[i].fd);
-        }
-    }
+    /* Run GTK main loop (blocks until quit) */
+    tray_run(ctx);
 
     return 0;
+}
+
+/*
+ * Run in host mode (streaming server)
+ */
+static int run_host_mode(rootstream_ctx_t *ctx) {
+    printf("INFO: Starting host mode\n");
+    printf("INFO: Press Ctrl+C to stop\n");
+    printf("\n");
+
+    /* Detect and select display */
+    display_info_t displays[MAX_DISPLAYS];
+    int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
+    
+    if (num_displays < 0) {
+        fprintf(stderr, "ERROR: %s\n", rootstream_get_error());
+        return -1;
+    }
+
+    printf("INFO: Found %d display(s)\n", num_displays);
+    for (int i = 0; i < num_displays; i++) {
+        printf("  [%d] %s - %dx%d @ %d Hz\n", i,
+               displays[i].name, displays[i].width,
+               displays[i].height, displays[i].refresh_rate);
+    }
+
+    /* Use first display (TODO: allow selection) */
+    if (rootstream_select_display(ctx, 0) < 0) {
+        return -1;
+    }
+
+    printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
+           ctx->display.name, ctx->display.width,
+           ctx->display.height, ctx->display.refresh_rate);
+
+    /* Initialize components */
+    if (rootstream_capture_init(ctx) < 0) {
+        fprintf(stderr, "ERROR: Capture init failed\n");
+        return -1;
+    }
+
+    if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
+        fprintf(stderr, "ERROR: Encoder init failed\n");
+        return -1;
+    }
+
+    if (rootstream_net_init(ctx, ctx->port) < 0) {
+        fprintf(stderr, "ERROR: Network init failed\n");
+        return -1;
+    }
+
+    if (rootstream_input_init(ctx) < 0) {
+        fprintf(stderr, "ERROR: Input init failed\n");
+        return -1;
+    }
+
+    /* Initialize discovery */
+    if (discovery_init(ctx) == 0) {
+        discovery_announce(ctx);
+    }
+
+    printf("✓ All systems ready\n");
+    printf("→ Waiting for connections...\n\n");
+
+    /* Run host service */
+    return service_run_host(ctx);
+}
+
+/*
+ * Connect to peer by RootStream code
+ */
+static int run_connect_mode(rootstream_ctx_t *ctx, const char *peer_code) {
+    printf("INFO: Connecting to peer: %s\n", peer_code);
+
+    /* Initialize network */
+    if (rootstream_net_init(ctx, ctx->port) < 0) {
+        return -1;
+    }
+
+    /* Connect to peer */
+    if (rootstream_connect_to_peer(ctx, peer_code) < 0) {
+        fprintf(stderr, "ERROR: Failed to connect to peer\n");
+        return -1;
+    }
+
+    printf("✓ Connection initiated\n");
+    printf("INFO: Waiting for handshake...\n");
+
+    /* Run client service */
+    return service_run_client(ctx);
 }
 
 /*
  * Main entry point
  */
 int main(int argc, char **argv) {
-    print_banner();
-
-    if (argc < 2) {
-        printf("Usage:\n");
-        printf("  %s host [--display N] [--port PORT]\n", argv[0]);
-        printf("  %s client HOST [--port PORT]\n", argv[0]);
-        printf("\n");
-        printf("Examples:\n");
-        printf("  %s host                    # Start host on default display\n", argv[0]);
-        printf("  %s host --display 1        # Use second display\n", argv[0]);
-        printf("  %s client 192.168.1.100    # Connect to host\n", argv[0]);
-        printf("\n");
-        return 1;
-    }
-
-    /* Setup signal handlers */
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-
-    /* Parse mode */
-    bool is_host = strcmp(argv[1], "host") == 0;
-    bool is_client = strcmp(argv[1], "client") == 0;
-
-    if (!is_host && !is_client) {
-        fprintf(stderr, "Invalid mode: %s\n", argv[1]);
-        return 1;
-    }
-
-    /* Parse options */
-    int display_idx = 0;
-    uint16_t port = 9876;
-    const char *host_addr = NULL;
-
-    for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--display") == 0 && i + 1 < argc) {
-            display_idx = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-            port = atoi(argv[++i]);
-        } else if (is_client && !host_addr) {
-            host_addr = argv[i];
-        }
-    }
-
-    /* Initialize context */
     rootstream_ctx_t ctx;
-    if (rootstream_init(&ctx) < 0) {
-        fprintf(stderr, "Initialization failed\n");
-        return 1;
-    }
-
     int ret = 0;
 
-    if (is_host) {
-        /* Host mode */
-        printf("🔍 Detecting displays...\n");
-        
-        if (rootstream_select_display(&ctx, display_idx) < 0) {
-            ret = 1;
-            goto cleanup;
+    /* Parse options */
+    static struct option long_options[] = {
+        {"help",        no_argument,       0, 'h'},
+        {"version",     no_argument,       0, 'v'},
+        {"qr",          no_argument,       0, 'q'},
+        {"service",     no_argument,       0, 's'},
+        {"port",        required_argument, 0, 'p'},
+        {"display",     required_argument, 0, 'd'},
+        {"bitrate",     required_argument, 0, 'b'},
+        {"no-discovery",no_argument,       0, 'n'},
+        {0, 0, 0, 0}
+    };
+
+    bool show_qr = false;
+    bool service_mode = false;
+    bool no_discovery = false;
+    uint16_t port = 9876;
+    int display_idx = 0;
+    int bitrate = 10000;
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:n", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'h':
+                print_usage(argv[0]);
+                return 0;
+            case 'v':
+                print_version();
+                return 0;
+            case 'q':
+                show_qr = true;
+                break;
+            case 's':
+                service_mode = true;
+                break;
+            case 'p':
+                port = atoi(optarg);
+                if (port == 0) {
+                    fprintf(stderr, "ERROR: Invalid port: %s\n", optarg);
+                    return 1;
+                }
+                break;
+            case 'd':
+                display_idx = atoi(optarg);
+                break;
+            case 'b':
+                bitrate = atoi(optarg);
+                if (bitrate < 1000) {
+                    fprintf(stderr, "ERROR: Bitrate too low: %d\n", bitrate);
+                    return 1;
+                }
+                break;
+            case 'n':
+                no_discovery = true;
+                break;
+            default:
+                print_usage(argv[0]);
+                return 1;
         }
-
-        printf("✓ Selected: %s (%dx%d @ %d Hz)\n\n",
-               ctx.display.name, ctx.display.width, 
-               ctx.display.height, ctx.display.refresh_rate);
-
-        /* Initialize capture */
-        if (rootstream_capture_init(&ctx) < 0) {
-            fprintf(stderr, "Capture init failed: %s\n", rootstream_get_error());
-            ret = 1;
-            goto cleanup;
-        }
-
-        /* Initialize encoder */
-        if (rootstream_encoder_init(&ctx, ENCODER_VAAPI) < 0) {
-            fprintf(stderr, "Encoder init failed: %s\n", rootstream_get_error());
-            ret = 1;
-            goto cleanup;
-        }
-
-        /* Initialize network */
-        if (rootstream_net_init(&ctx, "0.0.0.0", port) < 0) {
-            fprintf(stderr, "Network init failed: %s\n", rootstream_get_error());
-            ret = 1;
-            goto cleanup;
-        }
-
-        /* Initialize input */
-        if (rootstream_input_init(&ctx) < 0) {
-            fprintf(stderr, "Input init failed: %s\n", rootstream_get_error());
-            ret = 1;
-            goto cleanup;
-        }
-
-        /* Run host */
-        ret = rootstream_run_host(&ctx);
-
-    } else {
-        /* Client mode */
-        if (!host_addr) {
-            fprintf(stderr, "Host address required for client mode\n");
-            ret = 1;
-            goto cleanup;
-        }
-
-        ret = rootstream_run_client(&ctx, host_addr);
     }
 
-cleanup:
+    /* Install signal handlers */
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    signal(SIGPIPE, SIG_IGN);  /* Ignore broken pipe */
+
+    /* Initialize context */
+    if (rootstream_init(&ctx) < 0) {
+        fprintf(stderr, "ERROR: Initialization failed\n");
+        return 1;
+    }
+
+    ctx.port = port;
+
+    /* Handle --qr flag */
+    if (show_qr) {
+        printf("Scan this QR code to connect:\n");
+        qrcode_print_terminal(ctx.keypair.rootstream_code);
+        
+        /* Also save as PNG */
+        char qr_path[256];
+        snprintf(qr_path, sizeof(qr_path), "%s/rootstream-qr.png", 
+                config_get_dir());
+        if (qrcode_generate(ctx.keypair.rootstream_code, qr_path) == 0) {
+            printf("QR code saved to: %s\n", qr_path);
+        }
+        
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
+
+    /* Parse command */
+    const char *command = (optind < argc) ? argv[optind] : NULL;
+
+    if (command == NULL) {
+        /* Default: tray mode */
+        ret = run_tray_mode(&ctx, argc, argv);
+    } else if (strcmp(command, "host") == 0) {
+        /* Host mode */
+        ret = run_host_mode(&ctx);
+    } else if (strcmp(command, "connect") == 0) {
+        /* Connect mode */
+        if (optind + 1 >= argc) {
+            fprintf(stderr, "ERROR: Missing RootStream code\n");
+            fprintf(stderr, "Usage: %s connect <rootstream_code>\n", argv[0]);
+            ret = 1;
+        } else {
+            ret = run_connect_mode(&ctx, argv[optind + 1]);
+        }
+    } else {
+        fprintf(stderr, "ERROR: Unknown command: %s\n", command);
+        fprintf(stderr, "Run '%s --help' for usage\n", argv[0]);
+        ret = 1;
+    }
+
+    /* Print statistics and cleanup */
     rootstream_print_stats(&ctx);
     rootstream_cleanup(&ctx);
-    
-    printf("\n");
+
     return ret;
 }
