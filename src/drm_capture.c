@@ -59,7 +59,9 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
             continue;
 
         char path[256];
-        snprintf(path, sizeof(path), "/dev/dri/%s", entry->d_name);
+        if (snprintf(path, sizeof(path), "/dev/dri/%s", entry->d_name) >= (int)sizeof(path)) {
+            continue;
+        }
         
         int fd = open(path, O_RDWR | O_CLOEXEC);
         if (fd < 0)
@@ -116,8 +118,13 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
                 displays[count].refresh_rate = modes[0].vrefresh;
                 
                 /* Get connector name */
-                snprintf(displays[count].name, sizeof(displays[count].name),
-                         "%s-%u", entry->d_name, conn.connector_type);
+                if (snprintf(displays[count].name, sizeof(displays[count].name),
+                             "%s-%u", entry->d_name, conn.connector_type) >=
+                    (int)sizeof(displays[count].name)) {
+                    strncpy(displays[count].name, "drm-unknown",
+                            sizeof(displays[count].name) - 1);
+                    displays[count].name[sizeof(displays[count].name) - 1] = '\0';
+                }
                 
                 count++;
                 free(modes);

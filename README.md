@@ -272,6 +272,9 @@ rootstream host --latency-log --latency-interval 1000
 **Service Mode Notes**
 - `rootstream --service` defaults to host mode with no GUI.
 - Use `--no-discovery` to disable mDNS announcements/browsing.
+- Build headless without GTK3 by using `make HEADLESS=1` (tray UI disabled).
+- If libva is unavailable, build will use a stub encoder; install libva/libva-drm dev packages for hardware encoding.
+- libsodium is required for crypto; install libsodium dev packages if the build stops with a libsodium error.
 
 ---
 

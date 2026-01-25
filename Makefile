@@ -19,16 +19,37 @@ else
 endif
 
 # Libraries
-LIBS := -ldrm -lva -lva-drm -lpthread -lsodium -lqrencode -lpng -lm
+LIBS := -ldrm -lpthread -lqrencode -lpng -lm
 
-# GTK3 (required)
+# libsodium (required for crypto)
+SODIUM_FOUND := $(shell pkg-config --exists libsodium && echo yes)
+ifeq ($(SODIUM_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags libsodium)
+    LIBS += $(shell pkg-config --libs libsodium)
+else
+    $(error libsodium development files not found. Install libsodium (e.g., libsodium-dev) or run `make deps` for checks.)
+endif
+
+# VA-API (optional, required for encoding)
+VA_FOUND := $(shell pkg-config --exists libva && echo yes)
+ifeq ($(VA_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags libva libva-drm)
+    LIBS += $(shell pkg-config --libs libva libva-drm)
+    CFLAGS += -DHAVE_VAAPI
+endif
+
+# GTK3 (required unless HEADLESS=1)
 GTK_PKG := gtk+-3.0
 GTK_FOUND := $(shell pkg-config --exists $(GTK_PKG) && echo yes)
-ifeq ($(GTK_FOUND),yes)
-    CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
-    LIBS += $(shell pkg-config --libs $(GTK_PKG))
+ifdef HEADLESS
+    CFLAGS += -DROOTSTREAM_HEADLESS
 else
-    $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks.)
+    ifeq ($(GTK_FOUND),yes)
+        CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
+        LIBS += $(shell pkg-config --libs $(GTK_PKG))
+    else
+        $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks. Alternatively set HEADLESS=1 for a non-GUI build.)
+    endif
 endif
 
 # Avahi (optional)
@@ -57,6 +78,16 @@ SRCS := src/main.c \
         src/qrcode.c \
         src/config.c \
         src/latency.c
+
+ifdef HEADLESS
+    SRCS := $(filter-out src/tray.c,$(SRCS))
+    SRCS += src/tray_stub.c
+endif
+
+ifneq ($(VA_FOUND),yes)
+    SRCS := $(filter-out src/vaapi_encoder.c,$(SRCS))
+    SRCS += src/vaapi_stub.c
+endif
 
 # Object files
 OBJS := $(SRCS:.c=.o)
