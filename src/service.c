@@ -121,17 +121,25 @@ int service_run_host(rootstream_ctx_t *ctx) {
     signal(SIGINT, service_signal_handler);
 
     printf("INFO: Starting RootStream host service\n");
+    if (ctx->latency.enabled) {
+        printf("INFO: Latency logging enabled (interval=%lums, samples=%zu)\n",
+               ctx->latency.report_interval_ms, ctx->latency.capacity);
+    }
 
     /* Initialize components */
     if (rootstream_capture_init(ctx) < 0) {
+        fprintf(stderr, "ERROR: Capture init failed\n");
+        fprintf(stderr, "DETAILS: %s\n", rootstream_get_error());
         return -1;
     }
 
     if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
+        fprintf(stderr, "ERROR: Encoder init failed\n");
         return -1;
     }
 
     if (rootstream_input_init(ctx) < 0) {
+        fprintf(stderr, "ERROR: Input init failed\n");
         return -1;
     }
 
@@ -147,26 +155,48 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
     /* Main loop */
     while (service_running && ctx->running) {
+        uint64_t loop_start_us = get_timestamp_us();
+
         /* Capture frame */
         if (rootstream_capture_frame(ctx, &ctx->current_frame) < 0) {
+            fprintf(stderr, "ERROR: Capture failed (display=%s)\n", ctx->display.name);
+            fprintf(stderr, "DETAILS: %s\n", rootstream_get_error());
             usleep(16000);
             continue;
         }
+        uint64_t capture_end_us = get_timestamp_us();
 
         /* Encode frame */
         size_t enc_size = 0;
+        uint64_t encode_start_us = get_timestamp_us();
         if (rootstream_encode_frame(ctx, &ctx->current_frame,
                                    enc_buf, &enc_size) < 0) {
+            fprintf(stderr, "ERROR: Encode failed (frame=%lu)\n", ctx->frames_captured);
             continue;
         }
+        uint64_t encode_end_us = get_timestamp_us();
 
         /* Send to all connected peers */
+        uint64_t send_start_us = get_timestamp_us();
         for (int i = 0; i < ctx->num_peers; i++) {
             peer_t *peer = &ctx->peers[i];
             if (peer->state == PEER_CONNECTED && peer->is_streaming) {
-                rootstream_net_send_encrypted(ctx, peer, PKT_VIDEO,
-                                             enc_buf, enc_size);
+                if (rootstream_net_send_encrypted(ctx, peer, PKT_VIDEO,
+                                                  enc_buf, enc_size) < 0) {
+                    fprintf(stderr, "ERROR: Send failed (peer=%s)\n", peer->hostname);
+                }
             }
+        }
+        uint64_t send_end_us = get_timestamp_us();
+
+        if (ctx->latency.enabled) {
+            latency_sample_t sample = {
+                .capture_us = capture_end_us - loop_start_us,
+                .encode_us = encode_end_us - encode_start_us,
+                .send_us = send_end_us - send_start_us,
+                .total_us = send_end_us - loop_start_us
+            };
+            latency_record(&ctx->latency, &sample);
         }
 
         /* Process incoming packets */

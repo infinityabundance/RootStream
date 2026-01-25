@@ -19,7 +19,7 @@ else
 endif
 
 # Libraries
-LIBS := -ldrm -lva -lva-drm -lpthread -lsodium -lqrencode -lpng
+LIBS := -ldrm -lva -lva-drm -lpthread -lsodium -lqrencode -lpng -lm
 
 # GTK3
 CFLAGS += $(shell pkg-config --cflags gtk+-3.0)
@@ -49,7 +49,8 @@ SRCS := src/main.c \
         src/tray.c \
         src/service.c \
         src/qrcode.c \
-        src/config.c
+        src/config.c \
+        src/latency.c
 
 # Object files
 OBJS := $(SRCS:.c=.o)

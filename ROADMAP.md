@@ -26,8 +26,9 @@ Goal: **End-to-end Linux ↔ Linux streaming that is boringly reliable.**
   - [ ] Clean connect/disconnect flow
 
 - [ ] Deterministic latency instrumentation
-  - [ ] Timestamps per stage (capture → encode → send → recv → decode → present)
-  - [ ] Optional log mode: p50/p95/p99 latency over time
+  - [x] Host-side timestamps per stage (capture → encode → send)
+  - [x] Optional log mode: p50/p95/p99 latency over time (host loop)
+  - [ ] Client-side timestamps per stage (recv → decode → present)
   - [ ] Debug overlay (FPS + latency) on client
 
 - [ ] Identity & pairing

@@ -55,6 +55,8 @@ static void print_usage(const char *progname) {
     printf("  --display N         Select display index (default: 0)\n");
     printf("  --bitrate KBPS      Video bitrate in kbps (default: 10000)\n");
     printf("  --no-discovery      Disable mDNS auto-discovery\n");
+    printf("  --latency-log       Enable latency percentile logging\n");
+    printf("  --latency-interval MS  Latency log interval in ms (default: 1000)\n");
     printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
@@ -157,6 +159,7 @@ void rootstream_cleanup(rootstream_ctx_t *ctx) {
     rootstream_encoder_cleanup(ctx);
     rootstream_capture_cleanup(ctx);
     rootstream_input_cleanup(ctx);
+    latency_cleanup(&ctx->latency);
 
     /* Close network socket */
     if (ctx->sock_fd >= 0) {
@@ -331,6 +334,8 @@ int main(int argc, char **argv) {
         {"display",     required_argument, 0, 'd'},
         {"bitrate",     required_argument, 0, 'b'},
         {"no-discovery",no_argument,       0, 'n'},
+        {"latency-log", no_argument,       0, 'l'},
+        {"latency-interval", required_argument, 0, 'i'},
         {0, 0, 0, 0}
     };
 
@@ -340,9 +345,11 @@ int main(int argc, char **argv) {
     uint16_t port = 9876;
     int display_idx = 0;
     int bitrate = 10000;
+    bool latency_log = false;
+    uint64_t latency_interval_ms = 1000;
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:nli:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
                 print_usage(argv[0]);
@@ -376,6 +383,16 @@ int main(int argc, char **argv) {
             case 'n':
                 no_discovery = true;
                 break;
+            case 'l':
+                latency_log = true;
+                break;
+            case 'i':
+                latency_interval_ms = (uint64_t)strtoul(optarg, NULL, 10);
+                if (latency_interval_ms == 0) {
+                    fprintf(stderr, "ERROR: Invalid latency interval: %s\n", optarg);
+                    return 1;
+                }
+                break;
             default:
                 print_usage(argv[0]);
                 return 1;
@@ -391,6 +408,10 @@ int main(int argc, char **argv) {
     if (rootstream_init(&ctx) < 0) {
         fprintf(stderr, "ERROR: Initialization failed\n");
         return 1;
+    }
+
+    if (latency_init(&ctx.latency, 240, latency_interval_ms, latency_log) < 0) {
+        fprintf(stderr, "WARNING: Latency logging disabled due to init failure\n");
     }
 
     ctx.port = port;

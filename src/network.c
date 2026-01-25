@@ -575,3 +575,13 @@ uint64_t get_timestamp_ms(void) {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
+
+/*
+ * Get current timestamp in microseconds
+ * Used for latency instrumentation
+ */
+uint64_t get_timestamp_us(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+}
