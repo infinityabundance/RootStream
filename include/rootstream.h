@@ -5,159 +5,333 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 
-/* ============================================================================
- * RootStream - Native Linux Game Streaming
+/*
+ * ============================================================================
+ * RootStream - Secure Peer-to-Peer Game Streaming
+ * ============================================================================
  * 
- * A lightweight streaming solution that works directly with kernel APIs
- * to bypass the broken PipeWire/compositor ecosystem.
+ * A lightweight, encrypted streaming solution with:
+ * - Ed25519 public/private key authentication
+ * - No accounts, no servers, just peer-to-peer
+ * - QR code sharing for instant connection
+ * - Auto-discovery on local network (mDNS)
+ * - Direct kernel DRM capture (no compositor)
+ * - VA-API hardware encoding
  * 
  * Architecture:
- *   1. DRM/KMS Direct Capture - Read framebuffers straight from GPU
- *   2. Hardware Encoding - VA-API (Intel/AMD) or NVENC (NVIDIA)  
- *   3. UDP with FEC - Custom low-latency protocol
- *   4. uinput Injection - Virtual input devices for remote control
+ *   [DRM Capture] → [VA-API Encode] → [Encrypt] → [UDP] → [Network]
+ *                                                              ↓
+ *   [Display] ← [VA-API Decode] ← [Decrypt] ← [UDP] ← [Receive]
+ * 
+ * Security:
+ *   - Each device has Ed25519 keypair (32-byte public, 32-byte private)
+ *   - All packets encrypted with ChaCha20-Poly1305
+ *   - Perfect forward secrecy with ephemeral keys
+ *   - No central authority, no account database
+ * 
+ * RootStream Code Format:
+ *   <base64_public_key>@<hostname>
+ *   Example: kXx7Y...Qp9w@gaming-pc
+ * ============================================================================
+ */
+
+#define ROOTSTREAM_VERSION "1.0.0"
+#define MAX_DISPLAYS 4
+#define MAX_PACKET_SIZE 1400
+#define MAX_PEERS 16
+
+/* Cryptographic constants (libsodium) */
+#define CRYPTO_PUBLIC_KEY_BYTES 32
+#define CRYPTO_SECRET_KEY_BYTES 32
+#define CRYPTO_NONCE_BYTES 24
+#define CRYPTO_MAC_BYTES 16
+#define CRYPTO_SHARED_KEY_BYTES 32
+
+/* RootStream code format: base64(pubkey) + "@" + hostname */
+#define ROOTSTREAM_CODE_MAX_LEN 128
+
+/* ============================================================================
+ * CAPTURE - DRM/KMS framebuffer capture
  * ============================================================================ */
 
-#define ROOTSTREAM_VERSION "0.1.0"
-#define MAX_DISPLAYS 4
-#define MAX_PACKET_SIZE 1400  // MTU-safe
-
-/* Frame capture modes */
 typedef enum {
-    CAPTURE_DRM_KMS,      /* Direct kernel DRM/KMS (best) */
-    CAPTURE_MMAP,         /* Memory mapped framebuffer */
-    CAPTURE_FALLBACK      /* Software fallback */
+    CAPTURE_DRM_KMS,      /* Direct kernel DRM/KMS (default) */
+    CAPTURE_MMAP,         /* Memory mapped framebuffer fallback */
 } capture_mode_t;
 
-/* Hardware encoder types */
-typedef enum {
-    ENCODER_VAAPI,        /* VA-API (Intel/AMD) */
-    ENCODER_NVENC,        /* NVENC (NVIDIA) */
-    ENCODER_SOFTWARE      /* CPU encoding (fallback) */
-} encoder_type_t;
-
-/* Display information */
 typedef struct {
     int fd;                    /* DRM device file descriptor */
     uint32_t connector_id;     /* DRM connector ID */
     uint32_t crtc_id;          /* CRTC ID */
     uint32_t fb_id;            /* Framebuffer ID */
-    uint32_t width;
-    uint32_t height;
-    uint32_t refresh_rate;
-    char name[64];             /* e.g., "HDMI-A-1" */
+    uint32_t width;            /* Display width in pixels */
+    uint32_t height;           /* Display height in pixels */
+    uint32_t refresh_rate;     /* Display refresh rate (Hz) */
+    char name[64];             /* Display name (e.g., "HDMI-A-1") */
 } display_info_t;
 
-/* Frame buffer structure */
 typedef struct {
-    uint8_t *data;            /* Frame data */
-    uint32_t size;            /* Size in bytes */
-    uint32_t width;
-    uint32_t height;
-    uint32_t pitch;           /* Bytes per row */
-    uint32_t format;          /* Pixel format (fourcc) */
-    uint64_t timestamp;       /* Capture timestamp (usec) */
+    uint8_t *data;             /* Frame pixel data (RGBA) */
+    uint32_t size;             /* Total size in bytes */
+    uint32_t width;            /* Frame width */
+    uint32_t height;           /* Frame height */
+    uint32_t pitch;            /* Bytes per row (stride) */
+    uint32_t format;           /* Pixel format (DRM fourcc) */
+    uint64_t timestamp;        /* Capture timestamp (microseconds) */
 } frame_buffer_t;
 
-/* Encoder context */
+/* ============================================================================
+ * ENCODING - VA-API hardware video encoding
+ * ============================================================================ */
+
+typedef enum {
+    ENCODER_VAAPI,        /* VA-API (Intel/AMD) */
+    ENCODER_NVENC,        /* NVENC (NVIDIA) - TODO */
+    ENCODER_SOFTWARE      /* CPU encoding fallback - TODO */
+} encoder_type_t;
+
 typedef struct {
-    encoder_type_t type;
-    int device_fd;            /* Encoder device fd */
-    void *hw_ctx;             /* Hardware context */
+    encoder_type_t type;       /* Encoder type */
+    int device_fd;             /* Encoder device file descriptor */
+    void *hw_ctx;              /* Hardware context (opaque) */
     
     /* Encoding parameters */
-    uint32_t bitrate;
-    uint32_t framerate;
-    uint8_t quality;          /* 0-100 */
-    bool low_latency;
+    uint32_t bitrate;          /* Target bitrate (bits/sec) */
+    uint32_t framerate;        /* Target framerate (fps) */
+    uint8_t quality;           /* Quality level 0-100 */
+    bool low_latency;          /* Enable low-latency mode */
 } encoder_ctx_t;
 
-/* Network packet header */
+/* ============================================================================
+ * CRYPTOGRAPHY - Ed25519 keypairs and encryption
+ * ============================================================================ */
+
+typedef struct {
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];   /* Ed25519 public key */
+    uint8_t secret_key[CRYPTO_SECRET_KEY_BYTES];   /* Ed25519 private key */
+    char identity[128];                             /* Hostname/device name */
+    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN]; /* Public shareable code */
+} keypair_t;
+
+typedef struct {
+    uint8_t shared_key[CRYPTO_SHARED_KEY_BYTES];   /* Shared encryption key */
+    uint64_t nonce_counter;                         /* Nonce counter for packets */
+    bool authenticated;                             /* Peer authenticated? */
+} crypto_session_t;
+
+/* ============================================================================
+ * NETWORK - Encrypted UDP protocol
+ * ============================================================================ */
+
+/* Packet header (always plaintext for routing) */
 typedef struct __attribute__((packed)) {
-    uint32_t magic;           /* 0x524F4F54 "ROOT" */
-    uint8_t version;
-    uint8_t type;             /* PACKET_VIDEO, PACKET_AUDIO, etc */
-    uint16_t sequence;
-    uint32_t timestamp;
-    uint32_t payload_size;
-    uint16_t checksum;
+    uint32_t magic;            /* 0x524F4F54 "ROOT" */
+    uint8_t version;           /* Protocol version (1) */
+    uint8_t type;              /* Packet type (see below) */
+    uint16_t flags;            /* Packet flags */
+    uint64_t nonce;            /* Encryption nonce */
+    uint16_t payload_size;     /* Encrypted payload size */
+    uint8_t mac[CRYPTO_MAC_BYTES]; /* Authentication tag */
 } packet_header_t;
 
 /* Packet types */
-#define PACKET_VIDEO      0x01
-#define PACKET_AUDIO      0x02
-#define PACKET_INPUT      0x03
-#define PACKET_CONTROL    0x04
+#define PKT_HANDSHAKE     0x01  /* Initial key exchange */
+#define PKT_VIDEO         0x02  /* Encrypted video frame */
+#define PKT_AUDIO         0x03  /* Encrypted audio frame */
+#define PKT_INPUT         0x04  /* Encrypted input events */
+#define PKT_CONTROL       0x05  /* Control messages */
+#define PKT_PING          0x06  /* Keepalive ping */
+#define PKT_PONG          0x07  /* Keepalive pong */
 
-/* Input event structure */
+/* Encrypted input event payload */
 typedef struct __attribute__((packed)) {
-    uint8_t type;             /* KEY, MOUSE_MOVE, MOUSE_BUTTON, etc */
-    uint16_t code;            /* Key/button code */
-    int32_t value;            /* Value/delta */
+    uint8_t type;              /* EV_KEY, EV_REL, etc */
+    uint16_t code;             /* Key/button code */
+    int32_t value;             /* Value/delta */
 } input_event_pkt_t;
 
-/* Main streaming context */
+/* ============================================================================
+ * PEER MANAGEMENT - Connected peer tracking
+ * ============================================================================ */
+
+typedef enum {
+    PEER_DISCOVERED,      /* Found via mDNS */
+    PEER_CONNECTING,      /* Handshake in progress */
+    PEER_CONNECTED,       /* Fully authenticated */
+    PEER_DISCONNECTED,    /* Lost connection */
+} peer_state_t;
+
 typedef struct {
-    /* Capture */
+    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];  /* Peer's code */
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];    /* Peer's public key */
+    struct sockaddr_storage addr;                    /* Network address */
+    socklen_t addr_len;                              /* Address length */
+    crypto_session_t session;                        /* Encryption session */
+    peer_state_t state;                              /* Connection state */
+    uint64_t last_seen;                              /* Last packet time (ms) */
+    char hostname[64];                               /* Peer hostname */
+    bool is_streaming;                               /* Currently streaming? */
+} peer_t;
+
+/* ============================================================================
+ * DISCOVERY - mDNS/Avahi service discovery
+ * ============================================================================ */
+
+typedef struct {
+    void *avahi_client;        /* Avahi client (opaque) */
+    void *avahi_group;         /* Avahi entry group (opaque) */
+    void *avahi_browser;       /* Avahi service browser (opaque) */
+    bool running;              /* Discovery active? */
+} discovery_ctx_t;
+
+/* ============================================================================
+ * TRAY UI - GTK3 system tray application
+ * ============================================================================ */
+
+typedef enum {
+    STATUS_IDLE,          /* Not streaming */
+    STATUS_HOSTING,       /* Hosting stream */
+    STATUS_CONNECTED,     /* Connected to peer */
+    STATUS_ERROR,         /* Error state */
+} tray_status_t;
+
+typedef struct {
+    void *gtk_app;            /* GtkApplication (opaque) */
+    void *tray_icon;          /* GtkStatusIcon (opaque) */
+    void *menu;               /* GtkMenu (opaque) */
+    void *qr_window;          /* QR code display window (opaque) */
+    tray_status_t status;     /* Current status */
+} tray_ctx_t;
+
+/* ============================================================================
+ * MAIN CONTEXT - Application state
+ * ============================================================================ */
+
+typedef struct {
+    /* Identity */
+    keypair_t keypair;         /* This device's keys */
+    
+    /* Capture & Encoding */
     capture_mode_t capture_mode;
     display_info_t display;
     frame_buffer_t current_frame;
-    
-    /* Encoding */
     encoder_ctx_t encoder;
     
     /* Network */
-    int sock_fd;
-    struct sockaddr_storage peer_addr;
-    uint16_t sequence;
+    int sock_fd;               /* UDP socket */
+    uint16_t port;             /* Listening port */
+    
+    /* Peers */
+    peer_t peers[MAX_PEERS];   /* Connected peers */
+    int num_peers;             /* Number of active peers */
+    
+    /* Discovery */
+    discovery_ctx_t discovery;
     
     /* Input */
-    int uinput_kbd_fd;
-    int uinput_mouse_fd;
+    int uinput_kbd_fd;         /* Virtual keyboard */
+    int uinput_mouse_fd;       /* Virtual mouse */
+    
+    /* UI */
+    tray_ctx_t tray;
     
     /* State */
-    bool running;
-    uint64_t frames_captured;
+    bool running;              /* Main loop running? */
+    bool is_service;           /* Running as systemd service? */
+    uint64_t frames_captured;  /* Statistics */
     uint64_t frames_encoded;
     uint64_t bytes_sent;
+    uint64_t bytes_received;
 } rootstream_ctx_t;
 
-/* API Functions */
+/* ============================================================================
+ * API FUNCTIONS
+ * ============================================================================ */
 
-/* Initialization */
+/* --- Initialization --- */
 int rootstream_init(rootstream_ctx_t *ctx);
+void rootstream_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Cryptography --- */
+int crypto_init(void);
+int crypto_generate_keypair(keypair_t *kp, const char *hostname);
+int crypto_load_keypair(keypair_t *kp, const char *config_dir);
+int crypto_save_keypair(const keypair_t *kp, const char *config_dir);
+int crypto_verify_peer(const uint8_t *public_key, size_t key_len);
+int crypto_create_session(crypto_session_t *session, 
+                          const uint8_t *my_secret,
+                          const uint8_t *peer_public);
+int crypto_encrypt_packet(const crypto_session_t *session,
+                         const void *plaintext, size_t plain_len,
+                         void *ciphertext, size_t *cipher_len,
+                         uint64_t nonce);
+int crypto_decrypt_packet(const crypto_session_t *session,
+                         const void *ciphertext, size_t cipher_len,
+                         void *plaintext, size_t *plain_len,
+                         uint64_t nonce);
+
+/* --- Capture (existing, polished) --- */
 int rootstream_detect_displays(display_info_t *displays, int max_displays);
 int rootstream_select_display(rootstream_ctx_t *ctx, int display_index);
-
-/* Capture */
 int rootstream_capture_init(rootstream_ctx_t *ctx);
 int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
 void rootstream_capture_cleanup(rootstream_ctx_t *ctx);
 
-/* Encoding */
+/* --- Encoding (existing, polished) --- */
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type);
-int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size);
+int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                           uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
-/* Network */
-int rootstream_net_init(rootstream_ctx_t *ctx, const char *bind_addr, uint16_t port);
-int rootstream_net_send(rootstream_ctx_t *ctx, uint8_t type, const void *data, size_t size);
-int rootstream_net_recv(rootstream_ctx_t *ctx, void *buf, size_t size, int timeout_ms);
+/* --- Network --- */
+int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
+int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
+                                  uint8_t type, const void *data, size_t size);
+int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
+int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
 
-/* Input */
+/* --- Peer Management --- */
+peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
+peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key);
+void rootstream_remove_peer(rootstream_ctx_t *ctx, peer_t *peer);
+int rootstream_connect_to_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
+
+/* --- Discovery --- */
+int discovery_init(rootstream_ctx_t *ctx);
+int discovery_announce(rootstream_ctx_t *ctx);
+int discovery_browse(rootstream_ctx_t *ctx);
+void discovery_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Input (existing, polished) --- */
 int rootstream_input_init(rootstream_ctx_t *ctx);
 int rootstream_input_process(rootstream_ctx_t *ctx, input_event_pkt_t *event);
 void rootstream_input_cleanup(rootstream_ctx_t *ctx);
 
-/* Main loops */
-int rootstream_run_host(rootstream_ctx_t *ctx);
-int rootstream_run_client(rootstream_ctx_t *ctx, const char *host_addr);
+/* --- Tray UI --- */
+int tray_init(rootstream_ctx_t *ctx, int argc, char **argv);
+void tray_update_status(rootstream_ctx_t *ctx, tray_status_t status);
+void tray_show_qr_code(rootstream_ctx_t *ctx);
+void tray_show_peers(rootstream_ctx_t *ctx);
+void tray_run(rootstream_ctx_t *ctx);
+void tray_cleanup(rootstream_ctx_t *ctx);
 
-/* Cleanup */
-void rootstream_cleanup(rootstream_ctx_t *ctx);
+/* --- Service/Daemon --- */
+int service_daemonize(void);
+int service_run_host(rootstream_ctx_t *ctx);
+int service_run_client(rootstream_ctx_t *ctx);
 
-/* Utilities */
+/* --- QR Code --- */
+int qrcode_generate(const char *data, const char *output_file);
+int qrcode_display(rootstream_ctx_t *ctx, const char *rootstream_code);
+
+/* --- Configuration --- */
+const char* config_get_dir(void);
+int config_load(rootstream_ctx_t *ctx);
+int config_save(rootstream_ctx_t *ctx);
+
+/* --- Utilities --- */
 const char* rootstream_get_error(void);
 void rootstream_print_stats(rootstream_ctx_t *ctx);
+uint64_t get_timestamp_ms(void);
 
 #endif /* ROOTSTREAM_H */
