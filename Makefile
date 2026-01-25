@@ -21,9 +21,15 @@ endif
 # Libraries
 LIBS := -ldrm -lva -lva-drm -lpthread -lsodium -lqrencode -lpng -lm
 
-# GTK3
-CFLAGS += $(shell pkg-config --cflags gtk+-3.0)
-LIBS += $(shell pkg-config --libs gtk+-3.0)
+# GTK3 (required)
+GTK_PKG := gtk+-3.0
+GTK_FOUND := $(shell pkg-config --exists $(GTK_PKG) && echo yes)
+ifeq ($(GTK_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
+    LIBS += $(shell pkg-config --libs $(GTK_PKG))
+else
+    $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks.)
+endif
 
 # Avahi (optional)
 ifeq ($(shell pkg-config --exists avahi-client && echo yes),yes)

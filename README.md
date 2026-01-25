@@ -260,7 +260,18 @@ rootstream host
 
 # Run as background service
 rootstream --service
+
+# Enable latency percentile logging (host service loop)
+rootstream host --latency-log --latency-interval 1000
 ```
+
+**Latency Logging**
+- `--latency-log` prints p50/p95/p99 for capture/encode/send/total stages.
+- `--latency-interval MS` controls how often summaries print (default: 1000ms).
+
+**Service Mode Notes**
+- `rootstream --service` defaults to host mode with no GUI.
+- Use `--no-discovery` to disable mDNS announcements/browsing.
 
 ---
 

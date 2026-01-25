@@ -23,6 +23,10 @@
 #include <drm/drm.h>
 #include <drm/drm_mode.h>
 
+#ifndef DRM_MODE_CONNECTED
+#define DRM_MODE_CONNECTED 1
+#endif
+
 static char last_error[256] = {0};
 
 const char* rootstream_get_error(void) {

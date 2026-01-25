@@ -50,7 +50,8 @@ int service_daemonize(void) {
     /* First fork */
     pid_t pid = fork();
     if (pid < 0) {
-        fprintf(stderr, "ERROR: Fork failed: %s\n", strerror(errno));
+        fprintf(stderr, "ERROR: service_daemonize fork(1) failed\n");
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
         return -1;
     }
 
@@ -63,6 +64,8 @@ int service_daemonize(void) {
     
     /* Create new session */
     if (setsid() < 0) {
+        fprintf(stderr, "ERROR: service_daemonize setsid() failed\n");
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
         return -1;
     }
 
@@ -72,6 +75,8 @@ int service_daemonize(void) {
     /* Second fork */
     pid = fork();
     if (pid < 0) {
+        fprintf(stderr, "ERROR: service_daemonize fork(2) failed\n");
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
         return -1;
     }
 
@@ -84,6 +89,8 @@ int service_daemonize(void) {
 
     /* Change working directory */
     if (chdir("/") < 0) {
+        fprintf(stderr, "ERROR: service_daemonize chdir(\"/\") failed\n");
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
         return -1;
     }
 
@@ -101,6 +108,9 @@ int service_daemonize(void) {
         if (null_fd > 2) {
             close(null_fd);
         }
+    } else {
+        fprintf(stderr, "WARNING: service_daemonize failed to open /dev/null\n");
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
     }
 
     return 0;
@@ -147,6 +157,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
     if (ctx->discovery.running) {
         if (discovery_announce(ctx) < 0) {
             fprintf(stderr, "ERROR: Discovery announce failed (service startup)\n");
+            fprintf(stderr, "DETAILS: Service will continue without mDNS advertisement\n");
         }
     } else {
         printf("INFO: Discovery disabled (no service announcement)\n");
