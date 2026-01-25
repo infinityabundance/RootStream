@@ -1,0 +1,36 @@
+[Unit]
+Description=RootStream Game Streaming Host
+After=network.target graphical.target
+
+[Service]
+Type=simple
+User=%i
+Group=video
+ExecStart=/usr/local/bin/rootstream host
+Restart=on-failure
+RestartSec=5s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+# Allow access to DRM and uinput
+DeviceAllow=/dev/dri/card0 rw
+DeviceAllow=/dev/uinput rw
+DeviceAllow=/dev/dri/renderD128 rw
+
+# Capabilities
+AmbientCapabilities=CAP_SYS_ADMIN
+CapabilityBoundingSet=CAP_SYS_ADMIN
+
+[Install]
+WantedBy=multi-user.target
+
+# Installation instructions:
+# 1. Copy to /etc/systemd/system/rootstream@.service
+# 2. Enable for your user: sudo systemctl enable rootstream@$USER
+# 3. Start: sudo systemctl start rootstream@$USER
+# 4. Check status: sudo systemctl status rootstream@$USER
+# 5. View logs: sudo journalctl -u rootstream@$USER -f
