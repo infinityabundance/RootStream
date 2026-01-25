@@ -38,11 +38,11 @@ Goal: **End-to-end Linux ↔ Linux streaming that is boringly reliable.**
 
 ### Docs
 
-- [ ] Update `ARCHITECTURE.md` with client-side architecture
-- [ ] Add basic troubleshooting for:
-  - [ ] Client cannot decode
-  - [ ] Black screen / no frames
-  - [ ] Input not working
+- [x] Update `ARCHITECTURE.md` with client-side architecture
+- [x] Add basic troubleshooting for:
+  - [x] Client cannot decode
+  - [x] Black screen / no frames
+  - [x] Input not working
 
 ---
 

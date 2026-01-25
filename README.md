@@ -277,6 +277,9 @@ rootstream host --latency-log --latency-interval 1000
 - libsodium is required for crypto; install libsodium dev packages if the build stops with a libsodium error.
 - For dependency-only build troubleshooting, use `make HEADLESS=1 NO_CRYPTO=1 NO_QR=1 NO_DRM=1` (networking/crypto/QR/DRM disabled).
 
+**Troubleshooting**
+- See `TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
+
 ---
 
 ## Architecture
