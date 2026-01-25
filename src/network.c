@@ -498,7 +498,14 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *code) {
     peer->state = PEER_DISCOVERED;
     ctx->num_peers++;
 
-    printf("✓ Added peer: %s\n", peer->hostname);
+    char fingerprint[32];
+    if (crypto_format_fingerprint(peer->public_key, CRYPTO_PUBLIC_KEY_BYTES,
+                                  fingerprint, sizeof(fingerprint)) == 0) {
+        printf("✓ Added peer: %s (%s)\n", peer->hostname, fingerprint);
+    } else {
+        fprintf(stderr, "WARNING: Unable to format peer fingerprint\n");
+        printf("✓ Added peer: %s\n", peer->hostname);
+    }
 
     return peer;
 }
@@ -574,4 +581,14 @@ uint64_t get_timestamp_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+/*
+ * Get current timestamp in microseconds
+ * Used for latency instrumentation
+ */
+uint64_t get_timestamp_us(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }

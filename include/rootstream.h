@@ -81,6 +81,27 @@ typedef struct {
 } frame_buffer_t;
 
 /* ============================================================================
+ * LATENCY - Stage timing and reporting
+ * ============================================================================ */
+
+typedef struct {
+    uint64_t capture_us;        /* Capture duration */
+    uint64_t encode_us;         /* Encode duration */
+    uint64_t send_us;           /* Send duration (all peers) */
+    uint64_t total_us;          /* Capture → send duration */
+} latency_sample_t;
+
+typedef struct {
+    bool enabled;               /* Enable latency logging */
+    size_t capacity;            /* Ring buffer capacity */
+    size_t count;               /* Samples stored */
+    size_t cursor;              /* Next insert position */
+    uint64_t report_interval_ms;/* How often to print stats */
+    uint64_t last_report_ms;    /* Last report timestamp */
+    latency_sample_t *samples;  /* Sample ring buffer */
+} latency_stats_t;
+
+/* ============================================================================
  * ENCODING - VA-API hardware video encoding
  * ============================================================================ */
 
@@ -242,6 +263,7 @@ typedef struct {
     uint64_t frames_encoded;
     uint64_t bytes_sent;
     uint64_t bytes_received;
+    latency_stats_t latency;   /* Latency instrumentation */
 } rootstream_ctx_t;
 
 /* ============================================================================
@@ -258,6 +280,8 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname);
 int crypto_load_keypair(keypair_t *kp, const char *config_dir);
 int crypto_save_keypair(const keypair_t *kp, const char *config_dir);
 int crypto_verify_peer(const uint8_t *public_key, size_t key_len);
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
+                              char *output, size_t output_len);
 int crypto_create_session(crypto_session_t *session, 
                           const uint8_t *my_secret,
                           const uint8_t *peer_public);
@@ -323,6 +347,7 @@ int service_run_client(rootstream_ctx_t *ctx);
 /* --- QR Code --- */
 int qrcode_generate(const char *data, const char *output_file);
 int qrcode_display(rootstream_ctx_t *ctx, const char *rootstream_code);
+void qrcode_print_terminal(const char *data);
 
 /* --- Configuration --- */
 const char* config_get_dir(void);
@@ -333,5 +358,11 @@ int config_save(rootstream_ctx_t *ctx);
 const char* rootstream_get_error(void);
 void rootstream_print_stats(rootstream_ctx_t *ctx);
 uint64_t get_timestamp_ms(void);
+uint64_t get_timestamp_us(void);
+
+/* --- Latency instrumentation --- */
+int latency_init(latency_stats_t *stats, size_t capacity, uint64_t report_interval_ms, bool enabled);
+void latency_cleanup(latency_stats_t *stats);
+void latency_record(latency_stats_t *stats, const latency_sample_t *sample);
 
 #endif /* ROOTSTREAM_H */

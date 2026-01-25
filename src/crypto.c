@@ -39,6 +39,43 @@
 #include <sodium/utils.h>
 
 /*
+ * Format a human-readable fingerprint for a public key.
+ *
+ * Output format: xxxx-xxxx-xxxx-xxxx (16 hex chars + 3 dashes).
+ */
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
+                              char *output, size_t output_len) {
+    if (!public_key || key_len == 0 || !output) {
+        fprintf(stderr, "ERROR: crypto_format_fingerprint invalid arguments\n");
+        return -1;
+    }
+
+    if (output_len < 20) {
+        fprintf(stderr, "ERROR: Fingerprint buffer too small\n");
+        fprintf(stderr, "NEED: >= 20 bytes, HAVE: %zu\n", output_len);
+        return -1;
+    }
+
+    unsigned char hash[crypto_generichash_BYTES];
+    if (crypto_generichash(hash, sizeof(hash), public_key, key_len, NULL, 0) != 0) {
+        fprintf(stderr, "ERROR: Fingerprint hash failed\n");
+        return -1;
+    }
+
+    const char hex[] = "0123456789abcdef";
+    int out_idx = 0;
+    for (int i = 0; i < 8; i++) {
+        output[out_idx++] = hex[(hash[i] >> 4) & 0x0F];
+        output[out_idx++] = hex[hash[i] & 0x0F];
+        if (i % 2 == 1 && i < 7) {
+            output[out_idx++] = '-';
+        }
+    }
+    output[out_idx] = '\0';
+    return 0;
+}
+
+/*
  * Initialize libsodium
  * Must be called before any crypto operations
  */
@@ -150,6 +187,19 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
         return -1;
     }
     fclose(f);
+
+    struct stat key_stat;
+    if (stat(seckey_path, &key_stat) == 0) {
+        if ((key_stat.st_mode & 0077) != 0) {
+            fprintf(stderr, "WARNING: Private key permissions are too open\n");
+            fprintf(stderr, "FILE: %s\n", seckey_path);
+            fprintf(stderr, "RECOMMEND: chmod 600 %s\n", seckey_path);
+        }
+    } else {
+        fprintf(stderr, "WARNING: Unable to stat private key file\n");
+        fprintf(stderr, "FILE: %s\n", seckey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+    }
 
     /* Load public key */
     f = fopen(pubkey_path, "rb");

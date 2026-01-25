@@ -260,6 +260,40 @@ rootstream host
 
 # Run as background service
 rootstream --service
+
+# Enable latency percentile logging (host service loop)
+rootstream host --latency-log --latency-interval 1000
+```
+
+**Latency Logging**
+- `--latency-log` prints p50/p95/p99 for capture/encode/send/total stages.
+- `--latency-interval MS` controls how often summaries print (default: 1000ms).
+
+**Service Mode Notes**
+- `rootstream --service` defaults to host mode with no GUI.
+- Use `--no-discovery` to disable mDNS announcements/browsing.
+- Build headless without GTK3 by using `make HEADLESS=1` (tray UI disabled).
+- If libva is unavailable, build will use a stub encoder; install libva/libva-drm dev packages for hardware encoding.
+- libsodium is required for crypto; install libsodium dev packages if the build stops with a libsodium error.
+- For dependency-only build troubleshooting, use `make HEADLESS=1 NO_CRYPTO=1 NO_QR=1 NO_DRM=1` (networking/crypto/QR/DRM disabled).
+
+**Troubleshooting**
+- See `TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
+
+**Identity Backup & Restore**
+RootStream stores identity keys in `~/.config/rootstream/`:
+- `identity.pub` (public key)
+- `identity.key` (private key, keep safe)
+- `identity.txt` (device name)
+
+Backup:
+```bash
+tar -czf rootstream-identity.tar.gz -C ~/.config/rootstream identity.pub identity.key identity.txt
+```
+
+Restore:
+```bash
+tar -xzf rootstream-identity.tar.gz -C ~/.config/rootstream
 ```
 
 ---

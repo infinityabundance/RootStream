@@ -55,6 +55,8 @@ static void print_usage(const char *progname) {
     printf("  --display N         Select display index (default: 0)\n");
     printf("  --bitrate KBPS      Video bitrate in kbps (default: 10000)\n");
     printf("  --no-discovery      Disable mDNS auto-discovery\n");
+    printf("  --latency-log       Enable latency percentile logging\n");
+    printf("  --latency-interval MS  Latency log interval in ms (default: 1000)\n");
     printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
@@ -133,6 +135,14 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     printf("╚════════════════════════════════════════════════╝\n");
     printf("\n");
     printf("Device Identity: %s\n", ctx->keypair.identity);
+    char fingerprint[32];
+    if (crypto_format_fingerprint(ctx->keypair.public_key,
+                                  CRYPTO_PUBLIC_KEY_BYTES,
+                                  fingerprint, sizeof(fingerprint)) == 0) {
+        printf("Device Fingerprint: %s\n", fingerprint);
+    } else {
+        fprintf(stderr, "WARNING: Unable to format device fingerprint\n");
+    }
     printf("Your RootStream Code:\n");
     printf("  %s\n", ctx->keypair.rootstream_code);
     printf("\n");
@@ -157,6 +167,7 @@ void rootstream_cleanup(rootstream_ctx_t *ctx) {
     rootstream_encoder_cleanup(ctx);
     rootstream_capture_cleanup(ctx);
     rootstream_input_cleanup(ctx);
+    latency_cleanup(&ctx->latency);
 
     /* Close network socket */
     if (ctx->sock_fd >= 0) {
@@ -193,7 +204,7 @@ void rootstream_print_stats(rootstream_ctx_t *ctx) {
 /*
  * Run in tray mode (default)
  */
-static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
+static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_discovery) {
     printf("INFO: Starting system tray application\n");
     printf("INFO: Right-click the tray icon for options\n");
     printf("INFO: Left-click to show your QR code\n");
@@ -206,9 +217,15 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
     }
 
     /* Initialize discovery */
-    if (discovery_init(ctx) == 0) {
-        discovery_announce(ctx);
-        discovery_browse(ctx);
+    if (no_discovery) {
+        printf("INFO: mDNS discovery disabled by --no-discovery\n");
+    } else if (discovery_init(ctx) == 0) {
+        if (discovery_announce(ctx) < 0) {
+            fprintf(stderr, "ERROR: mDNS announce failed (tray mode)\n");
+        }
+        if (discovery_browse(ctx) < 0) {
+            fprintf(stderr, "ERROR: mDNS browse failed (tray mode)\n");
+        }
     }
 
     /* Initialize tray UI */
@@ -227,7 +244,7 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
 /*
  * Run in host mode (streaming server)
  */
-static int run_host_mode(rootstream_ctx_t *ctx) {
+static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery) {
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
@@ -248,14 +265,28 @@ static int run_host_mode(rootstream_ctx_t *ctx) {
                displays[i].height, displays[i].refresh_rate);
     }
 
-    /* Use first display (TODO: allow selection) */
-    if (rootstream_select_display(ctx, 0) < 0) {
+    if (display_idx < 0 || display_idx >= num_displays) {
+        fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n",
+                display_idx, num_displays - 1);
+        for (int i = 0; i < num_displays; i++) {
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
         return -1;
+    }
+
+    ctx->display = displays[display_idx];
+    for (int i = 0; i < num_displays; i++) {
+        if (i != display_idx && displays[i].fd >= 0) {
+            close(displays[i].fd);
+        }
     }
 
     printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
            ctx->display.name, ctx->display.width,
            ctx->display.height, ctx->display.refresh_rate);
+    printf("INFO: Target video bitrate: %u kbps\n", ctx->encoder.bitrate / 1000);
 
     /* Initialize components */
     if (rootstream_capture_init(ctx) < 0) {
@@ -279,8 +310,10 @@ static int run_host_mode(rootstream_ctx_t *ctx) {
     }
 
     /* Initialize discovery */
-    if (discovery_init(ctx) == 0) {
-        discovery_announce(ctx);
+    if (no_discovery) {
+        printf("INFO: mDNS discovery disabled by --no-discovery\n");
+    } else if (discovery_init(ctx) == 0) {
+        printf("INFO: Discovery initialized for host announcements\n");
     }
 
     printf("✓ All systems ready\n");
@@ -331,6 +364,8 @@ int main(int argc, char **argv) {
         {"display",     required_argument, 0, 'd'},
         {"bitrate",     required_argument, 0, 'b'},
         {"no-discovery",no_argument,       0, 'n'},
+        {"latency-log", no_argument,       0, 'l'},
+        {"latency-interval", required_argument, 0, 'i'},
         {0, 0, 0, 0}
     };
 
@@ -340,9 +375,11 @@ int main(int argc, char **argv) {
     uint16_t port = 9876;
     int display_idx = 0;
     int bitrate = 10000;
+    bool latency_log = false;
+    uint64_t latency_interval_ms = 1000;
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:nli:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
                 print_usage(argv[0]);
@@ -376,6 +413,16 @@ int main(int argc, char **argv) {
             case 'n':
                 no_discovery = true;
                 break;
+            case 'l':
+                latency_log = true;
+                break;
+            case 'i':
+                latency_interval_ms = (uint64_t)strtoul(optarg, NULL, 10);
+                if (latency_interval_ms == 0) {
+                    fprintf(stderr, "ERROR: Invalid latency interval: %s\n", optarg);
+                    return 1;
+                }
+                break;
             default:
                 print_usage(argv[0]);
                 return 1;
@@ -393,7 +440,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (latency_init(&ctx.latency, 240, latency_interval_ms, latency_log) < 0) {
+        fprintf(stderr, "WARNING: Latency logging disabled due to init failure\n");
+    }
+
     ctx.port = port;
+    ctx.encoder.bitrate = (uint32_t)bitrate * 1000;
 
     /* Handle --qr flag */
     if (show_qr) {
@@ -415,12 +467,26 @@ int main(int argc, char **argv) {
     /* Parse command */
     const char *command = (optind < argc) ? argv[optind] : NULL;
 
+    if (service_mode) {
+        ctx.is_service = true;
+        if (service_daemonize() < 0) {
+            fprintf(stderr, "ERROR: Failed to enter service mode\n");
+            ret = 1;
+            goto cleanup;
+        }
+    }
+
     if (command == NULL) {
-        /* Default: tray mode */
-        ret = run_tray_mode(&ctx, argc, argv);
+        if (service_mode) {
+            /* Default service behavior: host mode without GUI */
+            ret = run_host_mode(&ctx, display_idx, no_discovery);
+        } else {
+            /* Default: tray mode */
+            ret = run_tray_mode(&ctx, argc, argv, no_discovery);
+        }
     } else if (strcmp(command, "host") == 0) {
         /* Host mode */
-        ret = run_host_mode(&ctx);
+        ret = run_host_mode(&ctx, display_idx, no_discovery);
     } else if (strcmp(command, "connect") == 0) {
         /* Connect mode */
         if (optind + 1 >= argc) {
@@ -436,6 +502,7 @@ int main(int argc, char **argv) {
         ret = 1;
     }
 
+cleanup:
     /* Print statistics and cleanup */
     rootstream_print_stats(&ctx);
     rootstream_cleanup(&ctx);

@@ -19,11 +19,42 @@ else
 endif
 
 # Libraries
-LIBS := -ldrm -lva -lva-drm -lpthread -lsodium -lqrencode -lpng
+LIBS := -ldrm -lpthread -lqrencode -lpng -lm
 
-# GTK3
-CFLAGS += $(shell pkg-config --cflags gtk+-3.0)
-LIBS += $(shell pkg-config --libs gtk+-3.0)
+# libsodium (required for crypto unless NO_CRYPTO=1)
+SODIUM_FOUND := $(shell pkg-config --exists libsodium && echo yes)
+ifdef NO_CRYPTO
+    CFLAGS += -DROOTSTREAM_NO_CRYPTO
+else
+    ifeq ($(SODIUM_FOUND),yes)
+        CFLAGS += $(shell pkg-config --cflags libsodium)
+        LIBS += $(shell pkg-config --libs libsodium)
+    else
+        $(error libsodium development files not found. Install libsodium (e.g., libsodium-dev) or run `make deps` for checks. Alternatively set NO_CRYPTO=1 for a non-functional build.)
+    endif
+endif
+
+# VA-API (optional, required for encoding)
+VA_FOUND := $(shell pkg-config --exists libva && echo yes)
+ifeq ($(VA_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags libva libva-drm)
+    LIBS += $(shell pkg-config --libs libva libva-drm)
+    CFLAGS += -DHAVE_VAAPI
+endif
+
+# GTK3 (required unless HEADLESS=1)
+GTK_PKG := gtk+-3.0
+GTK_FOUND := $(shell pkg-config --exists $(GTK_PKG) && echo yes)
+ifdef HEADLESS
+    CFLAGS += -DROOTSTREAM_HEADLESS
+else
+    ifeq ($(GTK_FOUND),yes)
+        CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
+        LIBS += $(shell pkg-config --libs $(GTK_PKG))
+    else
+        $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks. Alternatively set HEADLESS=1 for a non-GUI build.)
+    endif
+endif
 
 # Avahi (optional)
 ifeq ($(shell pkg-config --exists avahi-client && echo yes),yes)
@@ -49,7 +80,37 @@ SRCS := src/main.c \
         src/tray.c \
         src/service.c \
         src/qrcode.c \
-        src/config.c
+        src/config.c \
+        src/latency.c
+
+ifdef HEADLESS
+    SRCS := $(filter-out src/tray.c,$(SRCS))
+    SRCS += src/tray_stub.c
+endif
+
+ifdef NO_CRYPTO
+    SRCS := $(filter-out src/crypto.c,$(SRCS))
+    SRCS := $(filter-out src/network.c,$(SRCS))
+    SRCS += src/crypto_stub.c
+    SRCS += src/network_stub.c
+endif
+
+ifdef NO_QR
+    SRCS := $(filter-out src/qrcode.c,$(SRCS))
+    SRCS += src/qrcode_stub.c
+    LIBS := $(filter-out -lqrencode -lpng,$(LIBS))
+endif
+
+ifdef NO_DRM
+    SRCS := $(filter-out src/drm_capture.c,$(SRCS))
+    SRCS += src/drm_capture_stub.c
+    LIBS := $(filter-out -ldrm,$(LIBS))
+endif
+
+ifneq ($(VA_FOUND),yes)
+    SRCS := $(filter-out src/vaapi_encoder.c,$(SRCS))
+    SRCS += src/vaapi_stub.c
+endif
 
 # Object files
 OBJS := $(SRCS:.c=.o)
@@ -122,35 +183,35 @@ install-icons:
 install-desktop:
 	@echo "🖥️  Installing desktop entry..."
 	@mkdir -p $(DESTDIR)$(DESKTOPDIR)
-	@cat > $(DESTDIR)$(DESKTOPDIR)/rootstream.desktop <<EOF
-[Desktop Entry]
-Name=RootStream
-Comment=Secure P2P Game Streaming
-Exec=rootstream
-Icon=rootstream
-Type=Application
-Categories=Network;AudioVideo;
-StartupNotify=false
-Terminal=false
-EOF
+	@cat > $(DESTDIR)$(DESKTOPDIR)/rootstream.desktop <<-EOF
+	[Desktop Entry]
+	Name=RootStream
+	Comment=Secure P2P Game Streaming
+	Exec=rootstream
+	Icon=rootstream
+	Type=Application
+	Categories=Network;AudioVideo;
+	StartupNotify=false
+	Terminal=false
+	EOF
 
 install-service:
 	@echo "⚙️  Installing systemd service..."
 	@mkdir -p $(SYSTEMDDIR)
-	@cat > $(SYSTEMDDIR)/rootstream.service <<EOF
-[Unit]
-Description=RootStream Secure P2P Streaming
-After=network.target graphical.target
+	@cat > $(SYSTEMDDIR)/rootstream.service <<-EOF
+	[Unit]
+	Description=RootStream Secure P2P Streaming
+	After=network.target graphical.target
 
-[Service]
-Type=simple
-ExecStart=$(BINDIR)/rootstream --service
-Restart=on-failure
-RestartSec=5s
+	[Service]
+	Type=simple
+	ExecStart=$(BINDIR)/rootstream --service
+	Restart=on-failure
+	RestartSec=5s
 
-[Install]
-WantedBy=default.target
-EOF
+	[Install]
+	WantedBy=default.target
+	EOF
 	@echo "✓ Service installed"
 	@echo "  Enable: systemctl --user enable rootstream.service"
 	@echo "  Start:  systemctl --user start rootstream.service"

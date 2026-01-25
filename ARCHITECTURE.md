@@ -198,6 +198,42 @@ vaMapBuffer(display, coded_buffer_id, &output_data);
 - `PACKET_INPUT (0x03)`: Keyboard/mouse events
 - `PACKET_CONTROL (0x04)`: Connection control
 
+### 4. Client-Side Loop (Decode + Present)
+
+The client’s job is to **receive, decrypt, decode, and present** frames with
+minimal buffering.
+
+```
+UDP recv → decrypt → decode (VA-API/NVDEC) → present (SDL2 or DRM/KMS)
+           ↑                                 ↓
+           input events ← capture (uinput) ← send to host
+```
+
+**Design Notes:**
+- **No deep buffers**: we drop late frames rather than queue them.
+- **Clock-aware**: future work will use timestamps to align video/audio.
+- **Input-first**: input events are sent immediately and should bypass queues.
+
+**Planned Client Components:**
+- Decode backend: VA-API decode for Intel/AMD, NVDEC for NVIDIA.
+- Presentation: SDL2 for convenience, DRM/KMS for lowest latency.
+- Input: uinput injection on host, raw input capture on client.
+
+### 5. Latency Instrumentation
+
+RootStream instruments the host loop to make regression detection easy.
+
+**Host stages:**
+- Capture → Encode → Send
+- Samples are recorded per frame in a fixed ring buffer.
+- Periodic summaries print p50/p95/p99 in microseconds.
+
+**Client stages (planned):**
+- Receive → Decode → Present
+
+This mirrors the roadmap requirement for deterministic latency reporting
+across both sides of the stream.
+
 **Error Handling:**
 - Checksum validates payload integrity
 - Sequence number detects packet loss

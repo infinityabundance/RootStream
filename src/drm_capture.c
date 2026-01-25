@@ -23,6 +23,10 @@
 #include <drm/drm.h>
 #include <drm/drm_mode.h>
 
+#ifndef DRM_MODE_CONNECTED
+#define DRM_MODE_CONNECTED 1
+#endif
+
 static char last_error[256] = {0};
 
 const char* rootstream_get_error(void) {
@@ -55,7 +59,9 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
             continue;
 
         char path[256];
-        snprintf(path, sizeof(path), "/dev/dri/%s", entry->d_name);
+        if (snprintf(path, sizeof(path), "/dev/dri/%s", entry->d_name) >= (int)sizeof(path)) {
+            continue;
+        }
         
         int fd = open(path, O_RDWR | O_CLOEXEC);
         if (fd < 0)
@@ -112,8 +118,13 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
                 displays[count].refresh_rate = modes[0].vrefresh;
                 
                 /* Get connector name */
-                snprintf(displays[count].name, sizeof(displays[count].name),
-                         "%s-%u", entry->d_name, conn.connector_type);
+                if (snprintf(displays[count].name, sizeof(displays[count].name),
+                             "%s-%u", entry->d_name, conn.connector_type) >=
+                    (int)sizeof(displays[count].name)) {
+                    strncpy(displays[count].name, "drm-unknown",
+                            sizeof(displays[count].name) - 1);
+                    displays[count].name[sizeof(displays[count].name) - 1] = '\0';
+                }
                 
                 count++;
                 free(modes);
@@ -139,6 +150,49 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
     }
     
     return count;
+}
+
+/*
+ * Select a display by index and attach it to the context.
+ * This helper re-detects displays and retains the selected FD.
+ */
+int rootstream_select_display(rootstream_ctx_t *ctx, int display_index) {
+    if (!ctx) {
+        set_error("Display selection failed: NULL context");
+        return -1;
+    }
+
+    if (display_index < 0) {
+        set_error("Display selection failed: invalid index %d", display_index);
+        return -1;
+    }
+
+    display_info_t displays[MAX_DISPLAYS];
+    int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
+    if (num_displays < 0) {
+        return -1;
+    }
+
+    if (display_index >= num_displays) {
+        for (int i = 0; i < num_displays; i++) {
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
+        set_error("Display selection failed: index %d out of range (0-%d)",
+                  display_index, num_displays - 1);
+        return -1;
+    }
+
+    ctx->display = displays[display_index];
+
+    for (int i = 0; i < num_displays; i++) {
+        if (i != display_index && displays[i].fd >= 0) {
+            close(displays[i].fd);
+        }
+    }
+
+    return 0;
 }
 
 /*

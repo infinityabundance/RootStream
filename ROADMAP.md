@@ -26,22 +26,23 @@ Goal: **End-to-end Linux ↔ Linux streaming that is boringly reliable.**
   - [ ] Clean connect/disconnect flow
 
 - [ ] Deterministic latency instrumentation
-  - [ ] Timestamps per stage (capture → encode → send → recv → decode → present)
-  - [ ] Optional log mode: p50/p95/p99 latency over time
+  - [x] Host-side timestamps per stage (capture → encode → send)
+  - [x] Optional log mode: p50/p95/p99 latency over time (host loop)
+  - [ ] Client-side timestamps per stage (recv → decode → present)
   - [ ] Debug overlay (FPS + latency) on client
 
 - [ ] Identity & pairing
   - [ ] Stable device identity key storage
-  - [ ] Human-readable peer fingerprint (for tray/CLI)
-  - [ ] Document backup/restore of identity keys
+  - [x] Human-readable peer fingerprint (for tray/CLI)
+  - [x] Document backup/restore of identity keys
 
 ### Docs
 
-- [ ] Update `ARCHITECTURE.md` with client-side architecture
-- [ ] Add basic troubleshooting for:
-  - [ ] Client cannot decode
-  - [ ] Black screen / no frames
-  - [ ] Input not working
+- [x] Update `ARCHITECTURE.md` with client-side architecture
+- [x] Add basic troubleshooting for:
+  - [x] Client cannot decode
+  - [x] Black screen / no frames
+  - [x] Input not working
 
 ---
 
