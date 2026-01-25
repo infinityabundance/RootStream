@@ -196,7 +196,7 @@ void rootstream_print_stats(rootstream_ctx_t *ctx) {
 /*
  * Run in tray mode (default)
  */
-static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
+static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_discovery) {
     printf("INFO: Starting system tray application\n");
     printf("INFO: Right-click the tray icon for options\n");
     printf("INFO: Left-click to show your QR code\n");
@@ -209,9 +209,15 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
     }
 
     /* Initialize discovery */
-    if (discovery_init(ctx) == 0) {
-        discovery_announce(ctx);
-        discovery_browse(ctx);
+    if (no_discovery) {
+        printf("INFO: mDNS discovery disabled by --no-discovery\n");
+    } else if (discovery_init(ctx) == 0) {
+        if (discovery_announce(ctx) < 0) {
+            fprintf(stderr, "ERROR: mDNS announce failed (tray mode)\n");
+        }
+        if (discovery_browse(ctx) < 0) {
+            fprintf(stderr, "ERROR: mDNS browse failed (tray mode)\n");
+        }
     }
 
     /* Initialize tray UI */
@@ -230,7 +236,7 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv) {
 /*
  * Run in host mode (streaming server)
  */
-static int run_host_mode(rootstream_ctx_t *ctx) {
+static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery) {
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
@@ -251,14 +257,28 @@ static int run_host_mode(rootstream_ctx_t *ctx) {
                displays[i].height, displays[i].refresh_rate);
     }
 
-    /* Use first display (TODO: allow selection) */
-    if (rootstream_select_display(ctx, 0) < 0) {
+    if (display_idx < 0 || display_idx >= num_displays) {
+        fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n",
+                display_idx, num_displays - 1);
+        for (int i = 0; i < num_displays; i++) {
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
         return -1;
+    }
+
+    ctx->display = displays[display_idx];
+    for (int i = 0; i < num_displays; i++) {
+        if (i != display_idx && displays[i].fd >= 0) {
+            close(displays[i].fd);
+        }
     }
 
     printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
            ctx->display.name, ctx->display.width,
            ctx->display.height, ctx->display.refresh_rate);
+    printf("INFO: Target video bitrate: %u kbps\n", ctx->encoder.bitrate / 1000);
 
     /* Initialize components */
     if (rootstream_capture_init(ctx) < 0) {
@@ -282,8 +302,10 @@ static int run_host_mode(rootstream_ctx_t *ctx) {
     }
 
     /* Initialize discovery */
-    if (discovery_init(ctx) == 0) {
-        discovery_announce(ctx);
+    if (no_discovery) {
+        printf("INFO: mDNS discovery disabled by --no-discovery\n");
+    } else if (discovery_init(ctx) == 0) {
+        printf("INFO: Discovery initialized for host announcements\n");
     }
 
     printf("✓ All systems ready\n");
@@ -415,6 +437,7 @@ int main(int argc, char **argv) {
     }
 
     ctx.port = port;
+    ctx.encoder.bitrate = (uint32_t)bitrate * 1000;
 
     /* Handle --qr flag */
     if (show_qr) {
@@ -436,12 +459,26 @@ int main(int argc, char **argv) {
     /* Parse command */
     const char *command = (optind < argc) ? argv[optind] : NULL;
 
+    if (service_mode) {
+        ctx.is_service = true;
+        if (service_daemonize() < 0) {
+            fprintf(stderr, "ERROR: Failed to enter service mode\n");
+            ret = 1;
+            goto cleanup;
+        }
+    }
+
     if (command == NULL) {
-        /* Default: tray mode */
-        ret = run_tray_mode(&ctx, argc, argv);
+        if (service_mode) {
+            /* Default service behavior: host mode without GUI */
+            ret = run_host_mode(&ctx, display_idx, no_discovery);
+        } else {
+            /* Default: tray mode */
+            ret = run_tray_mode(&ctx, argc, argv, no_discovery);
+        }
     } else if (strcmp(command, "host") == 0) {
         /* Host mode */
-        ret = run_host_mode(&ctx);
+        ret = run_host_mode(&ctx, display_idx, no_discovery);
     } else if (strcmp(command, "connect") == 0) {
         /* Connect mode */
         if (optind + 1 >= argc) {
@@ -457,6 +494,7 @@ int main(int argc, char **argv) {
         ret = 1;
     }
 
+cleanup:
     /* Print statistics and cleanup */
     rootstream_print_stats(&ctx);
     rootstream_cleanup(&ctx);

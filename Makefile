@@ -123,35 +123,35 @@ install-icons:
 install-desktop:
 	@echo "🖥️  Installing desktop entry..."
 	@mkdir -p $(DESTDIR)$(DESKTOPDIR)
-	@cat > $(DESTDIR)$(DESKTOPDIR)/rootstream.desktop <<EOF
-[Desktop Entry]
-Name=RootStream
-Comment=Secure P2P Game Streaming
-Exec=rootstream
-Icon=rootstream
-Type=Application
-Categories=Network;AudioVideo;
-StartupNotify=false
-Terminal=false
-EOF
+	@cat > $(DESTDIR)$(DESKTOPDIR)/rootstream.desktop <<-EOF
+	[Desktop Entry]
+	Name=RootStream
+	Comment=Secure P2P Game Streaming
+	Exec=rootstream
+	Icon=rootstream
+	Type=Application
+	Categories=Network;AudioVideo;
+	StartupNotify=false
+	Terminal=false
+	EOF
 
 install-service:
 	@echo "⚙️  Installing systemd service..."
 	@mkdir -p $(SYSTEMDDIR)
-	@cat > $(SYSTEMDDIR)/rootstream.service <<EOF
-[Unit]
-Description=RootStream Secure P2P Streaming
-After=network.target graphical.target
+	@cat > $(SYSTEMDDIR)/rootstream.service <<-EOF
+	[Unit]
+	Description=RootStream Secure P2P Streaming
+	After=network.target graphical.target
 
-[Service]
-Type=simple
-ExecStart=$(BINDIR)/rootstream --service
-Restart=on-failure
-RestartSec=5s
+	[Service]
+	Type=simple
+	ExecStart=$(BINDIR)/rootstream --service
+	Restart=on-failure
+	RestartSec=5s
 
-[Install]
-WantedBy=default.target
-EOF
+	[Install]
+	WantedBy=default.target
+	EOF
 	@echo "✓ Service installed"
 	@echo "  Enable: systemctl --user enable rootstream.service"
 	@echo "  Start:  systemctl --user start rootstream.service"

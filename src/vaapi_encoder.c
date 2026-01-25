@@ -183,7 +183,9 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     ctx->encoder.type = ENCODER_VAAPI;
     ctx->encoder.hw_ctx = va;
     ctx->encoder.device_fd = drm_fd;
-    ctx->encoder.bitrate = 10000000;  /* 10 Mbps */
+    if (ctx->encoder.bitrate == 0) {
+        ctx->encoder.bitrate = 10000000;  /* 10 Mbps default */
+    }
     ctx->encoder.framerate = va->fps;
     ctx->encoder.low_latency = true;
 

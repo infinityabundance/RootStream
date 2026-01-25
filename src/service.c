@@ -144,12 +144,20 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
 
     /* Announce service */
-    discovery_announce(ctx);
+    if (ctx->discovery.running) {
+        if (discovery_announce(ctx) < 0) {
+            fprintf(stderr, "ERROR: Discovery announce failed (service startup)\n");
+        }
+    } else {
+        printf("INFO: Discovery disabled (no service announcement)\n");
+    }
 
     /* Allocate encoding buffer */
     size_t enc_buf_size = ctx->display.width * ctx->display.height;
     uint8_t *enc_buf = malloc(enc_buf_size);
     if (!enc_buf) {
+        fprintf(stderr, "ERROR: Failed to allocate encode buffer (%zu bytes)\n",
+                enc_buf_size);
         return -1;
     }
 

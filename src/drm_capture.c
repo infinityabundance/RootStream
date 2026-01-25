@@ -142,6 +142,49 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
 }
 
 /*
+ * Select a display by index and attach it to the context.
+ * This helper re-detects displays and retains the selected FD.
+ */
+int rootstream_select_display(rootstream_ctx_t *ctx, int display_index) {
+    if (!ctx) {
+        set_error("Display selection failed: NULL context");
+        return -1;
+    }
+
+    if (display_index < 0) {
+        set_error("Display selection failed: invalid index %d", display_index);
+        return -1;
+    }
+
+    display_info_t displays[MAX_DISPLAYS];
+    int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
+    if (num_displays < 0) {
+        return -1;
+    }
+
+    if (display_index >= num_displays) {
+        for (int i = 0; i < num_displays; i++) {
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
+        set_error("Display selection failed: index %d out of range (0-%d)",
+                  display_index, num_displays - 1);
+        return -1;
+    }
+
+    ctx->display = displays[display_index];
+
+    for (int i = 0; i < num_displays; i++) {
+        if (i != display_index && displays[i].fd >= 0) {
+            close(displays[i].fd);
+        }
+    }
+
+    return 0;
+}
+
+/*
  * Initialize capture for a specific display
  */
 int rootstream_capture_init(rootstream_ctx_t *ctx) {

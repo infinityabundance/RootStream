@@ -345,6 +345,7 @@ int service_run_client(rootstream_ctx_t *ctx);
 /* --- QR Code --- */
 int qrcode_generate(const char *data, const char *output_file);
 int qrcode_display(rootstream_ctx_t *ctx, const char *rootstream_code);
+void qrcode_print_terminal(const char *data);
 
 /* --- Configuration --- */
 const char* config_get_dir(void);
