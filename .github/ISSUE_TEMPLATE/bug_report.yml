@@ -1,0 +1,92 @@
+
+---
+
+### `.github/ISSUE_TEMPLATE/bug_report.yml`
+
+```yaml
+name: Bug report
+description: Report something that is broken or behaving unexpectedly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug in RootStream.
+
+        Please fill in as much detail as you can — especially your distro, GPU and drivers.
+
+  - type: input
+    id: version
+    attributes:
+      label: RootStream version or commit hash
+      description: e.g. v0.1.0 or `git rev-parse HEAD`
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and version
+      description: e.g. Arch (up to date), Ubuntu 24.04, Fedora 41
+      placeholder: Arch Linux (2026-01-25)
+    validations:
+      required: true
+
+  - type: input
+    id: kernel
+    attributes:
+      label: Kernel version
+      description: Output of `uname -r`
+      placeholder: 6.11.5-arch1-1
+    validations:
+      required: false
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      description: e.g. AMD RX 6800 (mesa 24.x), NVIDIA RTX 4070 (535.xx)
+      placeholder: AMD RX 6800 XT (mesa 24.x)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What happened, and what did you expect to happen?
+      placeholder: A clear and concise description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions so we can reproduce the issue.
+      placeholder: |
+        1. Run `rootstream ...`
+        2. Connect from client ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: Relevant logs or terminal output, if any.
+      render: bash
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this has not been reported yet.
+          required: true
+        - label: I am using a supported Linux distribution and GPU driver stack.
+          required: false
