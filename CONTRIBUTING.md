@@ -1,5 +1,7 @@
-Contributing to RootStream 🚀
+## Contributing to RootStream 🚀
+
 First off, thank you for considering contributing to RootStream! This project was born from frustration with broken streaming solutions on Linux, and every contribution helps make it better.
+
 ╔════════════════════════════════════════════════╗
 ║  All Contributions Welcome!                    ║
 ║  • Bug reports                                 ║
@@ -8,7 +10,8 @@ First off, thank you for considering contributing to RootStream! This project wa
 ║  • Code contributions                          ║
 ║  • Testing on different hardware               ║
 ╚════════════════════════════════════════════════╝
-Table of Contents
+
+## Table of Contents
 
 Code of Conduct
 Ways to Contribute
@@ -23,7 +26,7 @@ Communication
 Recognition
 
 
-Code of Conduct
+## Code of Conduct
 Our Pledge
 We're here to build great software and help each other. Be kind, be respectful, be constructive.
 Expected Behavior
@@ -34,7 +37,7 @@ Be constructive - Criticism should include suggestions
 Be patient - We're all volunteers with day jobs
 Give credit - Acknowledge others' contributions
 
-Unacceptable Behavior
+## Unacceptable Behavior
 
 Harassment, discrimination, or personal attacks
 Trolling, insulting comments, or unconstructive criticism
@@ -43,35 +46,35 @@ Any conduct inappropriate in a professional setting
 
 Violations? Contact the maintainers. We'll handle it privately and professionally.
 
-Ways to Contribute
+## Ways to Contribute
 🐛 Bug Reports
 Found a bug? Excellent! Please open an issue with:
 markdown**Description:**
 Clear description of the bug
 
-**Steps to Reproduce:**
+## **Steps to Reproduce:**
 1. Start RootStream with...
 2. Click on...
 3. See error
 
-**Expected Behavior:**
+## **Expected Behavior:**
 What should happen
 
 **Actual Behavior:**
 What actually happens
 
-**System Information:**
+## **System Information:**
 - OS: Arch Linux
 - Kernel: 6.7.1
 - GPU: Intel UHD 730
 - RootStream version: 1.0.0
 
-**Logs:**
+## **Logs:**
 ```
 [paste relevant logs here]
 ```
 
-**Screenshots:**
+## **Screenshots:**
 [if applicable]
 Pro tip: Run with verbose logging:
 bashrootstream --service --verbose 2>&1 | tee rootstream.log
@@ -83,7 +86,7 @@ Proposed solution - How would it work?
 Alternatives considered - What else did you think about?
 Willingness to implement - Can you code it yourself?
 
-📚 Documentation
+## 📚 Documentation
 Documentation is just as important as code! Ways to help:
 
 Fix typos or clarify confusing sections
@@ -92,7 +95,7 @@ Translate documentation (see i18n roadmap)
 Write tutorials or guides
 Improve code comments
 
-🧪 Testing
+## 🧪 Testing
 Don't code? You can still help!
 
 Test on different hardware (especially AMD/NVIDIA GPUs)
@@ -100,7 +103,9 @@ Try edge cases and report results
 Verify fixes in pull requests
 Test on different distros (Ubuntu, Fedora, etc.)
 
-🎨 Design
+---
+
+## 🎨 Design
 
 UI/UX improvements for tray app
 Icon design (we need better icons!)
@@ -108,7 +113,7 @@ QR code styling
 Marketing materials
 
 
-Getting Started
+## Getting Started
 Prerequisites
 Before you start coding, ensure you have:
 ```
