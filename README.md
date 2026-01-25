@@ -12,6 +12,8 @@
 ╚════════════════════════════════════════════════╝
 ```
 
+---
+
 ## What is RootStream?
 
 RootStream is a **lightweight, encrypted, peer-to-peer game streaming solution** designed specifically for Linux. Unlike traditional solutions, RootStream:
@@ -61,6 +63,8 @@ RootStream Stack (3 layers, kernel-stable):
 Latency: 14-24ms | Memory: 15MB | Breaks: Never
 ```
 
+---
+
 ## Features
 
 ### 🔐 Security First
@@ -97,60 +101,117 @@ Latency: 14-24ms | Memory: 15MB | Breaks: Never
 4. **Auto-connect on LAN**
    - mDNS discovery finds peers automatically
 
+---
+
 ## Installation
 
 ### Arch Linux
 
-#### From AUR (Recommended)
+#### Dependencies by GPU
+
+**Intel GPU:**
 ```bash
-yay -S rootstream
+sudo pacman -S base-devel libdrm libva gtk3 libsodium qrencode libpng \
+               mesa libva-intel-driver intel-media-driver
 ```
 
-#### From Source
+**AMD GPU:**
 ```bash
-# Install dependencies
-sudo pacman -S base-devel libdrm libva gtk3 libsodium qrencode libpng mesa
+sudo pacman -S base-devel libdrm libva gtk3 libsodium qrencode libpng \
+               mesa libva-mesa-driver
+```
 
-# Optional: mDNS auto-discovery
-sudo pacman -S avahi
+**NVIDIA GPU:**
+```bash
+sudo pacman -S base-devel libdrm libva gtk3 libsodium qrencode libpng \
+               nvidia nvidia-utils libva-vdpau-driver
+# Note: Mesa NOT needed for NVIDIA
+```
 
-# Build
+**Optional (all GPUs):**
+```bash
+sudo pacman -S avahi  # For mDNS auto-discovery
+```
+
+#### Build and Install
+```bash
 git clone https://github.com/yourusername/rootstream
 cd rootstream
 make
-
-# Install
 sudo make install
-
-# Enable auto-start (optional)
-systemctl --user enable rootstream.service
 ```
+
+#### Verify VA-API
+```bash
+# Install test utility
+sudo pacman -S libva-utils
+
+# Test VA-API (should show your GPU and supported profiles)
+vainfo
+```
+
+**Expected output:**
+- **Intel**: `iHD driver` or `i965 driver`
+- **AMD**: `Radeon` or `AMD Radeon`
+- **NVIDIA**: `VDPAU backend` or `nvidia`
+
+---
 
 ### Ubuntu/Debian
+
+**Intel GPU:**
 ```bash
-# Install dependencies
 sudo apt install build-essential libdrm-dev libva-dev libgtk-3-dev \
-                 libsodium-dev libqrencode-dev libpng-dev mesa-va-drivers
-
-# Optional
-sudo apt install avahi-daemon libavahi-client-dev
-
-# Build and install
-make && sudo make install
+                 libsodium-dev libqrencode-dev libpng-dev \
+                 mesa-va-drivers i965-va-driver intel-media-va-driver
 ```
+
+**AMD GPU:**
+```bash
+sudo apt install build-essential libdrm-dev libva-dev libgtk-3-dev \
+                 libsodium-dev libqrencode-dev libpng-dev \
+                 mesa-va-drivers
+```
+
+**NVIDIA GPU:**
+```bash
+sudo apt install build-essential libdrm-dev libva-dev libgtk-3-dev \
+                 libsodium-dev libqrencode-dev libpng-dev \
+                 nvidia-driver nvidia-vaapi-driver
+# On older Ubuntu: use vdpau-va-driver instead of nvidia-vaapi-driver
+```
+
+---
 
 ### Fedora
+
+**Intel GPU:**
 ```bash
-# Install dependencies
 sudo dnf install gcc make libdrm-devel libva-devel gtk3-devel \
-                libsodium-devel qrencode-devel libpng-devel mesa-va-drivers
-
-# Optional
-sudo dnf install avahi avahi-devel
-
-# Build and install
-make && sudo make install
+                 libsodium-devel qrencode-devel libpng-devel \
+                 mesa-va-drivers intel-media-driver
 ```
+
+**AMD GPU:**
+```bash
+sudo dnf install gcc make libdrm-devel libva-devel gtk3-devel \
+                 libsodium-devel qrencode-devel libpng-devel \
+                 mesa-va-drivers
+```
+
+**NVIDIA GPU:**
+```bash
+# Enable RPM Fusion repository first
+sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+sudo dnf install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+# Install NVIDIA drivers and VA-API support
+sudo dnf install gcc make libdrm-devel libva-devel gtk3-devel \
+                 libsodium-devel qrencode-devel libpng-devel \
+                 akmod-nvidia xorg-x11-drv-nvidia-cuda libva-vdpau-driver
+```
+
+---
 
 ## Quick Start
 
@@ -200,6 +261,8 @@ rootstream host
 # Run as background service
 rootstream --service
 ```
+
+---
 
 ## Architecture
 
@@ -285,6 +348,8 @@ sendto(sock, packet, len, 0, &peer_addr, addr_len);
 // Drop bad frames, maintain smooth playback
 ```
 
+---
+
 ## Performance
 
 ### Latency Breakdown (1080p60)
@@ -318,6 +383,8 @@ sendto(sock, packet, len, 0, &peer_addr, addr_len);
 - 1440p60: 15 Mbps (112 MB/min)
 - 4K60: 25 Mbps (187 MB/min)
 
+---
+
 ## Configuration
 
 ### Directory Structure
@@ -334,6 +401,8 @@ sendto(sock, packet, len, 0, &peer_addr, addr_len);
 - **Private key**: Mode 0600 (owner read/write only)
 - **Public key**: Mode 0644 (world readable - it's safe!)
 - **Backup**: Save `identity.key` securely to keep same identity across reinstalls
+
+---
 
 ## Troubleshooting
 
@@ -389,6 +458,8 @@ cat /sys/class/drm/card*/status
 3. RootStream code correct?
 4. Try: `rootstream host` and `rootstream connect <code>`
 
+---
+
 ## FAQ
 
 **Q: Is this secure?**  
@@ -415,6 +486,8 @@ A: Not yet. Linux-only currently. Cross-platform client planned.
 **Q: Is this better than Parsec?**  
 A: For Linux-to-Linux: Yes (lower latency, no account, encrypted). For other platforms: Use Parsec for now.
 
+---
+
 ## Contributing
 
 We welcome contributions! Areas needing help:
@@ -427,6 +500,8 @@ We welcome contributions! Areas needing help:
 6. **Mobile apps** - Android/iOS clients
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
 
 ## Roadmap
 
@@ -448,11 +523,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - [ ] HDR support
 - [ ] VR streaming
 
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE)
 
 Do whatever you want with this code. If it helps make Linux gaming better, that's enough.
+
+---
 
 ## Credits
 
