@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 static volatile bool service_running = true;
 

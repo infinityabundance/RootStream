@@ -275,6 +275,7 @@ rootstream host --latency-log --latency-interval 1000
 - Build headless without GTK3 by using `make HEADLESS=1` (tray UI disabled).
 - If libva is unavailable, build will use a stub encoder; install libva/libva-drm dev packages for hardware encoding.
 - libsodium is required for crypto; install libsodium dev packages if the build stops with a libsodium error.
+- For dependency-only build troubleshooting, use `make HEADLESS=1 NO_CRYPTO=1 NO_QR=1 NO_DRM=1` (networking/crypto/QR/DRM disabled).
 
 ---
 

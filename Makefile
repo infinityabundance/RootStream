@@ -21,13 +21,17 @@ endif
 # Libraries
 LIBS := -ldrm -lpthread -lqrencode -lpng -lm
 
-# libsodium (required for crypto)
+# libsodium (required for crypto unless NO_CRYPTO=1)
 SODIUM_FOUND := $(shell pkg-config --exists libsodium && echo yes)
-ifeq ($(SODIUM_FOUND),yes)
-    CFLAGS += $(shell pkg-config --cflags libsodium)
-    LIBS += $(shell pkg-config --libs libsodium)
+ifdef NO_CRYPTO
+    CFLAGS += -DROOTSTREAM_NO_CRYPTO
 else
-    $(error libsodium development files not found. Install libsodium (e.g., libsodium-dev) or run `make deps` for checks.)
+    ifeq ($(SODIUM_FOUND),yes)
+        CFLAGS += $(shell pkg-config --cflags libsodium)
+        LIBS += $(shell pkg-config --libs libsodium)
+    else
+        $(error libsodium development files not found. Install libsodium (e.g., libsodium-dev) or run `make deps` for checks. Alternatively set NO_CRYPTO=1 for a non-functional build.)
+    endif
 endif
 
 # VA-API (optional, required for encoding)
@@ -82,6 +86,25 @@ SRCS := src/main.c \
 ifdef HEADLESS
     SRCS := $(filter-out src/tray.c,$(SRCS))
     SRCS += src/tray_stub.c
+endif
+
+ifdef NO_CRYPTO
+    SRCS := $(filter-out src/crypto.c,$(SRCS))
+    SRCS := $(filter-out src/network.c,$(SRCS))
+    SRCS += src/crypto_stub.c
+    SRCS += src/network_stub.c
+endif
+
+ifdef NO_QR
+    SRCS := $(filter-out src/qrcode.c,$(SRCS))
+    SRCS += src/qrcode_stub.c
+    LIBS := $(filter-out -lqrencode -lpng,$(LIBS))
+endif
+
+ifdef NO_DRM
+    SRCS := $(filter-out src/drm_capture.c,$(SRCS))
+    SRCS += src/drm_capture_stub.c
+    LIBS := $(filter-out -ldrm,$(LIBS))
 endif
 
 ifneq ($(VA_FOUND),yes)
