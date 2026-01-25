@@ -70,6 +70,17 @@ what went wrong, why it happens, where to look, and how to fix it.
 **Fix**
 - If fingerprints do not match, stop and re-pair using the correct RootStream code.
 
+## Private key permissions warning
+
+**Symptoms**
+- Startup warns that private key permissions are too open.
+
+**Likely causes**
+- Config directory or key file permissions were changed manually.
+
+**Fix**
+- Run: `chmod 600 ~/.config/rootstream/identity.key`
+
 ## Build failures (dependencies)
 
 **Symptoms**

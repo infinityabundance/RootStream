@@ -188,6 +188,19 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
     }
     fclose(f);
 
+    struct stat key_stat;
+    if (stat(seckey_path, &key_stat) == 0) {
+        if ((key_stat.st_mode & 0077) != 0) {
+            fprintf(stderr, "WARNING: Private key permissions are too open\n");
+            fprintf(stderr, "FILE: %s\n", seckey_path);
+            fprintf(stderr, "RECOMMEND: chmod 600 %s\n", seckey_path);
+        }
+    } else {
+        fprintf(stderr, "WARNING: Unable to stat private key file\n");
+        fprintf(stderr, "FILE: %s\n", seckey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+    }
+
     /* Load public key */
     f = fopen(pubkey_path, "rb");
     if (!f) {
