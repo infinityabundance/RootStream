@@ -280,6 +280,22 @@ rootstream host --latency-log --latency-interval 1000
 **Troubleshooting**
 - See `TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
 
+**Identity Backup & Restore**
+RootStream stores identity keys in `~/.config/rootstream/`:
+- `identity.pub` (public key)
+- `identity.key` (private key, keep safe)
+- `identity.txt` (device name)
+
+Backup:
+```bash
+tar -czf rootstream-identity.tar.gz -C ~/.config/rootstream identity.pub identity.key identity.txt
+```
+
+Restore:
+```bash
+tar -xzf rootstream-identity.tar.gz -C ~/.config/rootstream
+```
+
 ---
 
 ## Architecture

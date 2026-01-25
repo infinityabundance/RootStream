@@ -135,6 +135,14 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     printf("╚════════════════════════════════════════════════╝\n");
     printf("\n");
     printf("Device Identity: %s\n", ctx->keypair.identity);
+    char fingerprint[32];
+    if (crypto_format_fingerprint(ctx->keypair.public_key,
+                                  CRYPTO_PUBLIC_KEY_BYTES,
+                                  fingerprint, sizeof(fingerprint)) == 0) {
+        printf("Device Fingerprint: %s\n", fingerprint);
+    } else {
+        fprintf(stderr, "WARNING: Unable to format device fingerprint\n");
+    }
     printf("Your RootStream Code:\n");
     printf("  %s\n", ctx->keypair.rootstream_code);
     printf("\n");

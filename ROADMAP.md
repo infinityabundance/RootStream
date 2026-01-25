@@ -33,8 +33,8 @@ Goal: **End-to-end Linux ↔ Linux streaming that is boringly reliable.**
 
 - [ ] Identity & pairing
   - [ ] Stable device identity key storage
-  - [ ] Human-readable peer fingerprint (for tray/CLI)
-  - [ ] Document backup/restore of identity keys
+  - [x] Human-readable peer fingerprint (for tray/CLI)
+  - [x] Document backup/restore of identity keys
 
 ### Docs
 

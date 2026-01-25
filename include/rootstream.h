@@ -280,6 +280,8 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname);
 int crypto_load_keypair(keypair_t *kp, const char *config_dir);
 int crypto_save_keypair(const keypair_t *kp, const char *config_dir);
 int crypto_verify_peer(const uint8_t *public_key, size_t key_len);
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
+                              char *output, size_t output_len);
 int crypto_create_session(crypto_session_t *session, 
                           const uint8_t *my_secret,
                           const uint8_t *peer_public);

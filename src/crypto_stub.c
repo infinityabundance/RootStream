@@ -52,6 +52,17 @@ int crypto_verify_peer(const uint8_t *public_key, size_t key_len) {
     return -1;
 }
 
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
+                              char *output, size_t output_len) {
+    (void)public_key;
+    (void)key_len;
+    if (output && output_len > 0) {
+        output[0] = '\0';
+    }
+    fprintf(stderr, "ERROR: crypto_format_fingerprint unavailable (NO_CRYPTO build)\n");
+    return -1;
+}
+
 int crypto_create_session(crypto_session_t *session,
                           const uint8_t *my_secret,
                           const uint8_t *peer_public) {

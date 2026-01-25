@@ -59,6 +59,17 @@ what went wrong, why it happens, where to look, and how to fix it.
 - Load the module: `sudo modprobe uinput`.
 - Add udev rules for persistent access to `/dev/uinput`.
 
+## Pairing or peer mismatch
+
+**Symptoms**
+- You connect to a peer but want to verify it is the correct device.
+
+**What to check**
+- Compare the **device fingerprint** shown on both devices.
+
+**Fix**
+- If fingerprints do not match, stop and re-pair using the correct RootStream code.
+
 ## Build failures (dependencies)
 
 **Symptoms**
