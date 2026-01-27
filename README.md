@@ -1,6 +1,16 @@
 # RootStream 🎮🔐
 
+<p align="center">
+  <a href="https://github.com/infinityabundance/RootStream">
+    <img src="assets/rootstream.png" alt="RootStream" />
+  </a>
+</p>
+
+
 **Secure Peer-to-Peer Game Streaming for Linux**
+
+
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-green.svg)]()
