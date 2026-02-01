@@ -19,6 +19,9 @@
 /* SDL2 headers */
 #include <SDL2/SDL.h>
 
+/* Linux input event types */
+#include <linux/input.h>
+
 typedef struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -27,6 +30,68 @@ typedef struct {
     int height;
     bool initialized;
 } sdl2_display_ctx_t;
+
+/* Forward SDL2 input event to host */
+static void forward_input_event(rootstream_ctx_t *ctx, uint8_t type,
+                                uint16_t code, int32_t value) {
+    if (!ctx || ctx->num_peers == 0) {
+        return;
+    }
+
+    /* Create input event packet */
+    input_event_pkt_t event_pkt = {
+        .type = type,
+        .code = code,
+        .value = value
+    };
+
+    /* Send to first connected peer (typically there's only one for client) */
+    for (int i = 0; i < ctx->num_peers; i++) {
+        peer_t *peer = &ctx->peers[i];
+        if (peer->state == PEER_CONNECTED) {
+            rootstream_net_send_encrypted(ctx, peer, PKT_INPUT,
+                                         &event_pkt, sizeof(event_pkt));
+            break;
+        }
+    }
+}
+
+/* Convert SDL2 keycode to Linux key code */
+static uint16_t sdl_to_linux_keycode(SDL_Keycode sdl_key) {
+    /* Common key mappings (simplified - full mapping would be much longer) */
+    switch (sdl_key) {
+        case SDLK_ESCAPE: return KEY_ESC;
+        case SDLK_RETURN: return KEY_ENTER;
+        case SDLK_BACKSPACE: return KEY_BACKSPACE;
+        case SDLK_TAB: return KEY_TAB;
+        case SDLK_SPACE: return KEY_SPACE;
+        case SDLK_LEFT: return KEY_LEFT;
+        case SDLK_RIGHT: return KEY_RIGHT;
+        case SDLK_UP: return KEY_UP;
+        case SDLK_DOWN: return KEY_DOWN;
+        case SDLK_LSHIFT: return KEY_LEFTSHIFT;
+        case SDLK_RSHIFT: return KEY_RIGHTSHIFT;
+        case SDLK_LCTRL: return KEY_LEFTCTRL;
+        case SDLK_RCTRL: return KEY_RIGHTCTRL;
+        case SDLK_LALT: return KEY_LEFTALT;
+        case SDLK_RALT: return KEY_RIGHTALT;
+
+        /* Letters (a-z) */
+        default:
+            if (sdl_key >= SDLK_a && sdl_key <= SDLK_z) {
+                return KEY_A + (sdl_key - SDLK_a);
+            }
+            /* Numbers (0-9) */
+            if (sdl_key >= SDLK_0 && sdl_key <= SDLK_9) {
+                return KEY_0 + (sdl_key - SDLK_0);
+            }
+            /* F keys (F1-F12) */
+            if (sdl_key >= SDLK_F1 && sdl_key <= SDLK_F12) {
+                return KEY_F1 + (sdl_key - SDLK_F1);
+            }
+            return 0;  /* Unknown key */
+    }
+}
 
 /*
  * Initialize SDL2 display
@@ -173,8 +238,6 @@ int display_present_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
  * proper input capture and forwarding to host.
  */
 int display_poll_events(rootstream_ctx_t *ctx) {
-    (void)ctx;  /* Unused in basic implementation */
-
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -183,17 +246,62 @@ int display_poll_events(rootstream_ctx_t *ctx) {
                 return 1;
 
             case SDL_KEYDOWN:
-                /* ESC key to quit */
+                /* ESC key to quit (don't forward) */
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     return 1;
                 }
-                /* TODO Phase 4: Forward input to host */
+                /* Forward key press to host */
+                {
+                    uint16_t linux_key = sdl_to_linux_keycode(event.key.keysym.sym);
+                    if (linux_key != 0) {
+                        forward_input_event(ctx, EV_KEY, linux_key, 1);  /* 1 = pressed */
+                    }
+                }
+                break;
+
+            case SDL_KEYUP:
+                /* Forward key release to host */
+                {
+                    uint16_t linux_key = sdl_to_linux_keycode(event.key.keysym.sym);
+                    if (linux_key != 0) {
+                        forward_input_event(ctx, EV_KEY, linux_key, 0);  /* 0 = released */
+                    }
+                }
                 break;
 
             case SDL_MOUSEMOTION:
+                /* Forward relative mouse movement */
+                forward_input_event(ctx, EV_REL, REL_X, event.motion.xrel);
+                forward_input_event(ctx, EV_REL, REL_Y, event.motion.yrel);
+                break;
+
             case SDL_MOUSEBUTTONDOWN:
+                /* Forward mouse button press */
+                {
+                    uint16_t btn = BTN_LEFT;
+                    if (event.button.button == SDL_BUTTON_LEFT) btn = BTN_LEFT;
+                    else if (event.button.button == SDL_BUTTON_RIGHT) btn = BTN_RIGHT;
+                    else if (event.button.button == SDL_BUTTON_MIDDLE) btn = BTN_MIDDLE;
+                    forward_input_event(ctx, EV_KEY, btn, 1);  /* 1 = pressed */
+                }
+                break;
+
             case SDL_MOUSEBUTTONUP:
-                /* TODO Phase 4: Forward mouse events */
+                /* Forward mouse button release */
+                {
+                    uint16_t btn = BTN_LEFT;
+                    if (event.button.button == SDL_BUTTON_LEFT) btn = BTN_LEFT;
+                    else if (event.button.button == SDL_BUTTON_RIGHT) btn = BTN_RIGHT;
+                    else if (event.button.button == SDL_BUTTON_MIDDLE) btn = BTN_MIDDLE;
+                    forward_input_event(ctx, EV_KEY, btn, 0);  /* 0 = released */
+                }
+                break;
+
+            case SDL_MOUSEWHEEL:
+                /* Forward mouse wheel */
+                if (event.wheel.y != 0) {
+                    forward_input_event(ctx, EV_REL, REL_WHEEL, event.wheel.y);
+                }
                 break;
 
             case SDL_WINDOWEVENT:

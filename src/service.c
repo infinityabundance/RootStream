@@ -298,12 +298,18 @@ int service_run_client(rootstream_ctx_t *ctx) {
     }
 
     printf("✓ Client initialized - ready to receive video and audio\n");
+    if (ctx->latency.enabled) {
+        printf("INFO: Client latency logging enabled (interval=%lums, samples=%zu)\n",
+               ctx->latency.report_interval_ms, ctx->latency.capacity);
+    }
 
     /* Allocate decode buffer */
     frame_buffer_t decoded_frame = {0};
 
     /* Main receive loop */
     while (service_running && ctx->running) {
+        uint64_t loop_start_us = get_timestamp_us();
+
         /* Poll SDL events (window close, keyboard, mouse) */
         if (display_poll_events(ctx) != 0) {
             printf("INFO: User requested quit\n");
@@ -311,16 +317,36 @@ int service_run_client(rootstream_ctx_t *ctx) {
         }
 
         /* Receive packets (16ms timeout for ~60fps responsiveness) */
+        uint64_t recv_start_us = get_timestamp_us();
         rootstream_net_recv(ctx, 16);
+        uint64_t recv_end_us = get_timestamp_us();
 
         /* Check if we received a video frame */
         if (ctx->current_frame.data && ctx->current_frame.size > 0) {
+            ctx->frames_received++;
+
             /* Decode frame */
+            uint64_t decode_start_us = get_timestamp_us();
             if (rootstream_decode_frame(ctx, ctx->current_frame.data,
                                        ctx->current_frame.size,
                                        &decoded_frame) == 0) {
+                uint64_t decode_end_us = get_timestamp_us();
+
                 /* Present to display */
+                uint64_t present_start_us = get_timestamp_us();
                 display_present_frame(ctx, &decoded_frame);
+                uint64_t present_end_us = get_timestamp_us();
+
+                /* Record latency stats */
+                if (ctx->latency.enabled) {
+                    latency_sample_t sample = {
+                        .capture_us = recv_end_us - recv_start_us,  /* Network receive time */
+                        .encode_us = decode_end_us - decode_start_us, /* Decode time */
+                        .send_us = present_end_us - present_start_us, /* Present time */
+                        .total_us = present_end_us - loop_start_us
+                    };
+                    latency_record(&ctx->latency, &sample);
+                }
             } else {
                 fprintf(stderr, "WARNING: Frame decode failed\n");
             }
