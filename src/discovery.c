@@ -21,6 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #ifdef HAVE_AVAHI
 #include <avahi-client/client.h>
@@ -70,6 +73,93 @@ static void entry_group_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 }
 
 /*
+ * Service resolver callback
+ * Called when a discovered service has been resolved
+ */
+static void resolve_callback(AvahiServiceResolver *r,
+                             AvahiIfIndex interface,
+                             AvahiProtocol protocol,
+                             AvahiResolverEvent event,
+                             const char *name,
+                             const char *type,
+                             const char *domain,
+                             const char *host_name,
+                             const AvahiAddress *address,
+                             uint16_t port,
+                             AvahiStringList *txt,
+                             AvahiLookupResultFlags flags,
+                             void* userdata) {
+    (void)interface;
+    (void)protocol;
+    (void)type;
+    (void)domain;
+    (void)host_name;
+    (void)flags;
+
+    avahi_ctx_t *avahi = (avahi_ctx_t*)userdata;
+    rootstream_ctx_t *ctx = avahi->ctx;
+
+    if (event == AVAHI_RESOLVER_FOUND) {
+        char addr_str[AVAHI_ADDRESS_STR_MAX];
+        avahi_address_snprint(addr_str, sizeof(addr_str), address);
+
+        printf("✓ Resolved RootStream host: %s at %s:%u\n",
+               name, addr_str, port);
+
+        /* Extract RootStream code from TXT records */
+        AvahiStringList *code_txt = avahi_string_list_find(txt, "code");
+        if (code_txt) {
+            char *key = NULL;
+            char *value = NULL;
+            size_t value_len = 0;
+
+            if (avahi_string_list_get_pair(code_txt, &key, &value, &value_len) >= 0) {
+                /* Add discovered peer to context */
+                if (ctx->num_peers < MAX_PEERS) {
+                    peer_t *peer = &ctx->peers[ctx->num_peers];
+
+                    /* Parse address */
+                    struct sockaddr_in *addr = (struct sockaddr_in*)&peer->addr;
+                    addr->sin_family = AF_INET;
+                    addr->sin_port = htons(port);
+                    if (avahi_address_parse(addr_str, AVAHI_PROTO_INET,
+                                           (AvahiAddress*)&addr->sin_addr) != NULL) {
+                        /* Store peer info */
+                        strncpy(peer->hostname, name, sizeof(peer->hostname) - 1);
+                        peer->hostname[sizeof(peer->hostname) - 1] = '\0';
+
+                        strncpy(peer->rootstream_code, value,
+                               sizeof(peer->rootstream_code) - 1);
+                        peer->rootstream_code[sizeof(peer->rootstream_code) - 1] = '\0';
+
+                        peer->state = PEER_DISCOVERED;
+                        peer->last_seen = get_timestamp_ms();
+
+                        ctx->num_peers++;
+
+                        printf("  → Added peer: %s (code: %.8s...)\n",
+                               peer->hostname, peer->rootstream_code);
+                    }
+                } else {
+                    fprintf(stderr, "WARNING: Max peers reached, cannot add %s\n", name);
+                }
+
+                avahi_free(key);
+                avahi_free(value);
+            }
+        } else {
+            fprintf(stderr, "WARNING: No RootStream code in TXT records for %s\n", name);
+        }
+    } else {
+        fprintf(stderr, "WARNING: Failed to resolve service %s: %s\n",
+                name, avahi_strerror(avahi_client_errno(avahi->client)));
+    }
+
+    /* Free the resolver */
+    avahi_service_resolver_free(r);
+}
+
+/*
  * Service browser callback
  * Called when services are found or lost
  */
@@ -86,20 +176,44 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
     (void)flags;
 
     avahi_ctx_t *avahi = (avahi_ctx_t*)userdata;
+    rootstream_ctx_t *ctx = avahi->ctx;
 
     switch (event) {
         case AVAHI_BROWSER_NEW:
             printf("INFO: Discovered RootStream service: %s\n", name);
 
-            /* Resolve service to get IP and TXT records */
-            /* TODO: avahi_service_resolver_new() with avahi->client */
-            /* Extract public key from TXT records */
-            /* Add peer if trusted */
+            /* Resolve service to get IP address and TXT records */
+            if (!avahi_service_resolver_new(avahi->client, interface, protocol,
+                                            name, type, domain,
+                                            AVAHI_PROTO_UNSPEC, 0,
+                                            resolve_callback, avahi)) {
+                fprintf(stderr, "ERROR: Failed to create resolver for %s: %s\n",
+                       name, avahi_strerror(avahi_client_errno(avahi->client)));
+            }
             break;
 
         case AVAHI_BROWSER_REMOVE:
             printf("INFO: RootStream service removed: %s\n", name);
-            /* TODO: Remove peer if connected */
+
+            /* Find and remove peer */
+            for (int i = 0; i < ctx->num_peers; i++) {
+                if (strcmp(ctx->peers[i].hostname, name) == 0) {
+                    /* Disconnect if connected */
+                    if (ctx->peers[i].state == PEER_CONNECTED) {
+                        printf("  → Disconnecting peer %s\n", name);
+                        ctx->peers[i].state = PEER_DISCONNECTED;
+                    }
+
+                    /* Remove from peer list by shifting remaining peers */
+                    for (int j = i; j < ctx->num_peers - 1; j++) {
+                        ctx->peers[j] = ctx->peers[j + 1];
+                    }
+                    ctx->num_peers--;
+
+                    printf("  → Removed peer: %s\n", name);
+                    break;
+                }
+            }
             break;
 
         case AVAHI_BROWSER_FAILURE:
