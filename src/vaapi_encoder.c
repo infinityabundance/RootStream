@@ -34,8 +34,14 @@ typedef struct {
 /* Forward declare from drm_capture.c */
 extern const char* rootstream_get_error(void);
 
+/* Forward declarations for NVENC */
+extern int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx);
+extern int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                                         uint8_t *out, size_t *out_size);
+extern void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
+
 /*
- * Initialize VA-API encoder
+ * Initialize encoder (routes to VA-API or NVENC)
  */
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     if (!ctx) {
@@ -43,8 +49,13 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
         return -1;
     }
 
+    /* Route to NVENC if requested */
+    if (type == ENCODER_NVENC) {
+        return rootstream_encoder_init_nvenc(ctx);
+    }
+
     if (type != ENCODER_VAAPI) {
-        fprintf(stderr, "Only VA-API supported currently\n");
+        fprintf(stderr, "Unsupported encoder type: %d\n", type);
         return -1;
     }
 
@@ -196,13 +207,18 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
 }
 
 /*
- * Encode a frame using VA-API
+ * Encode a frame (routes to VA-API or NVENC)
  */
-int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in, 
+int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
                            uint8_t *out, size_t *out_size) {
     if (!ctx || !in || !out || !out_size) {
         fprintf(stderr, "Invalid arguments\n");
         return -1;
+    }
+
+    /* Route to NVENC if active */
+    if (ctx->encoder.type == ENCODER_NVENC) {
+        return rootstream_encode_frame_nvenc(ctx, in, out, out_size);
     }
 
     vaapi_ctx_t *va = (vaapi_ctx_t*)ctx->encoder.hw_ctx;
@@ -281,6 +297,12 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx) {
     if (!ctx || !ctx->encoder.hw_ctx)
         return;
+
+    /* Route to NVENC cleanup if active */
+    if (ctx->encoder.type == ENCODER_NVENC) {
+        rootstream_encoder_cleanup_nvenc(ctx);
+        return;
+    }
 
     vaapi_ctx_t *va = (vaapi_ctx_t*)ctx->encoder.hw_ctx;
 

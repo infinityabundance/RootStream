@@ -340,6 +340,13 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
                            uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
+/* NVENC encoder (Phase 5) */
+int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx);
+int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                                  uint8_t *out, size_t *out_size);
+void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
+bool rootstream_encoder_nvenc_available(void);
+
 /* --- Decoding (Phase 1) --- */
 int rootstream_decoder_init(rootstream_ctx_t *ctx);
 int rootstream_decode_frame(rootstream_ctx_t *ctx,

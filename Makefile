@@ -89,6 +89,38 @@ else
     $(warning ALSA not found - audio will not work. Install libasound2-dev or alsa-lib-devel)
 endif
 
+# NVENC (optional, for NVIDIA GPU encoding)
+# Check both CUDA and NVENC SDK headers
+CUDA_FOUND := $(shell pkg-config --exists cuda && echo yes)
+NVENC_HEADER := $(shell if [ -f "/usr/include/nvEncodeAPI.h" ] || \
+                        [ -f "/usr/local/cuda/include/nvEncodeAPI.h" ] || \
+                        [ -f "/opt/cuda/include/nvEncodeAPI.h" ]; then echo yes; fi)
+
+ifeq ($(CUDA_FOUND),yes)
+    ifeq ($(NVENC_HEADER),yes)
+        CFLAGS += $(shell pkg-config --cflags cuda) -DHAVE_NVENC
+        LIBS += $(shell pkg-config --libs cuda) -ldl
+        $(info NVENC support enabled)
+    else
+        $(info CUDA found but NVENC headers missing. Install nvidia-video-codec-sdk for NVENC support.)
+    endif
+else
+    # Try manual detection
+    ifneq ($(wildcard /usr/local/cuda/include/cuda.h),)
+        ifeq ($(NVENC_HEADER),yes)
+            CFLAGS += -I/usr/local/cuda/include -DHAVE_NVENC
+            LIBS += -L/usr/local/cuda/lib64 -lcuda -ldl
+            $(info NVENC support enabled (manual detection))
+        endif
+    else ifneq ($(wildcard /opt/cuda/include/cuda.h),)
+        ifeq ($(NVENC_HEADER),yes)
+            CFLAGS += -I/opt/cuda/include -DHAVE_NVENC
+            LIBS += -L/opt/cuda/lib64 -lcuda -ldl
+            $(info NVENC support enabled (manual detection))
+        endif
+    endif
+endif
+
 # ============================================================================
 # Targets
 # ============================================================================
@@ -101,6 +133,7 @@ SRCS := src/main.c \
         src/drm_capture.c \
         src/vaapi_encoder.c \
         src/vaapi_decoder.c \
+        src/nvenc_encoder.c \
         src/display_sdl2.c \
         src/opus_codec.c \
         src/audio_capture.c \
