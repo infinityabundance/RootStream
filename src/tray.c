@@ -307,6 +307,131 @@ static void on_view_peers(GtkMenuItem *item, gpointer user_data) {
 }
 
 /*
+ * Show settings dialog
+ */
+static void on_settings(GtkMenuItem *item, gpointer user_data) {
+    (void)item;
+    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
+
+    /* Create settings dialog */
+    GtkWidget *dialog = gtk_dialog_new_with_buttons(
+        "RootStream Settings",
+        NULL,
+        GTK_DIALOG_MODAL,
+        "_Cancel", GTK_RESPONSE_CANCEL,
+        "_Save", GTK_RESPONSE_ACCEPT,
+        NULL
+    );
+
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 400);
+
+    /* Create notebook for tabbed interface */
+    GtkWidget *notebook = gtk_notebook_new();
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_box_pack_start(GTK_BOX(content), notebook, TRUE, TRUE, 0);
+
+    /* --- Video Tab --- */
+    GtkWidget *video_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_set_border_width(GTK_CONTAINER(video_box), 15);
+
+    /* Video bitrate */
+    GtkWidget *bitrate_label = gtk_label_new("Bitrate (Mbps):");
+    GtkWidget *bitrate_spin = gtk_spin_button_new_with_range(1, 50, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(bitrate_spin),
+                              ctx->settings.video_bitrate / 1000000.0);
+    gtk_box_pack_start(GTK_BOX(video_box), bitrate_label, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(video_box), bitrate_spin, FALSE, FALSE, 0);
+
+    /* Video framerate */
+    GtkWidget *fps_label = gtk_label_new("Framerate (FPS):");
+    GtkWidget *fps_spin = gtk_spin_button_new_with_range(30, 144, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fps_spin),
+                              ctx->settings.video_framerate);
+    gtk_box_pack_start(GTK_BOX(video_box), fps_label, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(video_box), fps_spin, FALSE, FALSE, 0);
+
+    /* Video codec (label only for now, h264/h265 selection would go here) */
+    char codec_text[64];
+    snprintf(codec_text, sizeof(codec_text), "Codec: %s", ctx->settings.video_codec);
+    GtkWidget *codec_label = gtk_label_new(codec_text);
+    gtk_box_pack_start(GTK_BOX(video_box), codec_label, FALSE, FALSE, 0);
+
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), video_box,
+                            gtk_label_new("Video"));
+
+    /* --- Audio Tab --- */
+    GtkWidget *audio_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_set_border_width(GTK_CONTAINER(audio_box), 15);
+
+    /* Audio enabled */
+    GtkWidget *audio_enabled = gtk_check_button_new_with_label("Enable Audio");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(audio_enabled),
+                                 ctx->settings.audio_enabled);
+    gtk_box_pack_start(GTK_BOX(audio_box), audio_enabled, FALSE, FALSE, 0);
+
+    /* Audio bitrate */
+    GtkWidget *audio_bitrate_label = gtk_label_new("Audio Bitrate (kbps):");
+    GtkWidget *audio_bitrate_spin = gtk_spin_button_new_with_range(32, 320, 8);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(audio_bitrate_spin),
+                              ctx->settings.audio_bitrate / 1000.0);
+    gtk_box_pack_start(GTK_BOX(audio_box), audio_bitrate_label, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(audio_box), audio_bitrate_spin, FALSE, FALSE, 0);
+
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), audio_box,
+                            gtk_label_new("Audio"));
+
+    /* --- Network Tab --- */
+    GtkWidget *network_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_set_border_width(GTK_CONTAINER(network_box), 15);
+
+    /* Network port */
+    GtkWidget *port_label = gtk_label_new("UDP Port:");
+    GtkWidget *port_spin = gtk_spin_button_new_with_range(1024, 65535, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(port_spin),
+                              ctx->settings.network_port);
+    gtk_box_pack_start(GTK_BOX(network_box), port_label, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(network_box), port_spin, FALSE, FALSE, 0);
+
+    /* Discovery enabled */
+    GtkWidget *discovery_enabled = gtk_check_button_new_with_label("Enable mDNS Discovery");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(discovery_enabled),
+                                 ctx->settings.discovery_enabled);
+    gtk_box_pack_start(GTK_BOX(network_box), discovery_enabled, FALSE, FALSE, 0);
+
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), network_box,
+                            gtk_label_new("Network"));
+
+    /* Show all widgets */
+    gtk_widget_show_all(dialog);
+
+    /* Run dialog */
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+
+    if (response == GTK_RESPONSE_ACCEPT) {
+        /* Save settings */
+        ctx->settings.video_bitrate = (uint32_t)(
+            gtk_spin_button_get_value(GTK_SPIN_BUTTON(bitrate_spin)) * 1000000);
+        ctx->settings.video_framerate = (uint32_t)
+            gtk_spin_button_get_value(GTK_SPIN_BUTTON(fps_spin));
+        ctx->settings.audio_enabled =
+            gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(audio_enabled));
+        ctx->settings.audio_bitrate = (uint32_t)(
+            gtk_spin_button_get_value(GTK_SPIN_BUTTON(audio_bitrate_spin)) * 1000);
+        ctx->settings.network_port = (uint16_t)
+            gtk_spin_button_get_value(GTK_SPIN_BUTTON(port_spin));
+        ctx->settings.discovery_enabled =
+            gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(discovery_enabled));
+
+        /* Save to config file */
+        config_save(ctx);
+
+        printf("✓ Settings saved\n");
+    }
+
+    gtk_widget_destroy(dialog);
+}
+
+/*
  * Show about dialog
  */
 static void on_about(GtkMenuItem *item, gpointer user_data) {
@@ -369,6 +494,11 @@ static void create_menu(rootstream_ctx_t *ctx, GtkStatusIcon *tray_icon) {
     /* Separator */
     GtkWidget *sep1 = gtk_separator_menu_item_new();
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep1);
+
+    /* Settings */
+    GtkWidget *settings_item = gtk_menu_item_new_with_label("Settings...");
+    g_signal_connect(settings_item, "activate", G_CALLBACK(on_settings), ctx);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), settings_item);
 
     /* About */
     GtkWidget *about_item = gtk_menu_item_new_with_label("About");
