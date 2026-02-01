@@ -294,7 +294,8 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
         return -1;
     }
 
-    if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
+    /* Use H.264 by default (host mode doesn't use settings file) */
+    if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
         fprintf(stderr, "ERROR: Encoder init failed\n");
         return -1;
     }

@@ -90,34 +90,57 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
 
     printf("✓ VA-API decoder %d.%d initialized\n", major, minor);
 
-    /* Check for H.264 decoding support */
+    /* Check for H.264 and H.265 decoding support */
     int num_profiles = vaMaxNumProfiles(dec->display);
-    VAProfile *profiles = malloc(num_profiles * sizeof(VAProfile));
+    VAProfile *profiles_list = malloc(num_profiles * sizeof(VAProfile));
     int actual_num_profiles;
 
-    vaQueryConfigProfiles(dec->display, profiles, &actual_num_profiles);
+    vaQueryConfigProfiles(dec->display, profiles_list, &actual_num_profiles);
 
     bool h264_decode_supported = false;
+    bool h265_decode_supported = false;
     VAProfile selected_profile = VAProfileH264Main;
 
     for (int i = 0; i < actual_num_profiles; i++) {
-        if (profiles[i] == VAProfileH264High ||
-            profiles[i] == VAProfileH264Main) {
+        if (profiles_list[i] == VAProfileH264High ||
+            profiles_list[i] == VAProfileH264Main) {
             h264_decode_supported = true;
-            selected_profile = profiles[i];
-            break;
+            selected_profile = profiles_list[i];
+        }
+        if (profiles_list[i] == VAProfileHEVCMain) {
+            h265_decode_supported = true;
+            /* Will switch to HEVC profile if needed */
         }
     }
 
-    free(profiles);
+    free(profiles_list);
 
-    if (!h264_decode_supported) {
-        fprintf(stderr, "ERROR: H.264 decode not supported by GPU\n");
-        vaTerminate(dec->display);
-        free(dec);
-        close(drm_fd);
-        return -1;
+    /* Use H.264 as default for now (codec negotiation in future) */
+    codec_type_t codec = ctx->encoder.codec;  /* Match encoder codec */
+    const char *codec_name;
+
+    if (codec == CODEC_H265) {
+        if (!h265_decode_supported) {
+            fprintf(stderr, "ERROR: H.265 decode not supported by GPU\n");
+            vaTerminate(dec->display);
+            free(dec);
+            close(drm_fd);
+            return -1;
+        }
+        selected_profile = VAProfileHEVCMain;
+        codec_name = "H.265/HEVC";
+    } else {
+        if (!h264_decode_supported) {
+            fprintf(stderr, "ERROR: H.264 decode not supported by GPU\n");
+            vaTerminate(dec->display);
+            free(dec);
+            close(drm_fd);
+            return -1;
+        }
+        codec_name = "H.264";
     }
+
+    printf("INFO: Using %s decoder\n", codec_name);
 
     printf("✓ H.264 decode profile supported\n");
 

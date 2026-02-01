@@ -107,15 +107,21 @@ typedef struct {
 
 typedef enum {
     ENCODER_VAAPI,        /* VA-API (Intel/AMD) */
-    ENCODER_NVENC,        /* NVENC (NVIDIA) - TODO */
+    ENCODER_NVENC,        /* NVENC (NVIDIA) */
     ENCODER_SOFTWARE      /* CPU encoding fallback - TODO */
 } encoder_type_t;
 
+typedef enum {
+    CODEC_H264,           /* H.264/AVC */
+    CODEC_H265            /* H.265/HEVC */
+} codec_type_t;
+
 typedef struct {
     encoder_type_t type;       /* Encoder type */
+    codec_type_t codec;        /* Video codec */
     int device_fd;             /* Encoder device file descriptor */
     void *hw_ctx;              /* Hardware context (opaque) */
-    
+
     /* Encoding parameters */
     uint32_t bitrate;          /* Target bitrate (bits/sec) */
     uint32_t framerate;        /* Target framerate (fps) */
@@ -335,13 +341,13 @@ int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
 void rootstream_capture_cleanup(rootstream_ctx_t *ctx);
 
 /* --- Encoding (existing, polished) --- */
-int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type);
+int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec);
 int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
                            uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
 /* NVENC encoder (Phase 5) */
-int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx);
+int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec);
 int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
                                   uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);

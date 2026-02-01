@@ -35,7 +35,7 @@ typedef struct {
 extern const char* rootstream_get_error(void);
 
 /* Forward declarations for NVENC */
-extern int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx);
+extern int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec);
 extern int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
                                          uint8_t *out, size_t *out_size);
 extern void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
@@ -43,7 +43,7 @@ extern void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
 /*
  * Initialize encoder (routes to VA-API or NVENC)
  */
-int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
+int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec) {
     if (!ctx) {
         fprintf(stderr, "Invalid context\n");
         return -1;
@@ -51,7 +51,7 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
 
     /* Route to NVENC if requested */
     if (type == ENCODER_NVENC) {
-        return rootstream_encoder_init_nvenc(ctx);
+        return rootstream_encoder_init_nvenc(ctx, codec);
     }
 
     if (type != ENCODER_VAAPI) {
@@ -94,28 +94,47 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
 
     printf("✓ VA-API %d.%d initialized\n", major, minor);
 
-    /* Check for H.264 encoding support */
+    /* Check for codec support */
     int num_profiles = vaMaxNumProfiles(va->display);
-    VAProfile *profiles = malloc(num_profiles * sizeof(VAProfile));
+    VAProfile *profiles_list = malloc(num_profiles * sizeof(VAProfile));
     int actual_num_profiles;
-    
-    vaQueryConfigProfiles(va->display, profiles, &actual_num_profiles);
-    
-    bool h264_supported = false;
-    for (int i = 0; i < actual_num_profiles; i++) {
-        if (profiles[i] == VAProfileH264Main || 
-            profiles[i] == VAProfileH264High) {
-            h264_supported = true;
-            break;
+
+    vaQueryConfigProfiles(va->display, profiles_list, &actual_num_profiles);
+
+    bool codec_supported = false;
+    VAProfile selected_profile;
+    const char *codec_name;
+
+    if (codec == CODEC_H265) {
+        /* Check for H.265/HEVC support */
+        for (int i = 0; i < actual_num_profiles; i++) {
+            if (profiles_list[i] == VAProfileHEVCMain) {
+                codec_supported = true;
+                selected_profile = VAProfileHEVCMain;
+                codec_name = "H.265/HEVC";
+                break;
+            }
+        }
+    } else {
+        /* Check for H.264 support */
+        for (int i = 0; i < actual_num_profiles; i++) {
+            if (profiles_list[i] == VAProfileH264Main ||
+                profiles_list[i] == VAProfileH264High) {
+                codec_supported = true;
+                selected_profile = VAProfileH264High;
+                codec_name = "H.264";
+                break;
+            }
         }
     }
-    free(profiles);
+    free(profiles_list);
 
-    if (!h264_supported) {
+    if (!codec_supported) {
         vaTerminate(va->display);
         free(va);
         close(drm_fd);
-        fprintf(stderr, "H.264 encoding not supported\n");
+        fprintf(stderr, "ERROR: %s encoding not supported\n",
+                codec == CODEC_H265 ? "H.265" : "H.264");
         return -1;
     }
 
@@ -124,7 +143,7 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     attrib.type = VAConfigAttribRateControl;
     attrib.value = VA_RC_CBR;  /* Constant bitrate */
 
-    status = vaCreateConfig(va->display, VAProfileH264High, 
+    status = vaCreateConfig(va->display, selected_profile,
                            VAEntrypointEncSlice,
                            &attrib, 1, &va->config_id);
     if (status != VA_STATUS_SUCCESS) {
@@ -192,6 +211,7 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     }
 
     ctx->encoder.type = ENCODER_VAAPI;
+    ctx->encoder.codec = codec;
     ctx->encoder.hw_ctx = va;
     ctx->encoder.device_fd = drm_fd;
     if (ctx->encoder.bitrate == 0) {
@@ -200,8 +220,8 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     ctx->encoder.framerate = va->fps;
     ctx->encoder.low_latency = true;
 
-    printf("✓ VA-API encoder ready: %dx%d @ %d fps, %d kbps\n",
-           va->width, va->height, va->fps, ctx->encoder.bitrate / 1000);
+    printf("✓ VA-API %s encoder ready: %dx%d @ %d fps, %d kbps\n",
+           codec_name, va->width, va->height, va->fps, ctx->encoder.bitrate / 1000);
 
     return 0;
 }
