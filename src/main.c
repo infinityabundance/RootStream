@@ -46,6 +46,7 @@ static void print_usage(const char *progname) {
     printf("  connect <code>      Connect to peer using RootStream code\n");
     printf("  host                Run in host mode (streaming server)\n");
     printf("  --qr                Display your QR code and exit\n");
+    printf("  --list-displays     List available displays and exit\n");
     printf("  --service           Run as background service (no GUI)\n");
     printf("  --version           Show version and exit\n");
     printf("  --help              Show this help\n");
@@ -54,6 +55,7 @@ static void print_usage(const char *progname) {
     printf("  --port PORT         UDP port to use (default: 9876)\n");
     printf("  --display N         Select display index (default: 0)\n");
     printf("  --bitrate KBPS      Video bitrate in kbps (default: 10000)\n");
+    printf("  --record FILE       Record stream to file (host mode only)\n");
     printf("  --no-discovery      Disable mDNS auto-discovery\n");
     printf("  --latency-log       Enable latency percentile logging\n");
     printf("  --latency-interval MS  Latency log interval in ms (default: 1000)\n");
@@ -244,7 +246,7 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
 /*
  * Run in host mode (streaming server)
  */
-static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery) {
+static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery, const char *record_file) {
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
@@ -317,11 +319,26 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
         printf("INFO: Discovery initialized for host announcements\n");
     }
 
+    /* Initialize recording if requested */
+    if (record_file) {
+        if (recording_init(ctx, record_file) < 0) {
+            fprintf(stderr, "ERROR: Recording init failed\n");
+            return -1;
+        }
+    }
+
     printf("✓ All systems ready\n");
     printf("→ Waiting for connections...\n\n");
 
     /* Run host service */
-    return service_run_host(ctx);
+    int result = service_run_host(ctx);
+
+    /* Cleanup recording */
+    if (record_file && ctx->recording.active) {
+        recording_cleanup(ctx);
+    }
+
+    return result;
 }
 
 /*
@@ -360,10 +377,12 @@ int main(int argc, char **argv) {
         {"help",        no_argument,       0, 'h'},
         {"version",     no_argument,       0, 'v'},
         {"qr",          no_argument,       0, 'q'},
+        {"list-displays", no_argument,     0, 'L'},
         {"service",     no_argument,       0, 's'},
         {"port",        required_argument, 0, 'p'},
         {"display",     required_argument, 0, 'd'},
         {"bitrate",     required_argument, 0, 'b'},
+        {"record",      required_argument, 0, 'r'},
         {"no-discovery",no_argument,       0, 'n'},
         {"latency-log", no_argument,       0, 'l'},
         {"latency-interval", required_argument, 0, 'i'},
@@ -371,16 +390,18 @@ int main(int argc, char **argv) {
     };
 
     bool show_qr = false;
+    bool list_displays = false;
     bool service_mode = false;
     bool no_discovery = false;
     uint16_t port = 9876;
     int display_idx = 0;
     int bitrate = 10000;
+    const char *record_file = NULL;
     bool latency_log = false;
     uint64_t latency_interval_ms = 1000;
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hvqsp:d:b:nli:", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:nli:", long_options, NULL)) != -1) {
         switch (opt) {
             case 'h':
                 print_usage(argv[0]);
@@ -390,6 +411,9 @@ int main(int argc, char **argv) {
                 return 0;
             case 'q':
                 show_qr = true;
+                break;
+            case 'L':
+                list_displays = true;
                 break;
             case 's':
                 service_mode = true;
@@ -410,6 +434,9 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "ERROR: Bitrate too low: %d\n", bitrate);
                     return 1;
                 }
+                break;
+            case 'r':
+                record_file = optarg;
                 break;
             case 'n':
                 no_discovery = true;
@@ -448,19 +475,51 @@ int main(int argc, char **argv) {
     ctx.port = port;
     ctx.encoder.bitrate = (uint32_t)bitrate * 1000;
 
+    /* Handle --list-displays flag */
+    if (list_displays) {
+        display_info_t displays[MAX_DISPLAYS];
+        int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
+
+        if (num_displays < 0) {
+            fprintf(stderr, "ERROR: %s\n", rootstream_get_error());
+            rootstream_cleanup(&ctx);
+            return 1;
+        }
+
+        printf("Available displays:\n\n");
+        for (int i = 0; i < num_displays; i++) {
+            printf("  [%d] %s\n", i, displays[i].name);
+            printf("      Resolution: %dx%d @ %d Hz\n",
+                   displays[i].width, displays[i].height,
+                   displays[i].refresh_rate);
+            printf("\n");
+
+            /* Close FDs */
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
+
+        printf("Use --display N to select a specific display\n");
+        printf("Example: rootstream host --display 1\n");
+
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
+
     /* Handle --qr flag */
     if (show_qr) {
         printf("Scan this QR code to connect:\n");
         qrcode_print_terminal(ctx.keypair.rootstream_code);
-        
+
         /* Also save as PNG */
         char qr_path[256];
-        snprintf(qr_path, sizeof(qr_path), "%s/rootstream-qr.png", 
+        snprintf(qr_path, sizeof(qr_path), "%s/rootstream-qr.png",
                 config_get_dir());
         if (qrcode_generate(ctx.keypair.rootstream_code, qr_path) == 0) {
             printf("QR code saved to: %s\n", qr_path);
         }
-        
+
         rootstream_cleanup(&ctx);
         return 0;
     }
@@ -480,14 +539,14 @@ int main(int argc, char **argv) {
     if (command == NULL) {
         if (service_mode) {
             /* Default service behavior: host mode without GUI */
-            ret = run_host_mode(&ctx, display_idx, no_discovery);
+            ret = run_host_mode(&ctx, display_idx, no_discovery, record_file);
         } else {
             /* Default: tray mode */
             ret = run_tray_mode(&ctx, argc, argv, no_discovery);
         }
     } else if (strcmp(command, "host") == 0) {
         /* Host mode */
-        ret = run_host_mode(&ctx, display_idx, no_discovery);
+        ret = run_host_mode(&ctx, display_idx, no_discovery, record_file);
     } else if (strcmp(command, "connect") == 0) {
         /* Connect mode */
         if (optind + 1 >= argc) {

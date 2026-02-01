@@ -127,6 +127,7 @@ endif
 
 # Binary name
 TARGET := rootstream
+PLAYER := tools/rstr-player
 
 # Source files
 SRCS := src/main.c \
@@ -146,7 +147,8 @@ SRCS := src/main.c \
         src/service.c \
         src/qrcode.c \
         src/config.c \
-        src/latency.c
+        src/latency.c \
+        src/recording.c
 
 ifdef HEADLESS
     SRCS := $(filter-out src/tray.c,$(SRCS))
@@ -195,16 +197,23 @@ SYSTEMDDIR := $(HOME)/.config/systemd/user
 # Build Rules
 # ============================================================================
 
-.PHONY: all clean install uninstall deps check help
+.PHONY: all clean install uninstall deps check help player
 
 # Default target
-all: $(TARGET)
+all: $(TARGET) $(PLAYER)
 
 # Link
 $(TARGET): $(OBJS)
 	@echo "🔗 Linking $@..."
 	@$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS) $(LIBS)
 	@echo "✓ Build complete: $(TARGET)"
+
+# Build rstr-player tool
+# Note: Needs many modules for dependencies - simplified player would be better long-term
+$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c
+	@echo "🔗 Building rstr-player..."
+	@$(CC) $(CFLAGS) $^ -o $(PLAYER) $(LDFLAGS) $(LIBS)
+	@echo "✓ Build complete: $(PLAYER)"
 
 # Compile with dependency generation
 %.o: %.c
@@ -218,10 +227,12 @@ $(TARGET): $(OBJS)
 # Installation
 # ============================================================================
 
-install: $(TARGET) install-icons install-desktop install-service
+install: $(TARGET) $(PLAYER) install-icons install-desktop install-service
 	@echo "📦 Installing binary..."
 	@install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
+	@install -Dm755 $(PLAYER) $(DESTDIR)$(BINDIR)/rstr-player
 	@echo "✓ Installed to $(BINDIR)/$(TARGET)"
+	@echo "✓ Installed to $(BINDIR)/rstr-player"
 	@echo ""
 	@echo "╔════════════════════════════════════════════════╗"
 	@echo "║  Installation Complete!                        ║"
@@ -302,7 +313,7 @@ uninstall:
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
-	@rm -f $(OBJS) $(DEPS) $(TARGET)
+	@rm -f $(OBJS) $(DEPS) $(TARGET) $(PLAYER)
 	@rm -f src/*.o src/*.d
 	@echo "✓ Clean complete"
 

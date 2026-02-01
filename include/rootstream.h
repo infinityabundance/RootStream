@@ -260,6 +260,19 @@ typedef struct {
 } settings_t;
 
 /* ============================================================================
+ * RECORDING - Stream recording to file
+ * ============================================================================ */
+
+typedef struct {
+    int fd;                    /* Recording file descriptor */
+    bool active;               /* Recording in progress */
+    uint64_t start_time_us;    /* Recording start timestamp */
+    uint64_t frame_count;      /* Frames written */
+    uint64_t bytes_written;    /* Total bytes written */
+    char filename[256];        /* Output filename */
+} recording_ctx_t;
+
+/* ============================================================================
  * MAIN CONTEXT - Application state
  * ============================================================================ */
 
@@ -293,6 +306,9 @@ typedef struct {
 
     /* UI */
     tray_ctx_t tray;
+
+    /* Recording */
+    recording_ctx_t recording;
 
     /* State */
     bool running;              /* Main loop running? */
@@ -388,6 +404,12 @@ int audio_playback_init(rootstream_ctx_t *ctx);
 int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
                         size_t num_samples);
 void audio_playback_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Recording (Phase 7) --- */
+int recording_init(rootstream_ctx_t *ctx, const char *filename);
+int recording_write_frame(rootstream_ctx_t *ctx, const uint8_t *data,
+                          size_t size, bool is_keyframe);
+void recording_cleanup(rootstream_ctx_t *ctx);
 
 /* --- Network --- */
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
