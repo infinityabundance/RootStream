@@ -7,7 +7,7 @@
 
 # Compiler and flags
 CC := gcc
-CFLAGS := -Wall -Wextra -Werror -pedantic -std=gnu11 -O2 -D_GNU_SOURCE
+CFLAGS := -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -pedantic -std=gnu11 -O2 -D_GNU_SOURCE
 CFLAGS += -I./include
 
 # Debug flags (use: make DEBUG=1)

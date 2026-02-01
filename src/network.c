@@ -42,6 +42,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <time.h>
@@ -292,11 +293,54 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
 
     /* Handle packet based on type */
     switch (hdr->type) {
-        case PKT_HANDSHAKE:
-            /* Handle key exchange (see rootstream_net_handshake) */
-            printf("INFO: Received handshake from peer\n");
-            /* TODO: Full handshake implementation */
+        case PKT_HANDSHAKE: {
+            /* Parse handshake payload: [32-byte public key][hostname string] */
+            if (hdr->payload_size < CRYPTO_PUBLIC_KEY_BYTES) {
+                fprintf(stderr, "ERROR: Handshake payload too small\n");
+                return 0;
+            }
+
+            uint8_t *payload = buffer + sizeof(packet_header_t);
+            uint8_t peer_public_key[CRYPTO_PUBLIC_KEY_BYTES];
+            char peer_hostname[64] = {0};
+
+            /* Extract public key */
+            memcpy(peer_public_key, payload, CRYPTO_PUBLIC_KEY_BYTES);
+
+            /* Extract hostname (null-terminated string after public key) */
+            size_t hostname_len = hdr->payload_size - CRYPTO_PUBLIC_KEY_BYTES;
+            if (hostname_len > 0 && hostname_len < sizeof(peer_hostname)) {
+                memcpy(peer_hostname, payload + CRYPTO_PUBLIC_KEY_BYTES, hostname_len);
+                peer_hostname[hostname_len] = '\0';  /* Ensure null termination */
+            }
+
+            printf("✓ Received handshake from %s\n", peer_hostname[0] ? peer_hostname : "unknown");
+
+            /* Store peer information */
+            memcpy(peer->public_key, peer_public_key, CRYPTO_PUBLIC_KEY_BYTES);
+            if (peer_hostname[0]) {
+                strncpy(peer->hostname, peer_hostname, sizeof(peer->hostname) - 1);
+            }
+
+            /* Create encryption session (derive shared secret) */
+            if (crypto_create_session(&peer->session, ctx->keypair.secret_key,
+                                     peer_public_key) < 0) {
+                fprintf(stderr, "ERROR: Failed to create encryption session\n");
+                peer->state = PEER_DISCONNECTED;
+                return 0;
+            }
+
+            /* Update peer state */
+            peer->state = PEER_HANDSHAKE_RECEIVED;
+
+            /* Send handshake response if we haven't already */
+            if (rootstream_net_handshake(ctx, peer) == 0) {
+                peer->state = PEER_CONNECTED;
+                printf("✓ Handshake complete with %s\n", peer->hostname);
+            }
+
             break;
+        }
 
         case PKT_VIDEO:
         case PKT_AUDIO:
@@ -325,7 +369,38 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 input_event_pkt_t *input = (input_event_pkt_t*)decrypted;
                 rootstream_input_process(ctx, input);
             }
-            /* TODO: Handle other packet types */
+            else if (hdr->type == PKT_VIDEO) {
+                /* Store video frame for client loop to consume */
+                if (decrypted_len <= sizeof(ctx->current_frame.data)) {
+                    if (!ctx->current_frame.data) {
+                        /* Allocate frame buffer on first use */
+                        ctx->current_frame.data = malloc(MAX_PACKET_SIZE * 10);  /* Larger buffer for frames */
+                        if (!ctx->current_frame.data) {
+                            fprintf(stderr, "ERROR: Failed to allocate frame buffer\n");
+                            break;
+                        }
+                    }
+                    memcpy(ctx->current_frame.data, decrypted, decrypted_len);
+                    ctx->current_frame.size = decrypted_len;
+                    ctx->current_frame.timestamp = get_timestamp_us();
+                    ctx->frames_received++;
+                } else {
+                    fprintf(stderr, "WARNING: Video frame too large: %zu bytes\n", decrypted_len);
+                }
+            }
+            else if (hdr->type == PKT_AUDIO) {
+                /* TODO: Implement audio playback (Phase 2) */
+                /* For now, just acknowledge receipt */
+                #ifdef DEBUG
+                printf("DEBUG: Received audio packet (%zu bytes)\n", decrypted_len);
+                #endif
+            }
+            else if (hdr->type == PKT_CONTROL) {
+                /* TODO: Implement control messages */
+                #ifdef DEBUG
+                printf("DEBUG: Received control packet (%zu bytes)\n", decrypted_len);
+                #endif
+            }
 
             ctx->bytes_received += recv_len;
             break;
@@ -389,6 +464,12 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
         fprintf(stderr, "ERROR: Handshake send failed\n");
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         return -1;
+    }
+
+    /* Update peer state and timestamp for timeout tracking */
+    if (peer->state != PEER_HANDSHAKE_RECEIVED && peer->state != PEER_CONNECTED) {
+        peer->state = PEER_HANDSHAKE_SENT;
+        peer->handshake_sent_time = get_timestamp_ms();
     }
 
     printf("→ Sent handshake to peer\n");

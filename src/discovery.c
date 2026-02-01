@@ -79,16 +79,20 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
                            const char *domain, AvahiLookupResultFlags flags,
                            void *userdata) {
     (void)b;
+    (void)interface;
+    (void)protocol;
+    (void)type;
+    (void)domain;
     (void)flags;
+
     avahi_ctx_t *avahi = (avahi_ctx_t*)userdata;
-    rootstream_ctx_t *ctx = avahi->ctx;
 
     switch (event) {
         case AVAHI_BROWSER_NEW:
             printf("INFO: Discovered RootStream service: %s\n", name);
-            
+
             /* Resolve service to get IP and TXT records */
-            /* TODO: avahi_service_resolver_new() */
+            /* TODO: avahi_service_resolver_new() with avahi->client */
             /* Extract public key from TXT records */
             /* Add peer if trusted */
             break;
@@ -114,9 +118,9 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
  * Avahi client callback
  * Called when client state changes
  */
-static void client_callback(AvahiClient *c, AvahiClientState state, 
+static void client_callback(AvahiClient *c, AvahiClientState state,
                            void *userdata) {
-    avahi_ctx_t *avahi = (avahi_ctx_t*)userdata;
+    (void)userdata;  /* avahi_ctx_t not currently used */
 
     switch (state) {
         case AVAHI_CLIENT_S_RUNNING:
