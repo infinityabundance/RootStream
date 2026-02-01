@@ -311,6 +311,20 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
                            uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
+/* --- Decoding (Phase 1) --- */
+int rootstream_decoder_init(rootstream_ctx_t *ctx);
+int rootstream_decode_frame(rootstream_ctx_t *ctx,
+                           const uint8_t *in, size_t in_size,
+                           frame_buffer_t *out);
+void rootstream_decoder_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Display (Phase 1) --- */
+int display_init(rootstream_ctx_t *ctx, const char *title,
+                int width, int height);
+int display_present_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
+int display_poll_events(rootstream_ctx_t *ctx);
+void display_cleanup(rootstream_ctx_t *ctx);
+
 /* --- Network --- */
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
 int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,

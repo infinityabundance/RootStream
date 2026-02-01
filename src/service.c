@@ -246,19 +246,61 @@ int service_run_client(rootstream_ctx_t *ctx) {
 
     printf("INFO: Starting RootStream client service\n");
 
-    /* TODO: Load saved host from config */
-    /* TODO: Implement decoder and display */
-
-    /* Main loop */
-    while (service_running && ctx->running) {
-        /* Receive and decode */
-        rootstream_net_recv(ctx, 100);
-
-        /* Send input events */
-        /* TODO */
-
-        usleep(1000);
+    /* Initialize decoder */
+    if (rootstream_decoder_init(ctx) < 0) {
+        fprintf(stderr, "ERROR: Decoder initialization failed\n");
+        return -1;
     }
+
+    /* Initialize display (SDL2 window) */
+    if (display_init(ctx, "RootStream Client", 1920, 1080) < 0) {
+        fprintf(stderr, "ERROR: Display initialization failed\n");
+        rootstream_decoder_cleanup(ctx);
+        return -1;
+    }
+
+    printf("✓ Client initialized - ready to receive video\n");
+
+    /* Allocate decode buffer */
+    frame_buffer_t decoded_frame = {0};
+
+    /* Main receive loop */
+    while (service_running && ctx->running) {
+        /* Poll SDL events (window close, keyboard, mouse) */
+        if (display_poll_events(ctx) != 0) {
+            printf("INFO: User requested quit\n");
+            break;
+        }
+
+        /* Receive packets (16ms timeout for ~60fps responsiveness) */
+        rootstream_net_recv(ctx, 16);
+
+        /* Check if we received a video frame */
+        if (ctx->current_frame.data && ctx->current_frame.size > 0) {
+            /* Decode frame */
+            if (rootstream_decode_frame(ctx, ctx->current_frame.data,
+                                       ctx->current_frame.size,
+                                       &decoded_frame) == 0) {
+                /* Present to display */
+                display_present_frame(ctx, &decoded_frame);
+            } else {
+                fprintf(stderr, "WARNING: Frame decode failed\n");
+            }
+
+            /* Clear frame for next iteration */
+            ctx->current_frame.size = 0;
+        }
+    }
+
+    /* Cleanup */
+    if (decoded_frame.data) {
+        free(decoded_frame.data);
+    }
+
+    display_cleanup(ctx);
+    rootstream_decoder_cleanup(ctx);
+
+    printf("✓ Client shutdown complete\n");
 
     return 0;
 }
