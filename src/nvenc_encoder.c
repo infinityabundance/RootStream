@@ -61,6 +61,53 @@ static CUresult (*cuMemFree)(CUdeviceptr dptr) = NULL;
 static CUresult (*cuMemcpy2D)(const CUDA_MEMCPY2D *pCopy) = NULL;
 
 /*
+ * Detect if H.264 NAL stream contains an IDR (keyframe)
+ */
+static bool detect_h264_keyframe_nvenc(const uint8_t *data, size_t size) {
+    if (!data || size < 5) return false;
+
+    for (size_t i = 0; i < size - 4; i++) {
+        bool sc3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
+        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
+                   data[i+2] == 0x00 && data[i+3] == 0x01);
+
+        if (sc3 || sc4) {
+            size_t idx = sc4 ? i + 4 : i + 3;
+            if (idx < size && (data[idx] & 0x1F) == 5) {
+                return true;  /* IDR slice */
+            }
+            i += sc4 ? 3 : 2;
+        }
+    }
+    return false;
+}
+
+/*
+ * Detect if H.265/HEVC NAL stream contains an IDR (keyframe)
+ */
+static bool detect_h265_keyframe_nvenc(const uint8_t *data, size_t size) {
+    if (!data || size < 5) return false;
+
+    for (size_t i = 0; i < size - 4; i++) {
+        bool sc3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
+        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
+                   data[i+2] == 0x00 && data[i+3] == 0x01);
+
+        if (sc3 || sc4) {
+            size_t idx = sc4 ? i + 4 : i + 3;
+            if (idx < size) {
+                uint8_t nal_type = (data[idx] >> 1) & 0x3F;
+                if (nal_type == 19 || nal_type == 20 || nal_type == 21) {
+                    return true;  /* IDR or CRA */
+                }
+            }
+            i += sc4 ? 3 : 2;
+        }
+    }
+    return false;
+}
+
+/*
  * Load CUDA library dynamically
  */
 static int nvenc_load_cuda(nvenc_ctx_t *nv) {
@@ -451,6 +498,12 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
         return -1;
     }
 
+    /* Check if we should force a keyframe */
+    bool force_idr = ctx->encoder.force_keyframe;
+    if (force_idr) {
+        ctx->encoder.force_keyframe = false;  /* Reset the flag */
+    }
+
     /* Encode frame */
     NV_ENC_PIC_PARAMS pic_params = {0};
     pic_params.version = NV_ENC_PIC_PARAMS_VER;
@@ -461,7 +514,7 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
     pic_params.outputBitstream = nv->output_buffer;
     pic_params.completionEvent = NULL;
     pic_params.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
-    pic_params.encodePicFlags = 0;
+    pic_params.encodePicFlags = force_idr ? NV_ENC_PIC_FLAG_FORCEIDR : 0;
 
     status = nv->nvenc_api.nvEncEncodePicture(nv->encoder, &pic_params);
     if (status != NV_ENC_SUCCESS) {
@@ -487,6 +540,17 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
     /* Copy encoded data */
     *out_size = lock_params.bitstreamSizeInBytes;
     memcpy(out, lock_params.bitstreamBufferPtr, *out_size);
+
+    /* Detect actual keyframe from NAL units */
+    bool detected_keyframe;
+    if (ctx->encoder.codec == CODEC_H265) {
+        detected_keyframe = detect_h265_keyframe_nvenc(out, *out_size);
+    } else {
+        detected_keyframe = detect_h264_keyframe_nvenc(out, *out_size);
+    }
+
+    /* Store keyframe status in input frame */
+    in->is_keyframe = detected_keyframe;
 
     /* Unlock bitstream */
     nv->nvenc_api.nvEncUnlockBitstream(nv->encoder, nv->output_buffer);

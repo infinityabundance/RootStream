@@ -49,6 +49,95 @@ extern int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *
 extern void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
 
 /*
+ * Detect if H.264 NAL stream contains an IDR (keyframe)
+ *
+ * Parses through NAL units looking for NAL type 5 (IDR slice).
+ * Supports both Annex B (start code) format.
+ *
+ * NAL unit types:
+ *   1 = Non-IDR slice
+ *   5 = IDR slice (keyframe)
+ *   7 = SPS
+ *   8 = PPS
+ *
+ * @param data   Encoded H.264 data
+ * @param size   Data size in bytes
+ * @return       true if keyframe detected, false otherwise
+ */
+static bool detect_h264_keyframe(const uint8_t *data, size_t size) {
+    if (!data || size < 5) {
+        return false;
+    }
+
+    /* Search for NAL start codes (0x00 0x00 0x01 or 0x00 0x00 0x00 0x01) */
+    for (size_t i = 0; i < size - 4; i++) {
+        bool start_code_3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
+        bool start_code_4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
+                            data[i+2] == 0x00 && data[i+3] == 0x01);
+
+        if (start_code_3 || start_code_4) {
+            /* Get NAL type from the byte following start code */
+            size_t nal_byte_idx = start_code_4 ? i + 4 : i + 3;
+            if (nal_byte_idx < size) {
+                uint8_t nal_type = data[nal_byte_idx] & 0x1F;
+
+                /* NAL type 5 = IDR (Instantaneous Decoder Refresh) = keyframe */
+                if (nal_type == 5) {
+                    return true;
+                }
+            }
+
+            /* Skip past start code for next iteration */
+            i += start_code_4 ? 3 : 2;
+        }
+    }
+
+    return false;
+}
+
+/*
+ * Detect if H.265/HEVC NAL stream contains an IDR (keyframe)
+ *
+ * HEVC NAL unit types for keyframes:
+ *   19 = IDR_W_RADL
+ *   20 = IDR_N_LP
+ *   21 = CRA_NUT (Clean Random Access)
+ *
+ * @param data   Encoded H.265 data
+ * @param size   Data size in bytes
+ * @return       true if keyframe detected, false otherwise
+ */
+static bool detect_h265_keyframe(const uint8_t *data, size_t size) {
+    if (!data || size < 5) {
+        return false;
+    }
+
+    /* Search for NAL start codes */
+    for (size_t i = 0; i < size - 4; i++) {
+        bool start_code_3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
+        bool start_code_4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
+                            data[i+2] == 0x00 && data[i+3] == 0x01);
+
+        if (start_code_3 || start_code_4) {
+            /* HEVC NAL header is 2 bytes, NAL type is in bits 1-6 of first byte */
+            size_t nal_byte_idx = start_code_4 ? i + 4 : i + 3;
+            if (nal_byte_idx < size) {
+                uint8_t nal_type = (data[nal_byte_idx] >> 1) & 0x3F;
+
+                /* IDR or CRA NAL types = keyframe */
+                if (nal_type == 19 || nal_type == 20 || nal_type == 21) {
+                    return true;
+                }
+            }
+
+            i += start_code_4 ? 3 : 2;
+        }
+    }
+
+    return false;
+}
+
+/*
  * Convert RGBA to NV12 colorspace
  *
  * NV12 format: Planar YUV 4:2:0
@@ -334,6 +423,15 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
     vaUnmapBuffer(va->display, image.buf);
     vaDestroyImage(va->display, image.image_id);
 
+    /* Check if we should force a keyframe */
+    bool force_idr = ctx->encoder.force_keyframe;
+    if (force_idr) {
+        ctx->encoder.force_keyframe = false;  /* Reset the flag */
+    }
+
+    /* Determine if this frame should be a keyframe */
+    bool is_keyframe = force_idr || (va->frame_num % va->fps) == 0;
+
     /* Prepare H.264 encoding parameters */
     /* Sequence parameter buffer - global encoding settings */
     VAEncSequenceParameterBufferH264 seq_param = {0};
@@ -384,7 +482,7 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
     pic_param.pic_init_qp = 26;  /* Initial QP */
     pic_param.num_ref_idx_l0_active_minus1 = 0;
     pic_param.num_ref_idx_l1_active_minus1 = 0;
-    pic_param.pic_fields.bits.idr_pic_flag = (va->frame_num % va->fps) == 0 ? 1 : 0;
+    pic_param.pic_fields.bits.idr_pic_flag = is_keyframe ? 1 : 0;
     pic_param.pic_fields.bits.reference_pic_flag = 1;
     pic_param.pic_fields.bits.entropy_coding_mode_flag = 1;  /* CABAC */
     pic_param.pic_fields.bits.deblocking_filter_control_present_flag = 1;
@@ -393,7 +491,7 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
     VAEncSliceParameterBufferH264 slice_param = {0};
     slice_param.macroblock_address = 0;
     slice_param.num_macroblocks = seq_param.picture_width_in_mbs * seq_param.picture_height_in_mbs;
-    slice_param.slice_type = (va->frame_num % va->fps) == 0 ? 2 : 0;  /* 2=I-slice, 0=P-slice */
+    slice_param.slice_type = is_keyframe ? 2 : 0;  /* 2=I-slice, 0=P-slice */
     slice_param.pic_parameter_set_id = 0;
     slice_param.idr_pic_id = va->frame_num / va->fps;
     slice_param.pic_order_cnt_lsb = (va->frame_num * 2) & 0xFF;
@@ -501,12 +599,51 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
     *out_size = segment->size;
     memcpy(out, segment->buf, segment->size);
 
+    /* Detect actual keyframe from NAL units */
+    bool detected_keyframe;
+    if (ctx->encoder.codec == CODEC_H265) {
+        detected_keyframe = detect_h265_keyframe(out, *out_size);
+    } else {
+        detected_keyframe = detect_h264_keyframe(out, *out_size);
+    }
+
+    /* Store keyframe status in input frame for caller to access */
+    in->is_keyframe = detected_keyframe;
+
+    #ifdef DEBUG
+    if (detected_keyframe) {
+        printf("DEBUG: Encoded keyframe (frame %u, size %zu)\n",
+               va->frame_num, *out_size);
+    }
+    #endif
+
     vaUnmapBuffer(va->display, va->coded_buf_id);
 
     /* Increment frame counter for next encode */
     va->frame_num++;
     ctx->frames_encoded++;
     return 0;
+}
+
+/*
+ * Extended encode frame with explicit keyframe output
+ *
+ * Same as rootstream_encode_frame() but returns keyframe status via parameter.
+ *
+ * @param ctx         RootStream context
+ * @param in          Input frame (RGBA)
+ * @param out         Output buffer (encoded H.264/H.265)
+ * @param out_size    Output: encoded size
+ * @param is_keyframe Output: true if this is a keyframe
+ * @return            0 on success, -1 on error
+ */
+int rootstream_encode_frame_ex(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                              uint8_t *out, size_t *out_size, bool *is_keyframe) {
+    int result = rootstream_encode_frame(ctx, in, out, out_size);
+    if (result == 0 && is_keyframe) {
+        *is_keyframe = in->is_keyframe;
+    }
+    return result;
 }
 
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx) {
