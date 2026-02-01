@@ -154,6 +154,14 @@ int service_run_host(rootstream_ctx_t *ctx) {
         return -1;
     }
 
+    /* Initialize audio capture and Opus encoder */
+    if (audio_capture_init(ctx) < 0) {
+        fprintf(stderr, "WARNING: Audio capture init failed (continuing without audio)\n");
+    } else if (rootstream_opus_encoder_init(ctx) < 0) {
+        fprintf(stderr, "WARNING: Opus encoder init failed (continuing without audio)\n");
+        audio_capture_cleanup(ctx);
+    }
+
     /* Announce service */
     if (ctx->discovery.running) {
         if (discovery_announce(ctx) < 0) {
@@ -196,14 +204,36 @@ int service_run_host(rootstream_ctx_t *ctx) {
         }
         uint64_t encode_end_us = get_timestamp_us();
 
+        /* Capture and encode audio */
+        int16_t audio_samples[rootstream_opus_get_frame_size() * rootstream_opus_get_channels()];
+        uint8_t audio_buf[4000];  /* Max Opus packet size */
+        size_t audio_size = 0;
+        size_t num_samples = 0;
+
+        if (audio_capture_frame(ctx, audio_samples, &num_samples) == 0) {
+            if (rootstream_opus_encode(ctx, audio_samples, audio_buf, &audio_size) < 0) {
+                /* Audio encode failed, continue with video only */
+                audio_size = 0;
+            }
+        }
+
         /* Send to all connected peers */
         uint64_t send_start_us = get_timestamp_us();
         for (int i = 0; i < ctx->num_peers; i++) {
             peer_t *peer = &ctx->peers[i];
             if (peer->state == PEER_CONNECTED && peer->is_streaming) {
+                /* Send video */
                 if (rootstream_net_send_encrypted(ctx, peer, PKT_VIDEO,
                                                   enc_buf, enc_size) < 0) {
-                    fprintf(stderr, "ERROR: Send failed (peer=%s)\n", peer->hostname);
+                    fprintf(stderr, "ERROR: Video send failed (peer=%s)\n", peer->hostname);
+                }
+
+                /* Send audio if available */
+                if (audio_size > 0) {
+                    if (rootstream_net_send_encrypted(ctx, peer, PKT_AUDIO,
+                                                      audio_buf, audio_size) < 0) {
+                        fprintf(stderr, "ERROR: Audio send failed (peer=%s)\n", peer->hostname);
+                    }
                 }
             }
         }
@@ -259,7 +289,15 @@ int service_run_client(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    printf("✓ Client initialized - ready to receive video\n");
+    /* Initialize audio playback and Opus decoder */
+    if (audio_playback_init(ctx) < 0) {
+        fprintf(stderr, "WARNING: Audio playback init failed (continuing without audio)\n");
+    } else if (rootstream_opus_decoder_init(ctx) < 0) {
+        fprintf(stderr, "WARNING: Opus decoder init failed (continuing without audio)\n");
+        audio_playback_cleanup(ctx);
+    }
+
+    printf("✓ Client initialized - ready to receive video and audio\n");
 
     /* Allocate decode buffer */
     frame_buffer_t decoded_frame = {0};
@@ -297,6 +335,8 @@ int service_run_client(rootstream_ctx_t *ctx) {
         free(decoded_frame.data);
     }
 
+    audio_playback_cleanup(ctx);
+    rootstream_opus_cleanup(ctx);
     display_cleanup(ctx);
     rootstream_decoder_cleanup(ctx);
 

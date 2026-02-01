@@ -389,11 +389,19 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 }
             }
             else if (hdr->type == PKT_AUDIO) {
-                /* TODO: Implement audio playback (Phase 2) */
-                /* For now, just acknowledge receipt */
-                #ifdef DEBUG
-                printf("DEBUG: Received audio packet (%zu bytes)\n", decrypted_len);
-                #endif
+                /* Decode Opus audio and play immediately */
+                int16_t pcm_buffer[5760 * 2];  /* Max frame size * stereo */
+                size_t pcm_samples = 0;
+
+                if (rootstream_opus_decode(ctx, decrypted, decrypted_len,
+                               pcm_buffer, &pcm_samples) == 0) {
+                    /* Play audio immediately (low latency, no buffering) */
+                    audio_playback_write(ctx, pcm_buffer, pcm_samples);
+                } else {
+                    #ifdef DEBUG
+                    fprintf(stderr, "DEBUG: Audio decode failed\n");
+                    #endif
+                }
             }
             else if (hdr->type == PKT_CONTROL) {
                 /* TODO: Implement control messages */

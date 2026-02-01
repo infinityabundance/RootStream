@@ -71,6 +71,24 @@ else
     $(warning SDL2 not found - client display will not work. Install libsdl2-dev or sdl2-devel)
 endif
 
+# Opus (required for audio)
+OPUS_FOUND := $(shell pkg-config --exists opus && echo yes)
+ifeq ($(OPUS_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags opus)
+    LIBS += $(shell pkg-config --libs opus)
+else
+    $(warning Opus not found - audio will not work. Install libopus-dev or opus-devel)
+endif
+
+# ALSA (required for audio)
+ALSA_FOUND := $(shell pkg-config --exists alsa && echo yes)
+ifeq ($(ALSA_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags alsa)
+    LIBS += $(shell pkg-config --libs alsa)
+else
+    $(warning ALSA not found - audio will not work. Install libasound2-dev or alsa-lib-devel)
+endif
+
 # ============================================================================
 # Targets
 # ============================================================================
@@ -84,6 +102,9 @@ SRCS := src/main.c \
         src/vaapi_encoder.c \
         src/vaapi_decoder.c \
         src/display_sdl2.c \
+        src/opus_codec.c \
+        src/audio_capture.c \
+        src/audio_playback.c \
         src/network.c \
         src/input.c \
         src/crypto.c \
