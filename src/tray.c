@@ -38,6 +38,28 @@
 static rootstream_ctx_t *g_ctx = NULL;
 
 /*
+ * Callback for copy button timeout (reset button text)
+ */
+static gboolean on_copy_timeout(gpointer btn) {
+    gtk_button_set_label(GTK_BUTTON(btn), "Copy to Clipboard");
+    return G_SOURCE_REMOVE;
+}
+
+/*
+ * Callback for copy button click
+ */
+static void on_copy_btn_clicked(GtkButton *btn, gpointer data) {
+    (void)data;
+    GtkClipboard *clip = (GtkClipboard*)g_object_get_data(G_OBJECT(btn), "clipboard");
+    const char *text = (const char*)g_object_get_data(G_OBJECT(btn), "text");
+    gtk_clipboard_set_text(clip, text, -1);
+
+    /* Show brief notification */
+    gtk_button_set_label(GTK_BUTTON(btn), "✓ Copied!");
+    g_timeout_add(2000, on_copy_timeout, btn);
+}
+
+/*
  * Show QR code window
  * 
  * Displays:
@@ -98,24 +120,11 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
     /* Actually copy on button click */
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     g_object_set_data(G_OBJECT(copy_btn), "clipboard", clipboard);
-    g_object_set_data(G_OBJECT(copy_btn), "text", 
+    g_object_set_data(G_OBJECT(copy_btn), "text",
                       g_strdup(ctx->keypair.rootstream_code));
-    
+
     g_signal_connect(copy_btn, "clicked",
-        G_CALLBACK(+[](GtkButton *btn, gpointer data) {
-            (void)data;
-            GtkClipboard *clip = (GtkClipboard*)g_object_get_data(G_OBJECT(btn), "clipboard");
-            const char *text = (const char*)g_object_get_data(G_OBJECT(btn), "text");
-            gtk_clipboard_set_text(clip, text, -1);
-            
-            /* Show brief notification */
-            GtkWidget *label = gtk_bin_get_child(GTK_BIN(btn));
-            gtk_button_set_label(GTK_BUTTON(btn), "✓ Copied!");
-            g_timeout_add(2000, +[](gpointer btn) {
-                gtk_button_set_label(GTK_BUTTON(btn), "Copy to Clipboard");
-                return G_SOURCE_REMOVE;
-            }, btn);
-        }), NULL);
+        G_CALLBACK(on_copy_btn_clicked), NULL);
 
     /* Instructions */
     GtkWidget *instructions = gtk_label_new(

@@ -225,6 +225,15 @@ int service_run_host(rootstream_ctx_t *ctx) {
         }
         uint64_t encode_end_us = get_timestamp_us();
 
+        /* Write to recording file if active */
+        if (ctx->recording.active) {
+            /* TODO: Detect actual keyframes from encoder */
+            bool is_keyframe = (ctx->frames_encoded % ctx->display.refresh_rate) == 0;
+            if (recording_write_frame(ctx, enc_buf, enc_size, is_keyframe) < 0) {
+                fprintf(stderr, "WARNING: Failed to write frame to recording\n");
+            }
+        }
+
         /* Capture and encode audio */
         int16_t audio_samples[rootstream_opus_get_frame_size() * rootstream_opus_get_channels()];
         uint8_t audio_buf[4000];  /* Max Opus packet size */
