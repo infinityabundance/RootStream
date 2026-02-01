@@ -144,9 +144,25 @@ int service_run_host(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
-        fprintf(stderr, "ERROR: Encoder init failed\n");
-        return -1;
+    /* Auto-detect encoder: Try NVENC first (if available), fall back to VA-API */
+    extern bool rootstream_encoder_nvenc_available(void);
+
+    if (rootstream_encoder_nvenc_available()) {
+        printf("INFO: NVENC detected, trying NVIDIA encoder...\n");
+        if (rootstream_encoder_init(ctx, ENCODER_NVENC) == 0) {
+            printf("✓ Using NVENC encoder\n");
+        } else {
+            printf("WARNING: NVENC init failed, falling back to VA-API\n");
+            if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
+                fprintf(stderr, "ERROR: Both NVENC and VA-API failed\n");
+                return -1;
+            }
+        }
+    } else {
+        if (rootstream_encoder_init(ctx, ENCODER_VAAPI) < 0) {
+            fprintf(stderr, "ERROR: Encoder init failed\n");
+            return -1;
+        }
     }
 
     if (rootstream_input_init(ctx) < 0) {
