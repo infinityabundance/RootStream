@@ -325,6 +325,28 @@ int display_present_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
 int display_poll_events(rootstream_ctx_t *ctx);
 void display_cleanup(rootstream_ctx_t *ctx);
 
+/* --- Audio (Phase 2) --- */
+int rootstream_opus_encoder_init(rootstream_ctx_t *ctx);
+int rootstream_opus_decoder_init(rootstream_ctx_t *ctx);
+int rootstream_opus_encode(rootstream_ctx_t *ctx, const int16_t *pcm,
+               uint8_t *out, size_t *out_len);
+int rootstream_opus_decode(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_len,
+               int16_t *pcm, size_t *pcm_len);
+void rootstream_opus_cleanup(rootstream_ctx_t *ctx);
+int rootstream_opus_get_frame_size(void);
+int rootstream_opus_get_sample_rate(void);
+int rootstream_opus_get_channels(void);
+
+int audio_capture_init(rootstream_ctx_t *ctx);
+int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
+                       size_t *num_samples);
+void audio_capture_cleanup(rootstream_ctx_t *ctx);
+
+int audio_playback_init(rootstream_ctx_t *ctx);
+int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
+                        size_t num_samples);
+void audio_playback_cleanup(rootstream_ctx_t *ctx);
+
 /* --- Network --- */
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
 int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
