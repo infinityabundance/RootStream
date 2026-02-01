@@ -139,10 +139,21 @@ static int nvenc_load_sdk(nvenc_ctx_t *nv) {
 /*
  * Initialize NVENC encoder
  */
-int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
+int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     if (!ctx) {
         fprintf(stderr, "ERROR: Invalid context\n");
         return -1;
+    }
+
+    /* Select codec GUID */
+    GUID codec_guid;
+    const char *codec_name;
+    if (codec == CODEC_H265) {
+        codec_guid = NV_ENC_CODEC_HEVC_GUID;
+        codec_name = "H.265/HEVC";
+    } else {
+        codec_guid = NV_ENC_CODEC_H264_GUID;
+        codec_name = "H.264";
     }
 
     /* Allocate NVENC context */
@@ -220,10 +231,10 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
     caps_param.capsToQuery = NV_ENC_CAPS_SUPPORTED_RATECONTROL_MODES;
 
     int caps_value = 0;
-    status = nv->nvenc_api.nvEncGetEncodeCaps(nv->encoder, NV_ENC_CODEC_H264_GUID,
+    status = nv->nvenc_api.nvEncGetEncodeCaps(nv->encoder, codec_guid,
                                               &caps_param, &caps_value);
     if (status != NV_ENC_SUCCESS || caps_value == 0) {
-        fprintf(stderr, "ERROR: H.264 encoding not supported\n");
+        fprintf(stderr, "ERROR: %s encoding not supported\n", codec_name);
         nv->nvenc_api.nvEncDestroyEncoder(nv->encoder);
         dlclose(nv->nvenc_lib);
         cuCtxDestroy(nv->cuda_ctx);
@@ -244,7 +255,7 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
     /* Initialize encoder */
     NV_ENC_INITIALIZE_PARAMS init_params = {0};
     init_params.version = NV_ENC_INITIALIZE_PARAMS_VER;
-    init_params.encodeGUID = NV_ENC_CODEC_H264_GUID;
+    init_params.encodeGUID = codec_guid;
     init_params.presetGUID = NV_ENC_PRESET_P3_GUID;  /* Low latency, good quality */
     init_params.encodeWidth = nv->width;
     init_params.encodeHeight = nv->height;
@@ -261,7 +272,14 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
     /* Configure codec settings */
     NV_ENC_CONFIG encode_config = {0};
     encode_config.version = NV_ENC_CONFIG_VER;
-    encode_config.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
+
+    /* Select profile based on codec */
+    if (codec == CODEC_H265) {
+        encode_config.profileGUID = NV_ENC_HEVC_PROFILE_MAIN_GUID;
+    } else {
+        encode_config.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
+    }
+
     encode_config.gopLength = nv->fps * 2;  /* 2 second GOP */
     encode_config.frameIntervalP = 1;        /* All P-frames (low latency) */
     encode_config.frameFieldMode = NV_ENC_PARAMS_FRAME_FIELD_MODE_FRAME;
@@ -277,18 +295,34 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
     encode_config.rcParams.enableMaxQP = 0;
     encode_config.rcParams.zeroReorderDelay = 1;  /* Low latency */
 
-    /* H.264 specific settings */
-    encode_config.encodeCodecConfig.h264Config.idrPeriod = encode_config.gopLength;
-    encode_config.encodeCodecConfig.h264Config.sliceMode = 0;
-    encode_config.encodeCodecConfig.h264Config.sliceModeData = 0;
-    encode_config.encodeCodecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
-    encode_config.encodeCodecConfig.h264Config.chromaFormatIDC = 1;  /* YUV 4:2:0 */
-    encode_config.encodeCodecConfig.h264Config.outputBufferingPeriodSEI = 0;
-    encode_config.encodeCodecConfig.h264Config.outputPictureTimingSEI = 0;
-    encode_config.encodeCodecConfig.h264Config.outputAUD = 0;
-    encode_config.encodeCodecConfig.h264Config.disableSPSPPS = 0;
-    encode_config.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
-    encode_config.encodeCodecConfig.h264Config.enableIntraRefresh = 0;
+    /* Codec-specific settings */
+    if (codec == CODEC_H265) {
+        /* H.265/HEVC settings */
+        encode_config.encodeCodecConfig.hevcConfig.idrPeriod = encode_config.gopLength;
+        encode_config.encodeCodecConfig.hevcConfig.sliceMode = 0;
+        encode_config.encodeCodecConfig.hevcConfig.sliceModeData = 0;
+        encode_config.encodeCodecConfig.hevcConfig.level = NV_ENC_LEVEL_AUTOSELECT;
+        encode_config.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1;  /* YUV 4:2:0 */
+        encode_config.encodeCodecConfig.hevcConfig.outputBufferingPeriodSEI = 0;
+        encode_config.encodeCodecConfig.hevcConfig.outputPictureTimingSEI = 0;
+        encode_config.encodeCodecConfig.hevcConfig.outputAUD = 0;
+        encode_config.encodeCodecConfig.hevcConfig.disableSPSPPS = 0;
+        encode_config.encodeCodecConfig.hevcConfig.repeatSPSPPS = 1;
+        encode_config.encodeCodecConfig.hevcConfig.enableIntraRefresh = 0;
+    } else {
+        /* H.264 settings */
+        encode_config.encodeCodecConfig.h264Config.idrPeriod = encode_config.gopLength;
+        encode_config.encodeCodecConfig.h264Config.sliceMode = 0;
+        encode_config.encodeCodecConfig.h264Config.sliceModeData = 0;
+        encode_config.encodeCodecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
+        encode_config.encodeCodecConfig.h264Config.chromaFormatIDC = 1;  /* YUV 4:2:0 */
+        encode_config.encodeCodecConfig.h264Config.outputBufferingPeriodSEI = 0;
+        encode_config.encodeCodecConfig.h264Config.outputPictureTimingSEI = 0;
+        encode_config.encodeCodecConfig.h264Config.outputAUD = 0;
+        encode_config.encodeCodecConfig.h264Config.disableSPSPPS = 0;
+        encode_config.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
+        encode_config.encodeCodecConfig.h264Config.enableIntraRefresh = 0;
+    }
 
     init_params.encodeConfig = &encode_config;
     init_params.tuningInfo = NV_ENC_TUNING_INFO_LOW_LATENCY;
@@ -362,13 +396,14 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
 
     /* Store in context */
     ctx->encoder.type = ENCODER_NVENC;
+    ctx->encoder.codec = codec;
     ctx->encoder.hw_ctx = nv;
     ctx->encoder.bitrate = nv->bitrate;
     ctx->encoder.framerate = nv->fps;
     ctx->encoder.low_latency = true;
 
-    printf("✓ NVENC encoder ready: %dx%d @ %d fps, %d kbps\n",
-           nv->width, nv->height, nv->fps, nv->bitrate / 1000);
+    printf("✓ NVENC %s encoder ready: %dx%d @ %d fps, %d kbps\n",
+           codec_name, nv->width, nv->height, nv->fps, nv->bitrate / 1000);
 
     return 0;
 }
@@ -545,8 +580,9 @@ bool rootstream_encoder_nvenc_available(void) {
 
 /* Stub implementations when NVENC is not available */
 
-int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx) {
+int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     (void)ctx;
+    (void)codec;
     fprintf(stderr, "ERROR: NVENC support not compiled in\n");
     return -1;
 }
