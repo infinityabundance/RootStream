@@ -62,6 +62,15 @@ ifeq ($(shell pkg-config --exists avahi-client && echo yes),yes)
     LIBS += $(shell pkg-config --libs avahi-client)
 endif
 
+# SDL2 (required for client display)
+SDL2_FOUND := $(shell pkg-config --exists sdl2 && echo yes)
+ifeq ($(SDL2_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags sdl2)
+    LIBS += $(shell pkg-config --libs sdl2)
+else
+    $(warning SDL2 not found - client display will not work. Install libsdl2-dev or sdl2-devel)
+endif
+
 # ============================================================================
 # Targets
 # ============================================================================
@@ -73,6 +82,8 @@ TARGET := rootstream
 SRCS := src/main.c \
         src/drm_capture.c \
         src/vaapi_encoder.c \
+        src/vaapi_decoder.c \
+        src/display_sdl2.c \
         src/network.c \
         src/input.c \
         src/crypto.c \
