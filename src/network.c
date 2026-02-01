@@ -337,6 +337,9 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
             if (rootstream_net_handshake(ctx, peer) == 0) {
                 peer->state = PEER_CONNECTED;
                 printf("✓ Handshake complete with %s\n", peer->hostname);
+
+                /* Add to connection history */
+                config_add_peer_to_history(ctx, peer->rootstream_code);
             }
 
             break;

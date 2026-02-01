@@ -228,37 +228,66 @@ typedef struct {
 } tray_ctx_t;
 
 /* ============================================================================
+ * CONFIGURATION - User settings from config.ini
+ * ============================================================================ */
+
+#define MAX_PEER_HISTORY 32
+
+typedef struct {
+    /* Video settings */
+    uint32_t video_bitrate;    /* Target bitrate (bits/sec) */
+    uint32_t video_framerate;  /* Target framerate (fps) */
+    char video_codec[16];      /* Codec: "h264", "h265" */
+
+    /* Audio settings */
+    bool audio_enabled;        /* Enable audio streaming */
+    uint32_t audio_bitrate;    /* Audio bitrate (bits/sec) */
+
+    /* Network settings */
+    uint16_t network_port;     /* UDP port */
+    bool discovery_enabled;    /* Enable mDNS discovery */
+
+    /* Connection history */
+    char peer_history[MAX_PEER_HISTORY][ROOTSTREAM_CODE_MAX_LEN];
+    int peer_history_count;
+    char last_connected[ROOTSTREAM_CODE_MAX_LEN];
+} settings_t;
+
+/* ============================================================================
  * MAIN CONTEXT - Application state
  * ============================================================================ */
 
 typedef struct {
     /* Identity */
     keypair_t keypair;         /* This device's keys */
-    
+
+    /* Configuration */
+    settings_t settings;       /* User settings from config.ini */
+
     /* Capture & Encoding */
     capture_mode_t capture_mode;
     display_info_t display;
     frame_buffer_t current_frame;
     encoder_ctx_t encoder;
-    
+
     /* Network */
     int sock_fd;               /* UDP socket */
     uint16_t port;             /* Listening port */
-    
+
     /* Peers */
     peer_t peers[MAX_PEERS];   /* Connected peers */
     int num_peers;             /* Number of active peers */
-    
+
     /* Discovery */
     discovery_ctx_t discovery;
-    
+
     /* Input */
     int uinput_kbd_fd;         /* Virtual keyboard */
     int uinput_mouse_fd;       /* Virtual mouse */
-    
+
     /* UI */
     tray_ctx_t tray;
-    
+
     /* State */
     bool running;              /* Main loop running? */
     bool is_service;           /* Running as systemd service? */
@@ -393,6 +422,7 @@ void qrcode_print_terminal(const char *data);
 const char* config_get_dir(void);
 int config_load(rootstream_ctx_t *ctx);
 int config_save(rootstream_ctx_t *ctx);
+void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_code);
 
 /* --- Utilities --- */
 const char* rootstream_get_error(void);
