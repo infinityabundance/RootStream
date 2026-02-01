@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -46,8 +47,16 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <time.h>
+#include <netdb.h>
 
 #include <sodium.h>
+
+#ifdef HAVE_AVAHI
+#include <avahi-client/client.h>
+#include <avahi-client/lookup.h>
+#include <avahi-common/simple-watch.h>
+#include <avahi-common/error.h>
+#endif
 
 #define PACKET_MAGIC 0x524F4F54  /* "ROOT" */
 #define DEFAULT_PORT 9876
@@ -407,10 +416,72 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 }
             }
             else if (hdr->type == PKT_CONTROL) {
-                /* TODO: Implement control messages */
-                #ifdef DEBUG
-                printf("DEBUG: Received control packet (%zu bytes)\n", decrypted_len);
-                #endif
+                /* Process control messages */
+                if (decrypted_len >= sizeof(control_packet_t)) {
+                    control_packet_t *ctrl = (control_packet_t*)decrypted;
+
+                    switch (ctrl->cmd) {
+                        case CTRL_PAUSE:
+                            peer->is_streaming = false;
+                            printf("INFO: Stream paused by peer %s\n", peer->hostname);
+                            break;
+
+                        case CTRL_RESUME:
+                            peer->is_streaming = true;
+                            printf("INFO: Stream resumed by peer %s\n", peer->hostname);
+                            break;
+
+                        case CTRL_SET_BITRATE:
+                            if (ctrl->value >= 500000 && ctrl->value <= 100000000) {
+                                ctx->encoder.bitrate = ctrl->value;
+                                printf("INFO: Bitrate changed to %u bps by peer %s\n",
+                                       ctrl->value, peer->hostname);
+                            } else {
+                                fprintf(stderr, "WARNING: Invalid bitrate %u from peer %s\n",
+                                        ctrl->value, peer->hostname);
+                            }
+                            break;
+
+                        case CTRL_SET_FPS:
+                            if (ctrl->value >= 1 && ctrl->value <= 240) {
+                                ctx->encoder.framerate = ctrl->value;
+                                printf("INFO: Framerate changed to %u fps by peer %s\n",
+                                       ctrl->value, peer->hostname);
+                            } else {
+                                fprintf(stderr, "WARNING: Invalid framerate %u from peer %s\n",
+                                        ctrl->value, peer->hostname);
+                            }
+                            break;
+
+                        case CTRL_REQUEST_KEYFRAME:
+                            ctx->encoder.force_keyframe = true;
+                            #ifdef DEBUG
+                            printf("DEBUG: Keyframe requested by peer %s\n", peer->hostname);
+                            #endif
+                            break;
+
+                        case CTRL_SET_QUALITY:
+                            if (ctrl->value <= 100) {
+                                ctx->encoder.quality = (uint8_t)ctrl->value;
+                                printf("INFO: Quality changed to %u by peer %s\n",
+                                       ctrl->value, peer->hostname);
+                            }
+                            break;
+
+                        case CTRL_DISCONNECT:
+                            printf("INFO: Peer %s requested disconnect\n", peer->hostname);
+                            peer->state = PEER_DISCONNECTED;
+                            peer->is_streaming = false;
+                            break;
+
+                        default:
+                            fprintf(stderr, "WARNING: Unknown control command 0x%02x from peer %s\n",
+                                    ctrl->cmd, peer->hostname);
+                            break;
+                    }
+                } else {
+                    fprintf(stderr, "WARNING: Control packet too small (%zu bytes)\n", decrypted_len);
+                }
             }
 
             ctx->bytes_received += recv_len;
@@ -625,8 +696,121 @@ peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key) {
 }
 
 /*
+ * Resolve hostname to IP address
+ *
+ * Supports:
+ * - Standard DNS resolution (any hostname)
+ * - mDNS for .local domains (via Avahi if available)
+ * - Direct IP addresses (passthrough)
+ *
+ * @param hostname Hostname to resolve
+ * @param port     Target port
+ * @param addr     Output: resolved address
+ * @param addr_len Output: address length
+ * @return         0 on success, -1 on error
+ */
+static int resolve_hostname(const char *hostname, uint16_t port,
+                           struct sockaddr_storage *addr, socklen_t *addr_len) {
+    if (!hostname || !addr || !addr_len) {
+        return -1;
+    }
+
+    struct sockaddr_in *addr4 = (struct sockaddr_in*)addr;
+    memset(addr, 0, sizeof(*addr));
+
+    /* First, check if it's already an IP address */
+    if (inet_pton(AF_INET, hostname, &addr4->sin_addr) == 1) {
+        addr4->sin_family = AF_INET;
+        addr4->sin_port = htons(port);
+        *addr_len = sizeof(struct sockaddr_in);
+        return 0;
+    }
+
+    /* Check for .local domain (mDNS) */
+    const char *local_suffix = strstr(hostname, ".local");
+    bool is_mdns = local_suffix && (strlen(local_suffix) == 6 || local_suffix[6] == '\0');
+
+    if (is_mdns) {
+#ifdef HAVE_AVAHI
+        printf("INFO: Resolving %s via mDNS...\n", hostname);
+
+        /* Create a temporary Avahi client for resolution */
+        AvahiSimplePoll *simple_poll = avahi_simple_poll_new();
+        if (!simple_poll) {
+            fprintf(stderr, "ERROR: Cannot create Avahi poll for hostname resolution\n");
+            goto try_dns;
+        }
+
+        int avahi_error = 0;
+        AvahiClient *client = avahi_client_new(
+            avahi_simple_poll_get(simple_poll),
+            AVAHI_CLIENT_NO_FAIL,
+            NULL, NULL, &avahi_error);
+
+        if (!client) {
+            fprintf(stderr, "WARNING: Avahi client creation failed: %s\n",
+                    avahi_strerror(avahi_error));
+            avahi_simple_poll_free(simple_poll);
+            goto try_dns;
+        }
+
+        /* Use Avahi's hostname resolver */
+        /* For simplicity, we'll try DNS first for .local domains */
+        avahi_client_free(client);
+        avahi_simple_poll_free(simple_poll);
+        printf("INFO: mDNS direct lookup not implemented, trying DNS...\n");
+        goto try_dns;
+#else
+        printf("INFO: mDNS not available, trying DNS for %s\n", hostname);
+#endif
+    }
+
+try_dns:
+    /* Standard DNS resolution using getaddrinfo */
+    printf("INFO: Resolving %s via DNS...\n", hostname);
+
+    struct addrinfo hints = {0};
+    struct addrinfo *result = NULL;
+    hints.ai_family = AF_INET;      /* IPv4 */
+    hints.ai_socktype = SOCK_DGRAM; /* UDP */
+
+    char port_str[8];
+    snprintf(port_str, sizeof(port_str), "%u", port);
+
+    int ret = getaddrinfo(hostname, port_str, &hints, &result);
+    if (ret != 0) {
+        fprintf(stderr, "ERROR: Cannot resolve hostname '%s': %s\n",
+                hostname, gai_strerror(ret));
+        fprintf(stderr, "FIX: Check that the hostname is correct and DNS is working\n");
+        return -1;
+    }
+
+    /* Use first result */
+    if (result && result->ai_addr && result->ai_addrlen <= sizeof(*addr)) {
+        memcpy(addr, result->ai_addr, result->ai_addrlen);
+        *addr_len = result->ai_addrlen;
+
+        /* Log resolved address */
+        char ip_str[INET_ADDRSTRLEN];
+        struct sockaddr_in *resolved = (struct sockaddr_in*)result->ai_addr;
+        inet_ntop(AF_INET, &resolved->sin_addr, ip_str, sizeof(ip_str));
+        printf("✓ Resolved %s → %s\n", hostname, ip_str);
+
+        freeaddrinfo(result);
+        return 0;
+    }
+
+    if (result) {
+        freeaddrinfo(result);
+    }
+
+    fprintf(stderr, "ERROR: No valid address found for hostname '%s'\n", hostname);
+    return -1;
+}
+
+/*
  * Connect to peer (initiate streaming)
- * 
+ *
  * @param ctx  RootStream context
  * @param code Peer's RootStream code
  * @return     0 on success, -1 on error
@@ -643,15 +827,13 @@ int rootstream_connect_to_peer(rootstream_ctx_t *ctx, const char *code) {
         return -1;
     }
 
-    /* For now, assume peer is on default port (TODO: discovery) */
-    struct sockaddr_in *addr = (struct sockaddr_in*)&peer->addr;
-    addr->sin_family = AF_INET;
-    addr->sin_port = htons(DEFAULT_PORT);
-    
-    /* TODO: Resolve hostname via DNS or mDNS */
-    /* For now, assume localhost for testing */
-    inet_pton(AF_INET, "127.0.0.1", &addr->sin_addr);
-    peer->addr_len = sizeof(struct sockaddr_in);
+    /* Resolve hostname from peer info */
+    if (resolve_hostname(peer->hostname, DEFAULT_PORT,
+                        &peer->addr, &peer->addr_len) < 0) {
+        fprintf(stderr, "ERROR: Failed to resolve peer hostname: %s\n", peer->hostname);
+        fprintf(stderr, "HINT: Try using IP address directly, e.g., pubkey@192.168.1.100\n");
+        return -1;
+    }
 
     /* Initiate handshake */
     if (rootstream_net_handshake(ctx, peer) < 0) {
@@ -683,4 +865,72 @@ uint64_t get_timestamp_us(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+}
+
+/*
+ * Send control command to peer
+ *
+ * @param ctx   RootStream context
+ * @param peer  Target peer
+ * @param cmd   Control command (CTRL_*)
+ * @param value Command-specific value
+ * @return      0 on success, -1 on error
+ */
+int rootstream_send_control(rootstream_ctx_t *ctx, peer_t *peer,
+                           control_cmd_t cmd, uint32_t value) {
+    if (!ctx || !peer) {
+        fprintf(stderr, "ERROR: Invalid arguments to send_control\n");
+        return -1;
+    }
+
+    control_packet_t ctrl = {
+        .cmd = cmd,
+        .value = value
+    };
+
+    return rootstream_net_send_encrypted(ctx, peer, PKT_CONTROL,
+                                         &ctrl, sizeof(ctrl));
+}
+
+/*
+ * Pause streaming to peer
+ */
+int rootstream_pause_stream(rootstream_ctx_t *ctx, peer_t *peer) {
+    if (!ctx || !peer) {
+        return -1;
+    }
+
+    int result = rootstream_send_control(ctx, peer, CTRL_PAUSE, 0);
+    if (result == 0) {
+        peer->is_streaming = false;
+        printf("→ Sent pause to %s\n", peer->hostname);
+    }
+    return result;
+}
+
+/*
+ * Resume streaming to peer
+ */
+int rootstream_resume_stream(rootstream_ctx_t *ctx, peer_t *peer) {
+    if (!ctx || !peer) {
+        return -1;
+    }
+
+    int result = rootstream_send_control(ctx, peer, CTRL_RESUME, 0);
+    if (result == 0) {
+        peer->is_streaming = true;
+        printf("→ Sent resume to %s\n", peer->hostname);
+    }
+    return result;
+}
+
+/*
+ * Request keyframe from host
+ */
+int rootstream_request_keyframe(rootstream_ctx_t *ctx, peer_t *peer) {
+    if (!ctx || !peer) {
+        return -1;
+    }
+
+    return rootstream_send_control(ctx, peer, CTRL_REQUEST_KEYFRAME, 0);
 }

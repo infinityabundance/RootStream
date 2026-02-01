@@ -78,6 +78,7 @@ typedef struct {
     uint32_t pitch;            /* Bytes per row (stride) */
     uint32_t format;           /* Pixel format (DRM fourcc) */
     uint64_t timestamp;        /* Capture timestamp (microseconds) */
+    bool is_keyframe;          /* True if this is an I-frame/IDR */
 } frame_buffer_t;
 
 /* ============================================================================
@@ -127,6 +128,7 @@ typedef struct {
     uint32_t framerate;        /* Target framerate (fps) */
     uint8_t quality;           /* Quality level 0-100 */
     bool low_latency;          /* Enable low-latency mode */
+    bool force_keyframe;       /* Force next frame as keyframe */
 } encoder_ctx_t;
 
 /* ============================================================================
@@ -169,6 +171,23 @@ typedef struct __attribute__((packed)) {
 #define PKT_CONTROL       0x05  /* Control messages */
 #define PKT_PING          0x06  /* Keepalive ping */
 #define PKT_PONG          0x07  /* Keepalive pong */
+
+/* Control command types for PKT_CONTROL */
+typedef enum {
+    CTRL_PAUSE           = 0x01,  /* Pause streaming */
+    CTRL_RESUME          = 0x02,  /* Resume streaming */
+    CTRL_SET_BITRATE     = 0x03,  /* Change target bitrate */
+    CTRL_SET_FPS         = 0x04,  /* Change target framerate */
+    CTRL_REQUEST_KEYFRAME = 0x05, /* Request immediate keyframe */
+    CTRL_SET_QUALITY     = 0x06,  /* Change quality level */
+    CTRL_DISCONNECT      = 0x07,  /* Graceful disconnect */
+} control_cmd_t;
+
+/* Control packet payload (encrypted) */
+typedef struct __attribute__((packed)) {
+    uint8_t cmd;       /* control_cmd_t command */
+    uint32_t value;    /* Command-specific value */
+} control_packet_t;
 
 /* Encrypted input event payload */
 typedef struct __attribute__((packed)) {
@@ -360,6 +379,8 @@ void rootstream_capture_cleanup(rootstream_ctx_t *ctx);
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec);
 int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
                            uint8_t *out, size_t *out_size);
+int rootstream_encode_frame_ex(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                              uint8_t *out, size_t *out_size, bool *is_keyframe);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
 /* NVENC encoder (Phase 5) */
@@ -423,6 +444,13 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
 peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key);
 void rootstream_remove_peer(rootstream_ctx_t *ctx, peer_t *peer);
 int rootstream_connect_to_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
+
+/* --- Control Commands --- */
+int rootstream_send_control(rootstream_ctx_t *ctx, peer_t *peer,
+                           control_cmd_t cmd, uint32_t value);
+int rootstream_pause_stream(rootstream_ctx_t *ctx, peer_t *peer);
+int rootstream_resume_stream(rootstream_ctx_t *ctx, peer_t *peer);
+int rootstream_request_keyframe(rootstream_ctx_t *ctx, peer_t *peer);
 
 /* --- Discovery --- */
 int discovery_init(rootstream_ctx_t *ctx);

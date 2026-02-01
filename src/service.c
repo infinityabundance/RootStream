@@ -217,9 +217,10 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
         /* Encode frame */
         size_t enc_size = 0;
+        bool is_keyframe = false;
         uint64_t encode_start_us = get_timestamp_us();
-        if (rootstream_encode_frame(ctx, &ctx->current_frame,
-                                   enc_buf, &enc_size) < 0) {
+        if (rootstream_encode_frame_ex(ctx, &ctx->current_frame,
+                                      enc_buf, &enc_size, &is_keyframe) < 0) {
             fprintf(stderr, "ERROR: Encode failed (frame=%lu)\n", ctx->frames_captured);
             continue;
         }
@@ -227,8 +228,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
         /* Write to recording file if active */
         if (ctx->recording.active) {
-            /* TODO: Detect actual keyframes from encoder */
-            bool is_keyframe = (ctx->frames_encoded % ctx->display.refresh_rate) == 0;
+            /* Use real keyframe detection from encoder */
             if (recording_write_frame(ctx, enc_buf, enc_size, is_keyframe) < 0) {
                 fprintf(stderr, "WARNING: Failed to write frame to recording\n");
             }
