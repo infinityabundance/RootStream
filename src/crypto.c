@@ -284,7 +284,26 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         return -1;
     }
 
-    fwrite(kp->secret_key, 1, CRYPTO_SECRET_KEY_BYTES, f);
+    /* Write secret key with error checking */
+    if (fwrite(kp->secret_key, 1, CRYPTO_SECRET_KEY_BYTES, f) != CRYPTO_SECRET_KEY_BYTES) {
+        fprintf(stderr, "ERROR: Failed to write secret key\n");
+        fprintf(stderr, "FILE: %s\n", seckey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fclose(f);
+        unlink(seckey_path);  /* Remove incomplete file */
+        return -1;
+    }
+
+    /* Ensure data is written to disk */
+    if (fflush(f) != 0 || fsync(fileno(f)) != 0) {
+        fprintf(stderr, "ERROR: Failed to sync secret key to disk\n");
+        fprintf(stderr, "FILE: %s\n", seckey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fclose(f);
+        unlink(seckey_path);
+        return -1;
+    }
+
     fclose(f);
     chmod(seckey_path, 0600);  /* Owner read/write only */
 
@@ -294,10 +313,33 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "ERROR: Cannot create public key file\n");
         fprintf(stderr, "FILE: %s\n", pubkey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
+        /* Clean up secret key since we can't save the public key */
+        unlink(seckey_path);
         return -1;
     }
 
-    fwrite(kp->public_key, 1, CRYPTO_PUBLIC_KEY_BYTES, f);
+    /* Write public key with error checking */
+    if (fwrite(kp->public_key, 1, CRYPTO_PUBLIC_KEY_BYTES, f) != CRYPTO_PUBLIC_KEY_BYTES) {
+        fprintf(stderr, "ERROR: Failed to write public key\n");
+        fprintf(stderr, "FILE: %s\n", pubkey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fclose(f);
+        unlink(pubkey_path);  /* Remove incomplete file */
+        unlink(seckey_path);  /* Remove secret key too for consistency */
+        return -1;
+    }
+
+    /* Ensure data is written to disk */
+    if (fflush(f) != 0 || fsync(fileno(f)) != 0) {
+        fprintf(stderr, "ERROR: Failed to sync public key to disk\n");
+        fprintf(stderr, "FILE: %s\n", pubkey_path);
+        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fclose(f);
+        unlink(pubkey_path);
+        unlink(seckey_path);
+        return -1;
+    }
+
     fclose(f);
     chmod(pubkey_path, 0644);  /* World readable */
 
