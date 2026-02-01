@@ -348,6 +348,7 @@ static void on_quit(GtkMenuItem *item, gpointer user_data) {
  * Create tray menu
  */
 static void create_menu(rootstream_ctx_t *ctx, GtkStatusIcon *tray_icon) {
+    (void)tray_icon;  /* Passed for potential future use */
     GtkWidget *menu = gtk_menu_new();
 
     /* My QR Code */

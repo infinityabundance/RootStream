@@ -176,10 +176,12 @@ typedef struct __attribute__((packed)) {
  * ============================================================================ */
 
 typedef enum {
-    PEER_DISCOVERED,      /* Found via mDNS */
-    PEER_CONNECTING,      /* Handshake in progress */
-    PEER_CONNECTED,       /* Fully authenticated */
-    PEER_DISCONNECTED,    /* Lost connection */
+    PEER_DISCOVERED,           /* Found via mDNS */
+    PEER_CONNECTING,           /* Handshake in progress */
+    PEER_HANDSHAKE_SENT,       /* Sent handshake, awaiting response */
+    PEER_HANDSHAKE_RECEIVED,   /* Received handshake, session established */
+    PEER_CONNECTED,            /* Fully authenticated */
+    PEER_DISCONNECTED,         /* Lost connection */
 } peer_state_t;
 
 typedef struct {
@@ -190,6 +192,7 @@ typedef struct {
     crypto_session_t session;                        /* Encryption session */
     peer_state_t state;                              /* Connection state */
     uint64_t last_seen;                              /* Last packet time (ms) */
+    uint64_t handshake_sent_time;                    /* Handshake timestamp for timeout */
     char hostname[64];                               /* Peer hostname */
     bool is_streaming;                               /* Currently streaming? */
 } peer_t;
@@ -259,8 +262,9 @@ typedef struct {
     /* State */
     bool running;              /* Main loop running? */
     bool is_service;           /* Running as systemd service? */
-    uint64_t frames_captured;  /* Statistics */
-    uint64_t frames_encoded;
+    uint64_t frames_captured;  /* Statistics (host) */
+    uint64_t frames_encoded;   /* Statistics (host) */
+    uint64_t frames_received;  /* Statistics (client) */
     uint64_t bytes_sent;
     uint64_t bytes_received;
     latency_stats_t latency;   /* Latency instrumentation */
