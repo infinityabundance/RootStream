@@ -532,6 +532,16 @@ A: For Linux-to-Linux: Yes (lower latency, no account, encrypted). For other pla
 
 ---
 
+## Documentation
+
+For more detailed information, see our documentation:
+
+- **[User Guide](docs/user-guide.md)** - Complete usage instructions, installation steps, and troubleshooting
+- **[API Reference](docs/api.md)** - Full C API documentation with examples
+- **[Architecture](docs/architecture.md)** - Technical deep-dive into protocol, security model, and internals
+
+---
+
 ## Contributing
 
 We welcome contributions! Areas needing help:
