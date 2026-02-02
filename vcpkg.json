@@ -1,0 +1,23 @@
+{
+  "name": "rootstream",
+  "version": "1.0.0",
+  "description": "Secure peer-to-peer game streaming",
+  "homepage": "https://github.com/infinityabundance/RootStream",
+  "license": "MIT",
+  "dependencies": [
+    "sdl2",
+    "libsodium",
+    "opus"
+  ],
+  "features": {
+    "ffmpeg": {
+      "description": "Use FFmpeg for video decoding",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "features": ["avcodec", "avformat", "avutil"]
+        }
+      ]
+    }
+  }
+}
