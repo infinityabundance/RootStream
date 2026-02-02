@@ -151,6 +151,7 @@ endif()
 set(WINDOWS_SOURCES
     src/audio_wasapi.c
     src/decoder_mf.c
+    src/input_win32.c
     src/service.c
 )
 
