@@ -1,0 +1,8 @@
+# Test binaries
+unit/test_crypto
+unit/test_encoding
+
+# Test artifacts
+*.o
+*.log
+*.tmp

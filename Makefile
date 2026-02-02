@@ -193,11 +193,15 @@ ICONDIR := $(SHAREDIR)/icons/hicolor
 DESKTOPDIR := $(SHAREDIR)/applications
 SYSTEMDDIR := $(HOME)/.config/systemd/user
 
+# Test binaries
+TEST_CRYPTO := tests/unit/test_crypto
+TEST_ENCODING := tests/unit/test_encoding
+
 # ============================================================================
 # Build Rules
 # ============================================================================
 
-.PHONY: all clean install uninstall deps check help player
+.PHONY: all clean install uninstall deps check help player test test-build test-unit test-integration test-clean
 
 # Default target
 all: $(TARGET) $(PLAYER)
@@ -311,7 +315,7 @@ uninstall:
 # Cleaning
 # ============================================================================
 
-clean:
+clean: test-clean
 	@echo "🧹 Cleaning build artifacts..."
 	@rm -f $(OBJS) $(DEPS) $(TARGET) $(PLAYER)
 	@rm -f src/*.o src/*.d
@@ -373,6 +377,13 @@ help:
 	@echo "  format          Format source code"
 	@echo "  help            Show this help"
 	@echo ""
+	@echo "Testing:"
+	@echo "  test            Run all tests (unit + integration)"
+	@echo "  test-build      Build test binaries"
+	@echo "  test-unit       Run unit tests only"
+	@echo "  test-integration Run integration tests only"
+	@echo "  test-clean      Remove test artifacts"
+	@echo ""
 	@echo "Build options:"
 	@echo "  DEBUG=1         Build with debug symbols"
 	@echo "  PREFIX=/path    Install prefix (default: /usr/local)"
@@ -380,8 +391,61 @@ help:
 	@echo "Examples:"
 	@echo "  make                    # Build"
 	@echo "  make DEBUG=1            # Debug build"
+	@echo "  make test               # Run all tests"
 	@echo "  make install            # Install to /usr/local"
 	@echo "  sudo make PREFIX=/usr install   # Install to /usr"
+
+# ============================================================================
+# Testing
+# ============================================================================
+
+# Build all test binaries
+test-build: $(TEST_CRYPTO) $(TEST_ENCODING)
+
+# Build and run all tests
+test: test-unit test-integration
+
+# Run unit tests
+test-unit: test-build
+	@echo ""
+	@echo "╔════════════════════════════════════════════════╗"
+	@echo "║  Running Unit Tests                            ║"
+	@echo "╚════════════════════════════════════════════════╝"
+	@echo ""
+	@./$(TEST_CRYPTO)
+	@./$(TEST_ENCODING)
+	@echo ""
+	@echo "✓ All unit tests passed"
+
+# Run integration tests
+test-integration: $(TARGET)
+	@echo ""
+	@echo "╔════════════════════════════════════════════════╗"
+	@echo "║  Running Integration Tests                     ║"
+	@echo "╚════════════════════════════════════════════════╝"
+	@echo ""
+	@./tests/integration/test_stream.sh
+
+# Build crypto test
+$(TEST_CRYPTO): tests/unit/test_crypto.c src/crypto.c
+	@echo "🔨 Building crypto tests..."
+	@mkdir -p tests/unit
+	@$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)
+	@echo "✓ Built: $@"
+
+# Build encoding test (standalone, doesn't need hardware)
+$(TEST_ENCODING): tests/unit/test_encoding.c
+	@echo "🔨 Building encoding tests..."
+	@mkdir -p tests/unit
+	@$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+	@echo "✓ Built: $@"
+
+# Clean test artifacts
+test-clean:
+	@echo "🧹 Cleaning test artifacts..."
+	@rm -f $(TEST_CRYPTO) $(TEST_ENCODING)
+	@rm -f tests/unit/*.o
+	@echo "✓ Test clean complete"
 
 # ============================================================================
 # Special targets
