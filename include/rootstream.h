@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/socket.h>
+
+/* Platform abstraction for cross-platform socket types */
+#include "../src/platform/platform.h"
 
 /*
  * ============================================================================
@@ -309,7 +311,7 @@ typedef struct {
     encoder_ctx_t encoder;
 
     /* Network */
-    int sock_fd;               /* UDP socket */
+    rs_socket_t sock_fd;       /* UDP socket */
     uint16_t port;             /* Listening port */
 
     /* Peers */

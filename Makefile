@@ -148,7 +148,8 @@ SRCS := src/main.c \
         src/qrcode.c \
         src/config.c \
         src/latency.c \
-        src/recording.c
+        src/recording.c \
+        src/platform/platform_linux.c
 
 ifdef HEADLESS
     SRCS := $(filter-out src/tray.c,$(SRCS))
@@ -214,7 +215,7 @@ $(TARGET): $(OBJS)
 
 # Build rstr-player tool
 # Note: Needs many modules for dependencies - simplified player would be better long-term
-$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c
+$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c src/platform/platform_linux.c
 	@echo "🔗 Building rstr-player..."
 	@$(CC) $(CFLAGS) $^ -o $(PLAYER) $(LDFLAGS) $(LIBS)
 	@echo "✓ Build complete: $(PLAYER)"
@@ -427,7 +428,7 @@ test-integration: $(TARGET)
 	@./tests/integration/test_stream.sh
 
 # Build crypto test
-$(TEST_CRYPTO): tests/unit/test_crypto.c src/crypto.c
+$(TEST_CRYPTO): tests/unit/test_crypto.c src/crypto.c src/platform/platform_linux.c
 	@echo "🔨 Building crypto tests..."
 	@mkdir -p tests/unit
 	@$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(LIBS)

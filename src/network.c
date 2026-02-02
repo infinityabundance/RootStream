@@ -35,21 +35,18 @@
  */
 
 #include "../include/rootstream.h"
+#include "platform/platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <arpa/inet.h>
-#include <poll.h>
-#include <time.h>
-#include <netdb.h>
 
 #include <sodium.h>
+
+/* Platform-specific includes for address structures */
+#ifndef RS_PLATFORM_WINDOWS
+#include <netinet/ip.h>  /* IPTOS_LOWDELAY */
+#endif
 
 #ifdef HAVE_AVAHI
 #include <avahi-client/client.h>
@@ -79,6 +76,12 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
         return -1;
     }
 
+    /* Initialize platform networking */
+    if (rs_net_init() < 0) {
+        fprintf(stderr, "ERROR: Platform network initialization failed\n");
+        return -1;
+    }
+
     /* Use default port if not specified */
     if (port == 0) {
         port = DEFAULT_PORT;
@@ -86,30 +89,33 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
     ctx->port = port;
 
     /* Create UDP socket (IPv4 for now, IPv6 TODO) */
-    ctx->sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (ctx->sock_fd < 0) {
+    ctx->sock_fd = rs_socket_create(AF_INET, SOCK_DGRAM, 0);
+    if (ctx->sock_fd == RS_INVALID_SOCKET) {
+        int err = rs_socket_error();
         fprintf(stderr, "ERROR: Cannot create UDP socket\n");
-        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
         fprintf(stderr, "FIX: Check system limits (ulimit -n)\n");
         return -1;
     }
 
     /* Set socket options for performance and reliability */
     int opt = 1;
-    if (setsockopt(ctx->sock_fd, SOL_SOCKET, SO_REUSEADDR, 
-                   &opt, sizeof(opt)) < 0) {
+    if (rs_socket_setopt(ctx->sock_fd, SOL_SOCKET, SO_REUSEADDR,
+                         &opt, sizeof(opt)) < 0) {
         fprintf(stderr, "WARNING: Cannot set SO_REUSEADDR\n");
         /* Non-fatal, continue */
     }
 
     /* Increase buffer sizes for high-bitrate video */
     int buf_size = 2 * 1024 * 1024;  /* 2 MB */
-    setsockopt(ctx->sock_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-    setsockopt(ctx->sock_fd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+    rs_socket_setopt(ctx->sock_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+    rs_socket_setopt(ctx->sock_fd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
 
-    /* Set TOS for low latency (hint to routers) */
+#ifndef RS_PLATFORM_WINDOWS
+    /* Set TOS for low latency (hint to routers) - Linux/Unix only */
     int tos = IPTOS_LOWDELAY;
-    setsockopt(ctx->sock_fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+    rs_socket_setopt(ctx->sock_fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+#endif
 
     /* Bind to address */
     struct sockaddr_in addr = {0};
@@ -117,11 +123,12 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;  /* Listen on all interfaces */
 
-    if (bind(ctx->sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (rs_socket_bind(ctx->sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        int err = rs_socket_error();
         fprintf(stderr, "ERROR: Cannot bind to port %d\n", port);
-        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
         fprintf(stderr, "FIX: Port may be in use, try a different port\n");
-        close(ctx->sock_fd);
+        rs_socket_close(ctx->sock_fd);
         return -1;
     }
 
@@ -194,15 +201,16 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
     /* MAC is included in cipher_len by crypto_encrypt_packet */
 
     /* Send packet */
-    ssize_t sent = sendto(ctx->sock_fd, packet, 
-                         sizeof(packet_header_t) + cipher_len, 0,
-                         (struct sockaddr*)&peer->addr, peer->addr_len);
+    int sent = rs_socket_sendto(ctx->sock_fd, packet,
+                                sizeof(packet_header_t) + cipher_len, 0,
+                                (struct sockaddr*)&peer->addr, peer->addr_len);
 
     free(packet);
 
     if (sent < 0) {
+        int err = rs_socket_error();
         fprintf(stderr, "ERROR: Send failed\n");
-        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
         return -1;
     }
 
@@ -231,14 +239,10 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     }
 
     /* Poll for incoming data */
-    struct pollfd pfd = {
-        .fd = ctx->sock_fd,
-        .events = POLLIN
-    };
-
-    int ret = poll(&pfd, 1, timeout_ms);
+    int ret = rs_socket_poll(ctx->sock_fd, timeout_ms);
     if (ret < 0) {
-        fprintf(stderr, "ERROR: Poll failed: %s\n", strerror(errno));
+        int err = rs_socket_error();
+        fprintf(stderr, "ERROR: Poll failed: %s\n", rs_socket_strerror(err));
         return -1;
     }
 
@@ -252,16 +256,17 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     struct sockaddr_storage from;
     socklen_t fromlen = sizeof(from);
 
-    ssize_t recv_len = recvfrom(ctx->sock_fd, buffer, sizeof(buffer), 0,
-                               (struct sockaddr*)&from, &fromlen);
+    int recv_len = rs_socket_recvfrom(ctx->sock_fd, buffer, sizeof(buffer), 0,
+                                      (struct sockaddr*)&from, &fromlen);
 
     if (recv_len < 0) {
-        fprintf(stderr, "ERROR: Receive failed: %s\n", strerror(errno));
+        int err = rs_socket_error();
+        fprintf(stderr, "ERROR: Receive failed: %s\n", rs_socket_strerror(err));
         return -1;
     }
 
-    if (recv_len < (ssize_t)sizeof(packet_header_t)) {
-        fprintf(stderr, "WARNING: Packet too small (%zd bytes), ignoring\n", recv_len);
+    if (recv_len < (int)sizeof(packet_header_t)) {
+        fprintf(stderr, "WARNING: Packet too small (%d bytes), ignoring\n", recv_len);
         return 0;
     }
 
@@ -328,7 +333,7 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
             /* Store peer information */
             memcpy(peer->public_key, peer_public_key, CRYPTO_PUBLIC_KEY_BYTES);
             if (peer_hostname[0]) {
-                strncpy(peer->hostname, peer_hostname, sizeof(peer->hostname) - 1);
+                snprintf(peer->hostname, sizeof(peer->hostname), "%s", peer_hostname);
             }
 
             /* Create encryption session (derive shared secret) */
@@ -539,12 +544,13 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     memcpy(packet, &hdr, sizeof(hdr));
     memcpy(packet + sizeof(hdr), payload, payload_len);
 
-    ssize_t sent = sendto(ctx->sock_fd, packet, sizeof(packet), 0,
-                         (struct sockaddr*)&peer->addr, peer->addr_len);
+    int sent = rs_socket_sendto(ctx->sock_fd, packet, sizeof(packet), 0,
+                                (struct sockaddr*)&peer->addr, peer->addr_len);
 
     if (sent < 0) {
+        int err = rs_socket_error();
         fprintf(stderr, "ERROR: Handshake send failed\n");
-        fprintf(stderr, "REASON: %s\n", strerror(errno));
+        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
         return -1;
     }
 
@@ -852,9 +858,7 @@ int rootstream_connect_to_peer(rootstream_ctx_t *ctx, const char *code) {
  * Used for keepalive and timeout detection
  */
 uint64_t get_timestamp_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    return rs_timestamp_ms();
 }
 
 /*
@@ -862,9 +866,7 @@ uint64_t get_timestamp_ms(void) {
  * Used for latency instrumentation
  */
 uint64_t get_timestamp_us(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
+    return rs_timestamp_us();
 }
 
 /*

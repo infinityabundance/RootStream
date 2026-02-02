@@ -25,12 +25,16 @@
  */
 
 #include "../include/rootstream.h"
+#include "platform/platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
+
+/* Platform-specific includes for stat (permission checking on Linux) */
+#ifndef RS_PLATFORM_WINDOWS
 #include <sys/stat.h>
+#endif
 
 /* libsodium for crypto */
 #include <sodium.h>
@@ -125,14 +129,21 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname) {
     strncpy(kp->identity, hostname, sizeof(kp->identity) - 1);
     kp->identity[sizeof(kp->identity) - 1] = '\0';
 
-    /* Create RootStream code: base64(public_key)@hostname */
-    char b64_pubkey[256];
+    /* Create RootStream code: base64(public_key)@hostname
+     * Base64 of 32 bytes = 44 chars + null = 45, leaving 82 chars for hostname
+     * (128 - 45 - 1 for '@') */
+    char b64_pubkey[48];  /* 44 chars + null + padding */
     sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey),
                      kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
                      sodium_base64_VARIANT_ORIGINAL);
 
+    /* Truncate hostname to fit: 128 total - 48 b64 - 1 '@' - 1 null = 78 max */
+    char truncated_host[80];
+    strncpy(truncated_host, hostname, sizeof(truncated_host) - 1);
+    truncated_host[sizeof(truncated_host) - 1] = '\0';
+
     snprintf(kp->rootstream_code, sizeof(kp->rootstream_code),
-             "%s@%s", b64_pubkey, hostname);
+             "%s@%s", b64_pubkey, truncated_host);
 
     printf("✓ Generated new keypair\n");
     printf("  Identity: %s\n", kp->identity);
@@ -164,7 +175,7 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
     snprintf(identity_path, sizeof(identity_path), "%s/identity.txt", config_dir);
 
     /* Check if private key exists */
-    if (access(seckey_path, R_OK) != 0) {
+    if (!rs_file_exists(seckey_path)) {
         fprintf(stderr, "INFO: No existing keypair found\n");
         fprintf(stderr, "REASON: %s does not exist\n", seckey_path);
         fprintf(stderr, "ACTION: Will generate new keypair\n");
@@ -188,6 +199,8 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
     }
     fclose(f);
 
+#ifndef RS_PLATFORM_WINDOWS
+    /* Check file permissions on Unix systems */
     struct stat key_stat;
     if (stat(seckey_path, &key_stat) == 0) {
         if ((key_stat.st_mode & 0077) != 0) {
@@ -200,6 +213,7 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", seckey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
     }
+#endif
 
     /* Load public key */
     f = fopen(pubkey_path, "rb");
@@ -227,16 +241,24 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
         fclose(f);
     } else {
         /* Fallback to system hostname */
-        gethostname(kp->identity, sizeof(kp->identity));
+        rs_gethostname(kp->identity, sizeof(kp->identity));
     }
 
-    /* Reconstruct RootStream code */
-    char b64_pubkey[256];
+    /* Reconstruct RootStream code
+     * Base64 of 32 bytes = 44 chars + null = 45, leaving 82 chars for identity
+     * (128 - 45 - 1 for '@') */
+    char b64_pubkey[48];  /* 44 chars + null + padding */
     sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey),
                      kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
                      sodium_base64_VARIANT_ORIGINAL);
+
+    /* Truncate identity to fit: 128 total - 48 b64 - 1 '@' - 1 null = 78 max */
+    char truncated_id[80];
+    strncpy(truncated_id, kp->identity, sizeof(truncated_id) - 1);
+    truncated_id[sizeof(truncated_id) - 1] = '\0';
+
     snprintf(kp->rootstream_code, sizeof(kp->rootstream_code),
-             "%s@%s", b64_pubkey, kp->identity);
+             "%s@%s", b64_pubkey, truncated_id);
 
     printf("✓ Loaded existing keypair\n");
     printf("  Identity: %s\n", kp->identity);
@@ -263,7 +285,7 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
     }
 
     /* Create config directory if it doesn't exist */
-    if (mkdir(config_dir, 0700) != 0 && errno != EEXIST) {
+    if (rs_mkdir(config_dir, 0700) != 0 && errno != EEXIST) {
         fprintf(stderr, "ERROR: Cannot create config directory\n");
         fprintf(stderr, "PATH: %s\n", config_dir);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
@@ -290,22 +312,22 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", seckey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        unlink(seckey_path);  /* Remove incomplete file */
+        rs_unlink(seckey_path);  /* Remove incomplete file */
         return -1;
     }
 
     /* Ensure data is written to disk */
-    if (fflush(f) != 0 || fsync(fileno(f)) != 0) {
+    if (fflush(f) != 0 || rs_fsync(f) != 0) {
         fprintf(stderr, "ERROR: Failed to sync secret key to disk\n");
         fprintf(stderr, "FILE: %s\n", seckey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        unlink(seckey_path);
+        rs_unlink(seckey_path);
         return -1;
     }
 
     fclose(f);
-    chmod(seckey_path, 0600);  /* Owner read/write only */
+    rs_chmod(seckey_path, 0600);  /* Owner read/write only */
 
     /* Save public key (mode 0644) */
     f = fopen(pubkey_path, "wb");
@@ -314,7 +336,7 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", pubkey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         /* Clean up secret key since we can't save the public key */
-        unlink(seckey_path);
+        rs_unlink(seckey_path);
         return -1;
     }
 
@@ -324,24 +346,24 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", pubkey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        unlink(pubkey_path);  /* Remove incomplete file */
-        unlink(seckey_path);  /* Remove secret key too for consistency */
+        rs_unlink(pubkey_path);  /* Remove incomplete file */
+        rs_unlink(seckey_path);  /* Remove secret key too for consistency */
         return -1;
     }
 
     /* Ensure data is written to disk */
-    if (fflush(f) != 0 || fsync(fileno(f)) != 0) {
+    if (fflush(f) != 0 || rs_fsync(f) != 0) {
         fprintf(stderr, "ERROR: Failed to sync public key to disk\n");
         fprintf(stderr, "FILE: %s\n", pubkey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        unlink(pubkey_path);
-        unlink(seckey_path);
+        rs_unlink(pubkey_path);
+        rs_unlink(seckey_path);
         return -1;
     }
 
     fclose(f);
-    chmod(pubkey_path, 0644);  /* World readable */
+    rs_chmod(pubkey_path, 0644);  /* World readable */
 
     /* Save identity */
     f = fopen(identity_path, "w");
