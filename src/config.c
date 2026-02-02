@@ -124,7 +124,10 @@ static void trim(char *str) {
  */
 static int config_load_ini(settings_t *settings, const char *config_dir) {
     char ini_path[512];
-    snprintf(ini_path, sizeof(ini_path), "%s/config.ini", config_dir);
+    int len = snprintf(ini_path, sizeof(ini_path), "%s/config.ini", config_dir);
+    if (len < 0 || (size_t)len >= sizeof(ini_path)) {
+        return -1;  /* Path too long */
+    }
 
     FILE *fp = fopen(ini_path, "r");
     if (!fp) {
@@ -151,9 +154,12 @@ static int config_load_ini(settings_t *settings, const char *config_dir) {
         if (line[0] == '[') {
             char *end = strchr(line, ']');
             if (end) {
-                *end = '\0';
-                strncpy(section, line + 1, sizeof(section) - 1);
-                section[sizeof(section) - 1] = '\0';
+                size_t section_len = (size_t)(end - (line + 1));
+                if (section_len >= sizeof(section)) {
+                    section_len = sizeof(section) - 1;
+                }
+                memcpy(section, line + 1, section_len);
+                section[section_len] = '\0';
             }
             continue;
         }
@@ -335,19 +341,18 @@ void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_co
             /* Already in history, move to front */
             if (i > 0) {
                 char temp[ROOTSTREAM_CODE_MAX_LEN];
-                strncpy(temp, ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN - 1);
+                snprintf(temp, sizeof(temp), "%s", ctx->settings.peer_history[i]);
                 /* Shift others down */
                 for (int j = i; j > 0; j--) {
-                    strncpy(ctx->settings.peer_history[j],
-                           ctx->settings.peer_history[j-1],
-                           ROOTSTREAM_CODE_MAX_LEN - 1);
+                    snprintf(ctx->settings.peer_history[j], ROOTSTREAM_CODE_MAX_LEN,
+                            "%s", ctx->settings.peer_history[j-1]);
                 }
                 /* Put at front */
-                strncpy(ctx->settings.peer_history[0], temp, ROOTSTREAM_CODE_MAX_LEN - 1);
+                snprintf(ctx->settings.peer_history[0], ROOTSTREAM_CODE_MAX_LEN, "%s", temp);
             }
             /* Update last connected */
-            strncpy(ctx->settings.last_connected, rootstream_code,
-                   sizeof(ctx->settings.last_connected) - 1);
+            snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected),
+                    "%s", rootstream_code);
             config_save(ctx);
             return;
         }
@@ -357,27 +362,24 @@ void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_co
     if (ctx->settings.peer_history_count < MAX_PEER_HISTORY) {
         /* Shift all down */
         for (int i = ctx->settings.peer_history_count; i > 0; i--) {
-            strncpy(ctx->settings.peer_history[i],
-                   ctx->settings.peer_history[i-1],
-                   ROOTSTREAM_CODE_MAX_LEN - 1);
+            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN,
+                    "%s", ctx->settings.peer_history[i-1]);
         }
         ctx->settings.peer_history_count++;
     } else {
         /* At max capacity, shift all down (dropping last) */
         for (int i = MAX_PEER_HISTORY - 1; i > 0; i--) {
-            strncpy(ctx->settings.peer_history[i],
-                   ctx->settings.peer_history[i-1],
-                   ROOTSTREAM_CODE_MAX_LEN - 1);
+            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN,
+                    "%s", ctx->settings.peer_history[i-1]);
         }
     }
 
     /* Add new peer at front */
-    strncpy(ctx->settings.peer_history[0], rootstream_code,
-           ROOTSTREAM_CODE_MAX_LEN - 1);
+    snprintf(ctx->settings.peer_history[0], ROOTSTREAM_CODE_MAX_LEN, "%s", rootstream_code);
 
     /* Update last connected */
-    strncpy(ctx->settings.last_connected, rootstream_code,
-           sizeof(ctx->settings.last_connected) - 1);
+    snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected),
+            "%s", rootstream_code);
 
     /* Save to disk */
     config_save(ctx);

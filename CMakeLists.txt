@@ -17,7 +17,7 @@ endif()
 if(MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -Wextra -Werror)
+    add_compile_options(-Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation)
 endif()
 
 # Debug flags
@@ -127,6 +127,7 @@ set(COMMON_SOURCES
 set(LINUX_SOURCES
     src/drm_capture.c
     src/vaapi_encoder.c
+    src/nvenc_encoder.c
     src/vaapi_decoder.c
     src/audio_capture.c
     src/audio_playback.c
@@ -227,8 +228,13 @@ if(UNIX AND NOT APPLE)
     # Recording player tool
     add_executable(rstr-player
         tools/rstr-player.c
+        src/recording.c
         src/vaapi_decoder.c
         src/display_sdl2.c
+        src/network.c
+        src/crypto.c
+        src/config.c
+        src/input.c
         src/opus_codec.c
         src/audio_playback.c
         src/latency.c
@@ -244,6 +250,8 @@ if(UNIX AND NOT APPLE)
         ${SDL2_LIBRARIES}
         ${VAAPI_LIBRARIES}
         ${ALSA_LIBRARIES}
+        ${SODIUM_LIBRARIES}
+        ${AVAHI_LIBRARIES}
         m pthread
     )
 
