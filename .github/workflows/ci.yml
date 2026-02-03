@@ -207,6 +207,9 @@ jobs:
     strategy:
       matrix:
         build-type: [Release, Debug]
+    env:
+      VCPKG_ROOT: C:\vcpkg
+      VCPKG_DEFAULT_TRIPLET: x64-windows
 
     steps:
       - name: Checkout code
@@ -215,30 +218,45 @@ jobs:
       - name: Setup MSVC
         uses: microsoft/setup-msbuild@v2
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
         with:
-          vcpkgGitCommitId: '8eb57355a4ffb410a2e94c07b4dca2dffbee8e50'
+          path: C:\vcpkg\installed
+          key: vcpkg-win-x64-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-win-x64-
 
-      - name: Install dependencies
+      - name: Install vcpkg dependencies
         run: |
-          vcpkg install sdl2:x64-windows libsodium:x64-windows opus:x64-windows
+          & "$env:VCPKG_ROOT\vcpkg.exe" integrate install
+          & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows
 
       - name: Configure CMake
         run: |
           cmake -B build -S . `
             -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} `
-            -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
         run: cmake --build build --config ${{ matrix.build-type }}
 
+      - name: Verify build
+        run: |
+          if (Test-Path "build\${{ matrix.build-type }}\rootstream-client.exe") {
+            Write-Host "✓ Windows client built successfully"
+            Get-Item "build\${{ matrix.build-type }}\rootstream-client.exe"
+          } else {
+            Write-Host "Looking for built executable..."
+            Get-ChildItem -Recurse build -Filter "*.exe" | ForEach-Object { $_.FullName }
+          }
+
       - name: Upload Windows client
         uses: actions/upload-artifact@v4
         with:
           name: rootstream-windows-${{ matrix.build-type }}
-          path: build/${{ matrix.build-type }}/rootstream-client.exe
+          path: |
+            build/${{ matrix.build-type }}/rootstream-client.exe
+            build/rootstream-client.exe
           if-no-files-found: warn
 
   cmake-linux-build:

@@ -7,6 +7,15 @@
 /* Platform abstraction for cross-platform socket types */
 #include "../src/platform/platform.h"
 
+/* Cross-platform packed struct support */
+#ifdef _MSC_VER
+  #define PACKED_STRUCT __pragma(pack(push, 1)) struct
+  #define PACKED_STRUCT_END __pragma(pack(pop))
+#else
+  #define PACKED_STRUCT struct __attribute__((packed))
+  #define PACKED_STRUCT_END
+#endif
+
 /*
  * ============================================================================
  * RootStream - Secure Peer-to-Peer Game Streaming
@@ -155,7 +164,7 @@ typedef struct {
  * ============================================================================ */
 
 /* Packet header (always plaintext for routing) */
-typedef struct __attribute__((packed)) {
+typedef PACKED_STRUCT {
     uint32_t magic;            /* 0x524F4F54 "ROOT" */
     uint8_t version;           /* Protocol version (1) */
     uint8_t type;              /* Packet type (see below) */
@@ -164,6 +173,7 @@ typedef struct __attribute__((packed)) {
     uint16_t payload_size;     /* Encrypted payload size */
     uint8_t mac[CRYPTO_MAC_BYTES]; /* Authentication tag */
 } packet_header_t;
+PACKED_STRUCT_END
 
 /* Packet types */
 #define PKT_HANDSHAKE     0x01  /* Initial key exchange */
@@ -186,17 +196,19 @@ typedef enum {
 } control_cmd_t;
 
 /* Control packet payload (encrypted) */
-typedef struct __attribute__((packed)) {
+typedef PACKED_STRUCT {
     uint8_t cmd;       /* control_cmd_t command */
     uint32_t value;    /* Command-specific value */
 } control_packet_t;
+PACKED_STRUCT_END
 
 /* Encrypted input event payload */
-typedef struct __attribute__((packed)) {
+typedef PACKED_STRUCT {
     uint8_t type;              /* EV_KEY, EV_REL, etc */
     uint16_t code;             /* Key/button code */
     int32_t value;             /* Value/delta */
 } input_event_pkt_t;
+PACKED_STRUCT_END
 
 /* ============================================================================
  * PEER MANAGEMENT - Connected peer tracking
