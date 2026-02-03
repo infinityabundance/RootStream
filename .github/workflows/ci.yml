@@ -207,6 +207,9 @@ jobs:
     strategy:
       matrix:
         build-type: [Release, Debug]
+    env:
+      VCPKG_ROOT: C:\vcpkg
+      VCPKG_DEFAULT_TRIPLET: x64-windows
 
     steps:
       - name: Checkout code
@@ -215,17 +218,23 @@ jobs:
       - name: Setup MSVC
         uses: microsoft/setup-msbuild@v2
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
         with:
-          vcpkgGitCommitId: '01f602195983451bc83e72f4214af2cbc495aa94'
-          runVcpkgInstall: true
+          path: C:\vcpkg\installed
+          key: vcpkg-win-x64-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-win-x64-
+
+      - name: Install vcpkg dependencies
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" integrate install
+          & "$env:VCPKG_ROOT\vcpkg.exe" install sdl2:x64-windows libsodium:x64-windows opus:x64-windows
 
       - name: Configure CMake
         run: |
           cmake -B build -S . `
             -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} `
-            -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
@@ -233,9 +242,9 @@ jobs:
 
       - name: Verify build
         run: |
-          if (Test-Path "build/${{ matrix.build-type }}/rootstream-client.exe") {
+          if (Test-Path "build\${{ matrix.build-type }}\rootstream-client.exe") {
             Write-Host "✓ Windows client built successfully"
-            Get-Item "build/${{ matrix.build-type }}/rootstream-client.exe"
+            Get-Item "build\${{ matrix.build-type }}\rootstream-client.exe"
           } else {
             Write-Host "Looking for built executable..."
             Get-ChildItem -Recurse build -Filter "*.exe" | ForEach-Object { $_.FullName }
