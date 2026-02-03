@@ -218,11 +218,8 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: '8eb57355a4ffb410a2e94c07b4dca2dffbee8e50'
-
-      - name: Install dependencies
-        run: |
-          vcpkg install sdl2:x64-windows libsodium:x64-windows opus:x64-windows
+          vcpkgGitCommitId: '01f602195983451bc83e72f4214af2cbc495aa94'
+          runVcpkgInstall: true
 
       - name: Configure CMake
         run: |
@@ -234,11 +231,23 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{ matrix.build-type }}
 
+      - name: Verify build
+        run: |
+          if (Test-Path "build/${{ matrix.build-type }}/rootstream-client.exe") {
+            Write-Host "✓ Windows client built successfully"
+            Get-Item "build/${{ matrix.build-type }}/rootstream-client.exe"
+          } else {
+            Write-Host "Looking for built executable..."
+            Get-ChildItem -Recurse build -Filter "*.exe" | ForEach-Object { $_.FullName }
+          }
+
       - name: Upload Windows client
         uses: actions/upload-artifact@v4
         with:
           name: rootstream-windows-${{ matrix.build-type }}
-          path: build/${{ matrix.build-type }}/rootstream-client.exe
+          path: |
+            build/${{ matrix.build-type }}/rootstream-client.exe
+            build/rootstream-client.exe
           if-no-files-found: warn
 
   cmake-linux-build:
