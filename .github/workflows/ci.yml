@@ -228,7 +228,7 @@ jobs:
       - name: Install vcpkg dependencies
         run: |
           & "$env:VCPKG_ROOT\vcpkg.exe" integrate install
-          & "$env:VCPKG_ROOT\vcpkg.exe" install sdl2:x64-windows libsodium:x64-windows opus:x64-windows
+          & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet x64-windows
 
       - name: Configure CMake
         run: |
