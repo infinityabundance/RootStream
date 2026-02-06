@@ -58,6 +58,42 @@
 #define PACKET_MAGIC 0x524F4F54  /* "ROOT" */
 #define DEFAULT_PORT 9876
 #define MAX_VIDEO_FRAME_SIZE (16 * 1024 * 1024)
+#define HANDSHAKE_RETRY_MS 1000
+#define PEER_TIMEOUT_MS 5000
+#define KEEPALIVE_INTERVAL_MS 1000
+
+static peer_t* rootstream_find_peer_by_addr(rootstream_ctx_t *ctx,
+                                           const struct sockaddr_storage *addr,
+                                           socklen_t addr_len) {
+    if (!ctx || !addr) {
+        return NULL;
+    }
+
+    for (int i = 0; i < ctx->num_peers; i++) {
+        peer_t *peer = &ctx->peers[i];
+        if (peer->addr_len != addr_len) {
+            continue;
+        }
+
+        if (addr->ss_family == AF_INET) {
+            const struct sockaddr_in *a = (const struct sockaddr_in*)addr;
+            const struct sockaddr_in *b = (const struct sockaddr_in*)&peer->addr;
+            if (a->sin_port == b->sin_port &&
+                memcmp(&a->sin_addr, &b->sin_addr, sizeof(a->sin_addr)) == 0) {
+                return peer;
+            }
+        } else if (addr->ss_family == AF_INET6) {
+            const struct sockaddr_in6 *a = (const struct sockaddr_in6*)addr;
+            const struct sockaddr_in6 *b = (const struct sockaddr_in6*)&peer->addr;
+            if (a->sin6_port == b->sin6_port &&
+                memcmp(&a->sin6_addr, &b->sin6_addr, sizeof(a->sin6_addr)) == 0) {
+                return peer;
+            }
+        }
+    }
+
+    return NULL;
+}
 
 static size_t max_plain_payload_size(void) {
     size_t max_packet = MAX_PACKET_SIZE;
@@ -284,6 +320,7 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
         return -1;
     }
 
+    peer->last_sent = get_timestamp_ms();
     ctx->bytes_sent += sent;
     return 0;
 }
@@ -355,21 +392,28 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     }
 
     /* Find or create peer */
-    peer_t *peer = NULL;
-    
-    /* For now, simple implementation: use first peer or create new */
-    if (ctx->num_peers > 0) {
-        peer = &ctx->peers[0];
-    } else if (hdr->type == PKT_HANDSHAKE) {
-        /* New connection, will be handled in handshake */
-        peer = &ctx->peers[0];
-        ctx->num_peers = 1;
+    peer_t *peer = rootstream_find_peer_by_addr(ctx, &from, fromlen);
+    if (!peer) {
+        if (hdr->type != PKT_HANDSHAKE) {
+            fprintf(stderr, "WARNING: Packet from unknown peer (no handshake)\n");
+            return 0;
+        }
+        if (ctx->num_peers >= MAX_PEERS) {
+            fprintf(stderr, "WARNING: Peer limit reached, ignoring handshake\n");
+            return 0;
+        }
+
+        peer = &ctx->peers[ctx->num_peers++];
+        memset(peer, 0, sizeof(peer_t));
         memcpy(&peer->addr, &from, fromlen);
         peer->addr_len = fromlen;
         peer->state = PEER_CONNECTING;
-    } else {
-        fprintf(stderr, "WARNING: Packet from unknown peer (no handshake)\n");
-        return 0;
+        peer->video_tx_frame_id = 1;
+        peer->video_rx_frame_id = 0;
+        peer->video_rx_buffer = NULL;
+        peer->video_rx_capacity = 0;
+        peer->video_rx_expected = 0;
+        peer->video_rx_received = 0;
     }
 
     /* Update last seen time */
@@ -420,10 +464,17 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
             /* Send handshake response if we haven't already */
             if (rootstream_net_handshake(ctx, peer) == 0) {
                 peer->state = PEER_CONNECTED;
+                if (ctx->is_host) {
+                    peer->is_streaming = true;
+                }
                 printf("✓ Handshake complete with %s\n", peer->hostname);
 
                 /* Add to connection history */
                 config_add_peer_to_history(ctx, peer->rootstream_code);
+
+                if (!ctx->is_host) {
+                    rootstream_request_keyframe(ctx, peer);
+                }
             }
 
             break;
@@ -615,6 +666,48 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     return 0;
 }
 
+void rootstream_net_tick(rootstream_ctx_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+
+    uint64_t now = get_timestamp_ms();
+    for (int i = 0; i < ctx->num_peers; i++) {
+        peer_t *peer = &ctx->peers[i];
+
+        if (peer->state == PEER_HANDSHAKE_SENT) {
+            if (now - peer->handshake_sent_time >= HANDSHAKE_RETRY_MS) {
+                rootstream_net_handshake(ctx, peer);
+            }
+            if (now - peer->handshake_sent_time >= PEER_TIMEOUT_MS) {
+                fprintf(stderr, "WARNING: Handshake timeout for peer %s\n",
+                        peer->hostname[0] ? peer->hostname : "unknown");
+                peer->state = PEER_DISCONNECTED;
+            }
+        }
+
+        if (peer->state == PEER_CONNECTED) {
+            if (peer->last_seen > 0 && now - peer->last_seen >= PEER_TIMEOUT_MS) {
+                fprintf(stderr, "WARNING: Peer timeout: %s\n",
+                        peer->hostname[0] ? peer->hostname : "unknown");
+                peer->state = PEER_DISCONNECTED;
+                peer->is_streaming = false;
+                if (peer->video_rx_buffer) {
+                    free(peer->video_rx_buffer);
+                    peer->video_rx_buffer = NULL;
+                    peer->video_rx_capacity = 0;
+                }
+                continue;
+            }
+
+            if (now - peer->last_sent >= KEEPALIVE_INTERVAL_MS) {
+                rootstream_net_send_encrypted(ctx, peer, PKT_PING, NULL, 0);
+                peer->last_ping = now;
+            }
+        }
+    }
+}
+
 /*
  * Perform handshake with peer (key exchange)
  * 
@@ -659,6 +752,8 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
         fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
         return -1;
     }
+
+    peer->last_sent = get_timestamp_ms();
 
     /* Update peer state and timestamp for timeout tracking */
     if (peer->state != PEER_HANDSHAKE_RECEIVED && peer->state != PEER_CONNECTED) {
@@ -741,6 +836,31 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *code) {
         return NULL;
     }
 
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];
+    char hostname[64] = {0};
+
+    /* Parse RootStream code */
+    if (parse_rootstream_code(code, public_key,
+                             hostname, sizeof(hostname)) < 0) {
+        return NULL;
+    }
+
+    peer_t *existing = rootstream_find_peer(ctx, public_key);
+    if (existing) {
+        strncpy(existing->rootstream_code, code, sizeof(existing->rootstream_code) - 1);
+        if (hostname[0]) {
+            strncpy(existing->hostname, hostname, sizeof(existing->hostname) - 1);
+        }
+        if (!existing->session.authenticated) {
+            if (crypto_create_session(&existing->session, ctx->keypair.secret_key,
+                                     public_key) < 0) {
+                fprintf(stderr, "ERROR: Failed to create encryption session\n");
+                return NULL;
+            }
+        }
+        return existing;
+    }
+
     if (ctx->num_peers >= MAX_PEERS) {
         fprintf(stderr, "ERROR: Maximum peers reached (%d)\n", MAX_PEERS);
         return NULL;
@@ -749,10 +869,9 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *code) {
     peer_t *peer = &ctx->peers[ctx->num_peers];
     memset(peer, 0, sizeof(peer_t));
 
-    /* Parse RootStream code */
-    if (parse_rootstream_code(code, peer->public_key, 
-                             peer->hostname, sizeof(peer->hostname)) < 0) {
-        return NULL;
+    memcpy(peer->public_key, public_key, CRYPTO_PUBLIC_KEY_BYTES);
+    if (hostname[0]) {
+        strncpy(peer->hostname, hostname, sizeof(peer->hostname) - 1);
     }
 
     /* Verify public key */
@@ -811,6 +930,32 @@ peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key) {
     }
 
     return NULL;
+}
+
+void rootstream_remove_peer(rootstream_ctx_t *ctx, peer_t *peer) {
+    if (!ctx || !peer) {
+        return;
+    }
+
+    int index = (int)(peer - ctx->peers);
+    if (index < 0 || index >= ctx->num_peers) {
+        return;
+    }
+
+    if (peer->video_rx_buffer) {
+        if (ctx->current_frame.data == peer->video_rx_buffer) {
+            ctx->current_frame.data = NULL;
+            ctx->current_frame.size = 0;
+        }
+        free(peer->video_rx_buffer);
+        peer->video_rx_buffer = NULL;
+    }
+
+    for (int i = index; i < ctx->num_peers - 1; i++) {
+        ctx->peers[i] = ctx->peers[i + 1];
+    }
+
+    ctx->num_peers--;
 }
 
 /*

@@ -144,6 +144,7 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
+    ctx->is_host = true;
 
     /* Detect and select display */
     display_info_t displays[MAX_DISPLAYS];
@@ -373,6 +374,7 @@ int main(int argc, char **argv) {
 
     ctx.port = port;
     ctx.encoder.bitrate = (uint32_t)bitrate * 1000;
+    ctx.is_host = false;
 
     /* Handle --list-displays flag */
     if (list_displays) {

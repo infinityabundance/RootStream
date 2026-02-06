@@ -297,6 +297,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
         /* Process incoming packets */
         rootstream_net_recv(ctx, 1);
+        rootstream_net_tick(ctx);
 
         /* Rate limiting */
         uint32_t refresh_rate = ctx->display.refresh_rate ? ctx->display.refresh_rate : 60;
@@ -367,6 +368,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
         uint64_t recv_start_us = get_timestamp_us();
         rootstream_net_recv(ctx, 16);
         uint64_t recv_end_us = get_timestamp_us();
+        rootstream_net_tick(ctx);
 
         /* Check if we received a video frame */
         if (ctx->current_frame.data && ctx->current_frame.size > 0) {

@@ -267,6 +267,8 @@ typedef struct {
     size_t video_rx_capacity;                        /* Reassembly buffer size */
     size_t video_rx_expected;                        /* Expected frame size */
     size_t video_rx_received;                        /* Bytes received so far */
+    uint64_t last_sent;                              /* Last outbound packet time (ms) */
+    uint64_t last_ping;                              /* Last keepalive ping time (ms) */
 } peer_t;
 
 /* ============================================================================
@@ -391,6 +393,7 @@ typedef struct {
     uint64_t bytes_sent;
     uint64_t bytes_received;
     latency_stats_t latency;   /* Latency instrumentation */
+    bool is_host;              /* Host mode (streamer) */
 } rootstream_ctx_t;
 
 /* ============================================================================
@@ -493,6 +496,7 @@ int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
                               const uint8_t *data, size_t size);
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
+void rootstream_net_tick(rootstream_ctx_t *ctx);
 
 /* --- Peer Management --- */
 peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
