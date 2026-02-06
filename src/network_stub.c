@@ -47,6 +47,12 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     return -1;
 }
 
+int rootstream_net_validate_packet(const uint8_t *buffer, size_t len) {
+    (void)buffer;
+    (void)len;
+    return -1;
+}
+
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     (void)ctx;
     (void)peer;

@@ -115,6 +115,7 @@ set(COMMON_SOURCES
     src/core.c
     src/crypto.c
     src/network.c
+    src/packet_validate.c
     src/opus_codec.c
     src/display_sdl2.c
     src/config.c
@@ -234,6 +235,7 @@ if(UNIX AND NOT APPLE)
         src/vaapi_decoder.c
         src/display_sdl2.c
         src/network.c
+        src/packet_validate.c
         src/crypto.c
         src/config.c
         src/input.c
@@ -343,6 +345,10 @@ add_test(NAME crypto_tests COMMAND test_crypto)
 add_executable(test_encoding tests/unit/test_encoding.c)
 target_include_directories(test_encoding PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME encoding_tests COMMAND test_encoding)
+
+add_executable(test_packet tests/unit/test_packet.c src/packet_validate.c)
+target_include_directories(test_packet PRIVATE ${CMAKE_SOURCE_DIR}/include)
+add_test(NAME packet_tests COMMAND test_packet)
 
 # =============================================================================
 # Summary

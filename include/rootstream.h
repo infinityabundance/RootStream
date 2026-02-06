@@ -510,6 +510,7 @@ int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
 void rootstream_net_tick(rootstream_ctx_t *ctx);
+int rootstream_net_validate_packet(const uint8_t *buffer, size_t len);
 
 /* --- Peer Management --- */
 peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
