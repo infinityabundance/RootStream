@@ -140,7 +140,23 @@ typedef struct {
     uint8_t quality;           /* Quality level 0-100 */
     bool low_latency;          /* Enable low-latency mode */
     bool force_keyframe;       /* Force next frame as keyframe */
+    size_t max_output_size;    /* Max encoded output size (bytes) */
 } encoder_ctx_t;
+
+typedef struct {
+    codec_type_t codec;        /* Video codec */
+    void *backend_ctx;         /* Backend-specific context (opaque) */
+    int width;                 /* Frame width */
+    int height;                /* Frame height */
+    bool initialized;          /* Decoder initialized? */
+} decoder_ctx_t;
+
+typedef struct {
+    void *backend_ctx;         /* Backend-specific context (opaque) */
+    int sample_rate;           /* Audio sample rate */
+    int channels;              /* Number of channels */
+    bool initialized;          /* Audio initialized? */
+} audio_playback_ctx_t;
 
 /* ============================================================================
  * CRYPTOGRAPHY - Ed25519 keypairs and encryption
@@ -321,6 +337,12 @@ typedef struct {
     display_info_t display;
     frame_buffer_t current_frame;
     encoder_ctx_t encoder;
+
+    /* Decoding (client) */
+    decoder_ctx_t decoder;
+
+    /* Audio (client) */
+    audio_playback_ctx_t audio_playback;
 
     /* Network */
     rs_socket_t sock_fd;       /* UDP socket */

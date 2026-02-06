@@ -179,6 +179,11 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
         }
     }
 
+    if (ctx->display.refresh_rate == 0) {
+        ctx->display.refresh_rate = 60;
+        printf("WARNING: Display refresh rate unknown, defaulting to 60 Hz\n");
+    }
+
     printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
            ctx->display.name, ctx->display.width,
            ctx->display.height, ctx->display.refresh_rate);

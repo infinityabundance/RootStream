@@ -297,7 +297,7 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_ty
     /* Set encoding parameters */
     va->width = ctx->display.width;
     va->height = ctx->display.height;
-    va->fps = ctx->display.refresh_rate;
+    va->fps = ctx->display.refresh_rate ? ctx->display.refresh_rate : 60;
 
     /* Create surfaces (render targets) */
     va->num_surfaces = 4;  /* Ring buffer */
@@ -334,9 +334,14 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_ty
     }
 
     /* Create coded buffer (output) */
+    size_t coded_buf_size = (size_t)ctx->display.width * ctx->display.height * 4;
+    if (coded_buf_size > 64 * 1024 * 1024) {
+        coded_buf_size = 64 * 1024 * 1024;
+    }
+
     status = vaCreateBuffer(va->display, va->context_id,
                            VAEncCodedBufferType,
-                           ctx->display.width * ctx->display.height,
+                           coded_buf_size,
                            1, NULL, &va->coded_buf_id);
     if (status != VA_STATUS_SUCCESS) {
         vaDestroyContext(va->display, va->context_id);
@@ -358,6 +363,7 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_ty
     ctx->encoder.codec = codec;
     ctx->encoder.hw_ctx = va;
     ctx->encoder.device_fd = drm_fd;
+    ctx->encoder.max_output_size = coded_buf_size;
     if (ctx->encoder.bitrate == 0) {
         ctx->encoder.bitrate = 10000000;  /* 10 Mbps default */
     }
@@ -596,6 +602,12 @@ int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
     }
 
     /* Copy encoded data */
+    if (ctx->encoder.max_output_size > 0 && segment->size > ctx->encoder.max_output_size) {
+        fprintf(stderr, "ERROR: Encoded frame too large (%u > %zu)\n",
+                segment->size, ctx->encoder.max_output_size);
+        vaUnmapBuffer(va->display, va->coded_buf_id);
+        return -1;
+    }
     *out_size = segment->size;
     memcpy(out, segment->buf, segment->size);
 
