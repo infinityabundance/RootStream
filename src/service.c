@@ -355,11 +355,15 @@ int service_run_client(rootstream_ctx_t *ctx) {
     }
 
     /* Initialize audio playback and Opus decoder */
-    if (audio_playback_init(ctx) < 0) {
-        fprintf(stderr, "WARNING: Audio playback init failed (continuing without audio)\n");
-    } else if (rootstream_opus_decoder_init(ctx) < 0) {
-        fprintf(stderr, "WARNING: Opus decoder init failed (continuing without audio)\n");
-        audio_playback_cleanup(ctx);
+    if (ctx->settings.audio_enabled) {
+        if (audio_playback_init(ctx) < 0) {
+            fprintf(stderr, "WARNING: Audio playback init failed (continuing without audio)\n");
+        } else if (rootstream_opus_decoder_init(ctx) < 0) {
+            fprintf(stderr, "WARNING: Opus decoder init failed (continuing without audio)\n");
+            audio_playback_cleanup(ctx);
+        }
+    } else {
+        printf("INFO: Audio disabled in settings\n");
     }
 
     printf("✓ Client initialized - ready to receive video and audio\n");
@@ -425,8 +429,10 @@ int service_run_client(rootstream_ctx_t *ctx) {
         free(decoded_frame.data);
     }
 
-    audio_playback_cleanup(ctx);
-    rootstream_opus_cleanup(ctx);
+    if (ctx->settings.audio_enabled) {
+        audio_playback_cleanup(ctx);
+        rootstream_opus_cleanup(ctx);
+    }
     display_cleanup(ctx);
     rootstream_decoder_cleanup(ctx);
 

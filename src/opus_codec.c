@@ -60,7 +60,10 @@ int rootstream_opus_encoder_init(rootstream_ctx_t *ctx) {
     opus->sample_rate = OPUS_SAMPLE_RATE;
     opus->channels = OPUS_CHANNELS;
     opus->frame_size = OPUS_FRAME_SIZE;
-    opus->bitrate = OPUS_BITRATE;
+    opus->bitrate = ctx->settings.audio_bitrate;
+    if (opus->bitrate == 0) {
+        opus->bitrate = OPUS_BITRATE;
+    }
 
     /* Create Opus encoder */
     int error;
@@ -116,7 +119,10 @@ int rootstream_opus_decoder_init(rootstream_ctx_t *ctx) {
         opus->sample_rate = OPUS_SAMPLE_RATE;
         opus->channels = OPUS_CHANNELS;
         opus->frame_size = OPUS_FRAME_SIZE;
+    opus->bitrate = ctx->settings.audio_bitrate;
+    if (opus->bitrate == 0) {
         opus->bitrate = OPUS_BITRATE;
+    }
         ctx->uinput_kbd_fd = (int)(intptr_t)opus;
     }
 

@@ -197,9 +197,23 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
     }
 
     /* Use H.264 by default (host mode doesn't use settings file) */
-    if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
-        fprintf(stderr, "ERROR: Encoder init failed\n");
-        return -1;
+    {
+        extern bool rootstream_encoder_nvenc_available(void);
+        if (rootstream_encoder_nvenc_available()) {
+            printf("INFO: NVENC detected, trying NVIDIA encoder...\n");
+            if (rootstream_encoder_init(ctx, ENCODER_NVENC, CODEC_H264) == 0) {
+                printf("✓ Using NVENC encoder\n");
+            } else {
+                printf("WARNING: NVENC init failed, falling back to VA-API\n");
+                if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
+                    fprintf(stderr, "ERROR: Encoder init failed\n");
+                    return -1;
+                }
+            }
+        } else if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
+            fprintf(stderr, "ERROR: Encoder init failed\n");
+            return -1;
+        }
     }
 
     if (rootstream_net_init(ctx, ctx->port) < 0) {

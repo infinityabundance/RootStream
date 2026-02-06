@@ -559,6 +559,9 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 }
             }
             else if (hdr->type == PKT_AUDIO) {
+                if (!ctx->settings.audio_enabled) {
+                    break;
+                }
                 /* Decode Opus audio and play immediately */
                 if (decrypted_len < sizeof(audio_packet_header_t)) {
                     fprintf(stderr, "WARNING: Audio packet too small: %zu bytes\n", decrypted_len);
