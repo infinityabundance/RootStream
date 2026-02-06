@@ -240,6 +240,7 @@ int rootstream_capture_init(rootstream_ctx_t *ctx) {
     ctx->current_frame.width = ctx->display.width;
     ctx->current_frame.height = ctx->display.height;
     ctx->current_frame.size = frame_size;
+    ctx->current_frame.capacity = frame_size;
     ctx->current_frame.format = 0x34325258; /* DRM_FORMAT_XRGB8888 */
 
     printf("✓ DRM capture initialized: %dx%d @ %d Hz\n",

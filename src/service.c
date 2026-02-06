@@ -269,8 +269,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
             peer_t *peer = &ctx->peers[i];
             if (peer->state == PEER_CONNECTED && peer->is_streaming) {
                 /* Send video */
-                if (rootstream_net_send_encrypted(ctx, peer, PKT_VIDEO,
-                                                  enc_buf, enc_size) < 0) {
+                if (enc_size > 0 &&
+                    rootstream_net_send_video(ctx, peer, enc_buf, enc_size) < 0) {
                     fprintf(stderr, "ERROR: Video send failed (peer=%s)\n", peer->hostname);
                 }
 
@@ -370,8 +370,6 @@ int service_run_client(rootstream_ctx_t *ctx) {
 
         /* Check if we received a video frame */
         if (ctx->current_frame.data && ctx->current_frame.size > 0) {
-            ctx->frames_received++;
-
             /* Decode frame */
             uint64_t decode_start_us = get_timestamp_us();
             if (rootstream_decode_frame(ctx, ctx->current_frame.data,
