@@ -104,7 +104,8 @@ static size_t max_plain_payload_size(void) {
 }
 
 int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
-                              const uint8_t *data, size_t size) {
+                              const uint8_t *data, size_t size,
+                              uint64_t timestamp_us) {
     if (!ctx || !peer || !data || size == 0) {
         fprintf(stderr, "ERROR: Invalid arguments to send_video\n");
         return -1;
@@ -138,7 +139,8 @@ int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
             .total_size = (uint32_t)size,
             .offset = (uint32_t)offset,
             .chunk_size = (uint16_t)chunk_size,
-            .flags = 0
+            .flags = 0,
+            .timestamp_us = timestamp_us
         };
 
         memcpy(payload, &header, sizeof(header));
@@ -558,19 +560,40 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                     ctx->current_frame.data = peer->video_rx_buffer;
                     ctx->current_frame.size = peer->video_rx_expected;
                     ctx->current_frame.capacity = peer->video_rx_capacity;
-                    ctx->current_frame.timestamp = get_timestamp_us();
+                    ctx->current_frame.timestamp = header.timestamp_us;
+                    ctx->last_video_ts_us = header.timestamp_us;
                     ctx->frames_received++;
                 }
             }
             else if (hdr->type == PKT_AUDIO) {
                 /* Decode Opus audio and play immediately */
+                if (decrypted_len < sizeof(audio_packet_header_t)) {
+                    fprintf(stderr, "WARNING: Audio packet too small: %zu bytes\n", decrypted_len);
+                    break;
+                }
+
+                audio_packet_header_t header;
+                memcpy(&header, decrypted, sizeof(header));
+
+                size_t opus_len = decrypted_len - sizeof(audio_packet_header_t);
+                const uint8_t *opus_data = decrypted + sizeof(audio_packet_header_t);
                 int16_t pcm_buffer[5760 * 2];  /* Max frame size * stereo */
                 size_t pcm_samples = 0;
 
-                if (rootstream_opus_decode(ctx, decrypted, decrypted_len,
+                if (rootstream_opus_decode(ctx, opus_data, opus_len,
                                pcm_buffer, &pcm_samples) == 0) {
-                    /* Play audio immediately (low latency, no buffering) */
-                    audio_playback_write(ctx, pcm_buffer, pcm_samples);
+                    bool drop_audio = false;
+                    if (ctx->last_video_ts_us > 0) {
+                        int64_t delta = (int64_t)header.timestamp_us - (int64_t)ctx->last_video_ts_us;
+                        if (delta > 80000 || delta < -200000) {
+                            drop_audio = true;
+                        }
+                    }
+
+                    if (!drop_audio) {
+                        audio_playback_write(ctx, pcm_buffer, pcm_samples);
+                        ctx->last_audio_ts_us = header.timestamp_us;
+                    }
                 } else {
                     #ifdef DEBUG
                     fprintf(stderr, "DEBUG: Audio decode failed\n");

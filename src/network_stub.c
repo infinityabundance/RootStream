@@ -28,6 +28,18 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
     return -1;
 }
 
+int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
+                              const uint8_t *data, size_t size,
+                              uint64_t timestamp_us) {
+    (void)ctx;
+    (void)peer;
+    (void)data;
+    (void)size;
+    (void)timestamp_us;
+    fprintf(stderr, "ERROR: Cannot send video (NO_CRYPTO build)\n");
+    return -1;
+}
+
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
     (void)ctx;
     (void)timeout_ms;
@@ -40,6 +52,10 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     (void)peer;
     fprintf(stderr, "ERROR: Cannot handshake (NO_CRYPTO build)\n");
     return -1;
+}
+
+void rootstream_net_tick(rootstream_ctx_t *ctx) {
+    (void)ctx;
 }
 
 peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code) {
