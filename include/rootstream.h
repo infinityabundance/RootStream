@@ -226,7 +226,17 @@ typedef PACKED_STRUCT {
     uint32_t offset;       /* Offset of this chunk */
     uint16_t chunk_size;   /* Size of this chunk */
     uint16_t flags;        /* Reserved for future use */
+    uint64_t timestamp_us; /* Capture timestamp */
 } video_chunk_header_t;
+PACKED_STRUCT_END
+
+/* Audio payload header (inside encrypted payload) */
+typedef PACKED_STRUCT {
+    uint64_t timestamp_us; /* Capture timestamp */
+    uint32_t sample_rate;  /* Samples per second */
+    uint16_t channels;     /* Channel count */
+    uint16_t samples;      /* Samples per channel */
+} audio_packet_header_t;
 PACKED_STRUCT_END
 
 /* Encrypted input event payload */
@@ -394,6 +404,8 @@ typedef struct {
     uint64_t bytes_received;
     latency_stats_t latency;   /* Latency instrumentation */
     bool is_host;              /* Host mode (streamer) */
+    uint64_t last_video_ts_us; /* Last received video timestamp */
+    uint64_t last_audio_ts_us; /* Last received audio timestamp */
 } rootstream_ctx_t;
 
 /* ============================================================================
@@ -493,7 +505,8 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
 int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
                                   uint8_t type, const void *data, size_t size);
 int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
-                              const uint8_t *data, size_t size);
+                              const uint8_t *data, size_t size,
+                              uint64_t timestamp_us);
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
 void rootstream_net_tick(rootstream_ctx_t *ctx);

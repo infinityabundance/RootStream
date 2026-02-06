@@ -189,11 +189,15 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
 
     /* Initialize audio capture and Opus encoder */
-    if (audio_capture_init(ctx) < 0) {
-        fprintf(stderr, "WARNING: Audio capture init failed (continuing without audio)\n");
-    } else if (rootstream_opus_encoder_init(ctx) < 0) {
-        fprintf(stderr, "WARNING: Opus encoder init failed (continuing without audio)\n");
-        audio_capture_cleanup(ctx);
+    if (ctx->settings.audio_enabled) {
+        if (audio_capture_init(ctx) < 0) {
+            fprintf(stderr, "WARNING: Audio capture init failed (continuing without audio)\n");
+        } else if (rootstream_opus_encoder_init(ctx) < 0) {
+            fprintf(stderr, "WARNING: Opus encoder init failed (continuing without audio)\n");
+            audio_capture_cleanup(ctx);
+        }
+    } else {
+        printf("INFO: Audio disabled in settings\n");
     }
 
     /* Announce service */
@@ -256,7 +260,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
         size_t audio_size = 0;
         size_t num_samples = 0;
 
-        if (audio_capture_frame(ctx, audio_samples, &num_samples) == 0) {
+        if (ctx->settings.audio_enabled &&
+            audio_capture_frame(ctx, audio_samples, &num_samples) == 0) {
             if (rootstream_opus_encode(ctx, audio_samples, audio_buf, &audio_size) < 0) {
                 /* Audio encode failed, continue with video only */
                 audio_size = 0;
@@ -270,14 +275,26 @@ int service_run_host(rootstream_ctx_t *ctx) {
             if (peer->state == PEER_CONNECTED && peer->is_streaming) {
                 /* Send video */
                 if (enc_size > 0 &&
-                    rootstream_net_send_video(ctx, peer, enc_buf, enc_size) < 0) {
+                    rootstream_net_send_video(ctx, peer, enc_buf, enc_size,
+                                              ctx->current_frame.timestamp) < 0) {
                     fprintf(stderr, "ERROR: Video send failed (peer=%s)\n", peer->hostname);
                 }
 
                 /* Send audio if available */
                 if (audio_size > 0) {
+                    audio_packet_header_t header = {
+                        .timestamp_us = get_timestamp_us(),
+                        .sample_rate = 48000,
+                        .channels = 2,
+                        .samples = (uint16_t)num_samples
+                    };
+
+                    uint8_t payload[sizeof(audio_packet_header_t) + 4000];
+                    memcpy(payload, &header, sizeof(header));
+                    memcpy(payload + sizeof(header), audio_buf, audio_size);
+
                     if (rootstream_net_send_encrypted(ctx, peer, PKT_AUDIO,
-                                                      audio_buf, audio_size) < 0) {
+                                                      payload, sizeof(header) + audio_size) < 0) {
                         fprintf(stderr, "ERROR: Audio send failed (peer=%s)\n", peer->hostname);
                     }
                 }

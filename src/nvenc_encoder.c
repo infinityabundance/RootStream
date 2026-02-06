@@ -293,8 +293,11 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     /* Set encoding parameters */
     nv->width = ctx->display.width;
     nv->height = ctx->display.height;
-    nv->fps = ctx->display.refresh_rate;
-    nv->bitrate = ctx->settings.video_bitrate;
+    nv->fps = ctx->display.refresh_rate ? ctx->display.refresh_rate : 60;
+    nv->bitrate = ctx->encoder.bitrate;
+    if (nv->bitrate == 0) {
+        nv->bitrate = ctx->settings.video_bitrate;
+    }
     if (nv->bitrate == 0) {
         nv->bitrate = 10000000;  /* 10 Mbps default */
     }
