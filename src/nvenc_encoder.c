@@ -448,6 +448,13 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     ctx->encoder.bitrate = nv->bitrate;
     ctx->encoder.framerate = nv->fps;
     ctx->encoder.low_latency = true;
+    {
+        size_t max_size = (size_t)nv->width * nv->height * 4;
+        if (max_size > 64 * 1024 * 1024) {
+            max_size = 64 * 1024 * 1024;
+        }
+        ctx->encoder.max_output_size = max_size;
+    }
 
     printf("✓ NVENC %s encoder ready: %dx%d @ %d fps, %d kbps\n",
            codec_name, nv->width, nv->height, nv->fps, nv->bitrate / 1000);
@@ -539,6 +546,12 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
 
     /* Copy encoded data */
     *out_size = lock_params.bitstreamSizeInBytes;
+    if (ctx->encoder.max_output_size > 0 && *out_size > ctx->encoder.max_output_size) {
+        fprintf(stderr, "ERROR: Encoded frame too large (%zu > %zu)\n",
+                *out_size, ctx->encoder.max_output_size);
+        nv->nvenc_api.nvEncUnlockBitstream(nv->encoder, nv->output_buffer);
+        return -1;
+    }
     memcpy(out, lock_params.bitstreamBufferPtr, *out_size);
 
     /* Detect actual keyframe from NAL units */

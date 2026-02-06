@@ -16,11 +16,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <signal.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
+
+#ifdef _WIN32
+  #include <io.h>
+  #include <fcntl.h>
+  #define usleep(us) Sleep((us) / 1000)
+#else
+  #include <unistd.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+#endif
 
 static volatile bool service_running = true;
 
@@ -42,6 +49,11 @@ static void service_signal_handler(int sig) {
  * 6. Redirect to /dev/null
  */
 int service_daemonize(void) {
+#ifdef _WIN32
+    /* Windows uses Windows Services, not UNIX daemons */
+    /* For now, just run in foreground on Windows */
+    return 0;
+#else
     /* Check if already running under systemd */
     if (getenv("INVOCATION_ID")) {
         /* Running under systemd, don't daemonize */
@@ -62,7 +74,7 @@ int service_daemonize(void) {
     }
 
     /* Child continues */
-    
+
     /* Create new session */
     if (setsid() < 0) {
         fprintf(stderr, "ERROR: service_daemonize setsid() failed\n");
@@ -115,6 +127,7 @@ int service_daemonize(void) {
     }
 
     return 0;
+#endif
 }
 
 /*
@@ -194,7 +207,10 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
 
     /* Allocate encoding buffer */
-    size_t enc_buf_size = ctx->display.width * ctx->display.height;
+    size_t enc_buf_size = ctx->encoder.max_output_size;
+    if (enc_buf_size == 0) {
+        enc_buf_size = (size_t)ctx->display.width * ctx->display.height;
+    }
     uint8_t *enc_buf = malloc(enc_buf_size);
     if (!enc_buf) {
         fprintf(stderr, "ERROR: Failed to allocate encode buffer (%zu bytes)\n",
@@ -283,7 +299,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
         rootstream_net_recv(ctx, 1);
 
         /* Rate limiting */
-        usleep(1000000 / ctx->display.refresh_rate);
+        uint32_t refresh_rate = ctx->display.refresh_rate ? ctx->display.refresh_rate : 60;
+        usleep(1000000 / refresh_rate);
     }
 
     free(enc_buf);
