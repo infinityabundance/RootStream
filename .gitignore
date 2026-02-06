@@ -1,0 +1,11 @@
+build/
+*.o
+*.d
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.pdb
+rootstream
+tools/rstr-player

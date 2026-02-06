@@ -112,6 +112,7 @@ endif()
 # =============================================================================
 
 set(COMMON_SOURCES
+    src/core.c
     src/crypto.c
     src/network.c
     src/opus_codec.c
