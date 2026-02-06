@@ -379,19 +379,12 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
         return 0;
     }
 
+    if (rootstream_net_validate_packet(buffer, (size_t)recv_len) != 0) {
+        fprintf(stderr, "WARNING: Invalid packet received (%d bytes)\n", recv_len);
+        return 0;
+    }
+
     packet_header_t *hdr = (packet_header_t*)buffer;
-
-    /* Validate magic number */
-    if (hdr->magic != PACKET_MAGIC) {
-        fprintf(stderr, "WARNING: Invalid magic number, ignoring packet\n");
-        return 0;
-    }
-
-    /* Validate version */
-    if (hdr->version != 1) {
-        fprintf(stderr, "WARNING: Unsupported protocol version %d\n", hdr->version);
-        return 0;
-    }
 
     /* Find or create peer */
     peer_t *peer = rootstream_find_peer_by_addr(ctx, &from, fromlen);

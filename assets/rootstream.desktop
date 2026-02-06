@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RootStream
+Comment=Secure peer-to-peer game streaming
+Exec=rootstream
+Icon=rootstream
+Terminal=false
+Categories=Game;Network;

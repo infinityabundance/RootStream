@@ -123,6 +123,13 @@ install_binary() {
     
     sudo install -m 755 rootstream /usr/local/bin/
     echo -e "${GREEN}✓ Installed to /usr/local/bin/rootstream${NC}"
+
+    if [ -f assets/rootstream.desktop ]; then
+        sudo install -m 644 assets/rootstream.desktop /usr/local/share/applications/rootstream.desktop
+    fi
+    if [ -f assets/rootstream.png ]; then
+        sudo install -m 644 assets/rootstream.png /usr/local/share/icons/hicolor/256x256/apps/rootstream.png
+    fi
 }
 
 # Setup permissions
@@ -181,6 +188,12 @@ main() {
         install_binary
         setup_permissions
         test_vaapi
+
+        if [ -f rootstream.service ]; then
+            echo -e "\n${BLUE}🧩 Installing systemd service template...${NC}"
+            sudo install -m 644 rootstream.service /etc/systemd/system/rootstream@.service
+            echo -e "${GREEN}✓ Installed /etc/systemd/system/rootstream@.service${NC}"
+        fi
         
         echo -e "\n${GREEN}╔═══════════════════════════════════════════════╗${NC}"
         echo -e "${GREEN}║  🎉 Installation Complete!                    ║${NC}"
