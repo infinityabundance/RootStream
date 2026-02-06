@@ -17,20 +17,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
 #include <errno.h>
-#include <pwd.h>
+
+#ifdef _WIN32
+  #include <direct.h>
+  #include <io.h>
+  #define getuid() 0
+#else
+  #include <unistd.h>
+  #include <sys/stat.h>
+  #include <pwd.h>
+#endif
 
 /*
  * Get configuration directory path
  *
  * @return Configuration directory path (never NULL)
  *
- * Priority:
+ * Priority (Linux):
  * 1. $XDG_CONFIG_HOME/rootstream
  * 2. $HOME/.config/rootstream
  * 3. /tmp/rootstream (fallback if no home)
+ *
+ * Priority (Windows):
+ * 1. %APPDATA%\RootStream (via platform layer)
  */
 const char* config_get_dir(void) {
     static char config_dir[512] = {0};
@@ -39,6 +49,17 @@ const char* config_get_dir(void) {
         return config_dir;  /* Already computed */
     }
 
+#ifdef _WIN32
+    /* Use platform layer for Windows */
+    const char *platform_dir = rs_config_dir();
+    if (platform_dir) {
+        strncpy(config_dir, platform_dir, sizeof(config_dir) - 1);
+        return config_dir;
+    }
+    /* Fallback */
+    snprintf(config_dir, sizeof(config_dir), "C:\\RootStream");
+    return config_dir;
+#else
     /* Try XDG_CONFIG_HOME */
     const char *xdg_config = getenv("XDG_CONFIG_HOME");
     if (xdg_config && xdg_config[0] != '\0') {
@@ -64,6 +85,7 @@ const char* config_get_dir(void) {
     /* Fallback to /tmp (not ideal, but works) */
     snprintf(config_dir, sizeof(config_dir), "/tmp/rootstream-%d", getuid());
     fprintf(stderr, "WARNING: Using fallback config directory: %s\n", config_dir);
+#endif
 
     return config_dir;
 }
@@ -76,6 +98,7 @@ static void config_init_defaults(settings_t *settings) {
     settings->video_bitrate = 10000000;  /* 10 Mbps */
     settings->video_framerate = 60;      /* 60 fps */
     strncpy(settings->video_codec, "h264", sizeof(settings->video_codec) - 1);
+    settings->display_index = 0;
 
     /* Audio defaults */
     settings->audio_enabled = true;
@@ -182,6 +205,8 @@ static int config_load_ini(settings_t *settings, const char *config_dir) {
                 settings->video_framerate = (uint32_t)atoi(value);
             } else if (strcmp(key, "codec") == 0) {
                 strncpy(settings->video_codec, value, sizeof(settings->video_codec) - 1);
+            } else if (strcmp(key, "display") == 0) {
+                settings->display_index = atoi(value);
             }
         }
         /* Audio settings */
@@ -247,7 +272,8 @@ static int config_save_ini(const settings_t *settings, const char *config_dir) {
     fprintf(fp, "[video]\n");
     fprintf(fp, "bitrate = %u\n", settings->video_bitrate);
     fprintf(fp, "framerate = %u\n", settings->video_framerate);
-    fprintf(fp, "codec = %s\n\n", settings->video_codec);
+    fprintf(fp, "codec = %s\n", settings->video_codec);
+    fprintf(fp, "display = %d\n\n", settings->display_index);
 
     /* Audio settings */
     fprintf(fp, "[audio]\n");
