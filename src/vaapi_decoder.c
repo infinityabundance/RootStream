@@ -320,15 +320,17 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
     out->timestamp = get_timestamp_us();
 
     /* Allocate output buffer if needed */
-    if (!out->data) {
-        out->data = malloc(out->size);
-        if (!out->data) {
+    if (!out->data || out->capacity < out->size) {
+        uint8_t *new_buf = realloc(out->data, out->size);
+        if (!new_buf) {
             fprintf(stderr, "ERROR: Cannot allocate output buffer\n");
             vaUnmapBuffer(dec->display, image.buf);
             vaDestroyImage(dec->display, image.image_id);
             vaDestroyBuffer(dec->display, slice_data_buf);
             return -1;
         }
+        out->data = new_buf;
+        out->capacity = out->size;
     }
 
     /* Copy pixel data */

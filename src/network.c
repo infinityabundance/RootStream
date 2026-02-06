@@ -57,6 +57,69 @@
 
 #define PACKET_MAGIC 0x524F4F54  /* "ROOT" */
 #define DEFAULT_PORT 9876
+#define MAX_VIDEO_FRAME_SIZE (16 * 1024 * 1024)
+
+static size_t max_plain_payload_size(void) {
+    size_t max_packet = MAX_PACKET_SIZE;
+    if (max_packet <= sizeof(packet_header_t) + crypto_aead_chacha20poly1305_IETF_ABYTES) {
+        return 0;
+    }
+    return max_packet - sizeof(packet_header_t) - crypto_aead_chacha20poly1305_IETF_ABYTES;
+}
+
+int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
+                              const uint8_t *data, size_t size) {
+    if (!ctx || !peer || !data || size == 0) {
+        fprintf(stderr, "ERROR: Invalid arguments to send_video\n");
+        return -1;
+    }
+
+    size_t max_plain = max_plain_payload_size();
+    if (max_plain <= sizeof(video_chunk_header_t)) {
+        fprintf(stderr, "ERROR: Payload size too small for video chunks\n");
+        return -1;
+    }
+
+    size_t max_chunk = max_plain - sizeof(video_chunk_header_t);
+    uint8_t *payload = malloc(sizeof(video_chunk_header_t) + max_chunk);
+    if (!payload) {
+        fprintf(stderr, "ERROR: Cannot allocate video payload buffer\n");
+        return -1;
+    }
+
+    uint32_t frame_id = peer->video_tx_frame_id++;
+    size_t offset = 0;
+    int result = 0;
+
+    while (offset < size) {
+        size_t chunk_size = size - offset;
+        if (chunk_size > max_chunk) {
+            chunk_size = max_chunk;
+        }
+
+        video_chunk_header_t header = {
+            .frame_id = frame_id,
+            .total_size = (uint32_t)size,
+            .offset = (uint32_t)offset,
+            .chunk_size = (uint16_t)chunk_size,
+            .flags = 0
+        };
+
+        memcpy(payload, &header, sizeof(header));
+        memcpy(payload + sizeof(header), data + offset, chunk_size);
+
+        if (rootstream_net_send_encrypted(ctx, peer, PKT_VIDEO,
+                                          payload, sizeof(header) + chunk_size) < 0) {
+            result = -1;
+            break;
+        }
+
+        offset += chunk_size;
+    }
+
+    free(payload);
+    return result;
+}
 
 /*
  * Initialize UDP socket for listening and sending
@@ -155,7 +218,7 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
  */
 int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
                                   uint8_t type, const void *data, size_t size) {
-    if (!ctx || !peer || !data) {
+    if (!ctx || !peer || (!data && size > 0)) {
         fprintf(stderr, "ERROR: Invalid arguments to send_encrypted\n");
         return -1;
     }
@@ -164,6 +227,13 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
         fprintf(stderr, "ERROR: Cannot send - peer not authenticated\n");
         fprintf(stderr, "PEER: %s\n", peer->hostname);
         fprintf(stderr, "FIX: Complete handshake first\n");
+        return -1;
+    }
+
+    size_t max_plain = max_plain_payload_size();
+    if (size > max_plain) {
+        fprintf(stderr, "ERROR: Payload too large for single packet (%zu > %zu)\n",
+                size, max_plain);
         return -1;
     }
 
@@ -387,22 +457,58 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 rootstream_input_process(ctx, input);
             }
             else if (hdr->type == PKT_VIDEO) {
-                /* Store video frame for client loop to consume */
-                if (decrypted_len <= sizeof(ctx->current_frame.data)) {
-                    if (!ctx->current_frame.data) {
-                        /* Allocate frame buffer on first use */
-                        ctx->current_frame.data = malloc(MAX_PACKET_SIZE * 10);  /* Larger buffer for frames */
-                        if (!ctx->current_frame.data) {
-                            fprintf(stderr, "ERROR: Failed to allocate frame buffer\n");
-                            break;
-                        }
+                if (decrypted_len < sizeof(video_chunk_header_t)) {
+                    fprintf(stderr, "WARNING: Video chunk too small: %zu bytes\n", decrypted_len);
+                    break;
+                }
+
+                video_chunk_header_t header;
+                memcpy(&header, decrypted, sizeof(header));
+
+                if (header.total_size == 0 || header.total_size > MAX_VIDEO_FRAME_SIZE) {
+                    fprintf(stderr, "WARNING: Invalid video frame size: %u bytes\n",
+                            header.total_size);
+                    break;
+                }
+
+                if ((size_t)header.offset + header.chunk_size > header.total_size) {
+                    fprintf(stderr, "WARNING: Video chunk out of range (offset=%u size=%u total=%u)\n",
+                            header.offset, header.chunk_size, header.total_size);
+                    break;
+                }
+
+                if (decrypted_len != sizeof(video_chunk_header_t) + header.chunk_size) {
+                    fprintf(stderr, "WARNING: Video chunk size mismatch\n");
+                    break;
+                }
+
+                if (peer->video_rx_frame_id != header.frame_id) {
+                    peer->video_rx_frame_id = header.frame_id;
+                    peer->video_rx_received = 0;
+                    peer->video_rx_expected = header.total_size;
+                }
+
+                if (peer->video_rx_capacity < peer->video_rx_expected) {
+                    uint8_t *new_buf = realloc(peer->video_rx_buffer, peer->video_rx_expected);
+                    if (!new_buf) {
+                        fprintf(stderr, "ERROR: Failed to allocate video reassembly buffer\n");
+                        break;
                     }
-                    memcpy(ctx->current_frame.data, decrypted, decrypted_len);
-                    ctx->current_frame.size = decrypted_len;
+                    peer->video_rx_buffer = new_buf;
+                    peer->video_rx_capacity = peer->video_rx_expected;
+                }
+
+                memcpy(peer->video_rx_buffer + header.offset,
+                       decrypted + sizeof(video_chunk_header_t),
+                       header.chunk_size);
+                peer->video_rx_received += header.chunk_size;
+
+                if (peer->video_rx_received >= peer->video_rx_expected) {
+                    ctx->current_frame.data = peer->video_rx_buffer;
+                    ctx->current_frame.size = peer->video_rx_expected;
+                    ctx->current_frame.capacity = peer->video_rx_capacity;
                     ctx->current_frame.timestamp = get_timestamp_us();
                     ctx->frames_received++;
-                } else {
-                    fprintf(stderr, "WARNING: Video frame too large: %zu bytes\n", decrypted_len);
                 }
             }
             else if (hdr->type == PKT_AUDIO) {
@@ -540,11 +646,11 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     hdr.type = PKT_HANDSHAKE;
     hdr.payload_size = payload_len;
 
-    uint8_t packet[sizeof(packet_header_t) + payload_len];
+    uint8_t packet[sizeof(packet_header_t) + 256];  /* Fixed size for MSVC compatibility */
     memcpy(packet, &hdr, sizeof(hdr));
     memcpy(packet + sizeof(hdr), payload, payload_len);
 
-    int sent = rs_socket_sendto(ctx->sock_fd, packet, sizeof(packet), 0,
+    int sent = rs_socket_sendto(ctx->sock_fd, packet, sizeof(hdr) + payload_len, 0,
                                 (struct sockaddr*)&peer->addr, peer->addr_len);
 
     if (sent < 0) {
@@ -665,6 +771,12 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *code) {
     }
 
     peer->state = PEER_DISCOVERED;
+    peer->video_tx_frame_id = 1;
+    peer->video_rx_frame_id = 0;
+    peer->video_rx_buffer = NULL;
+    peer->video_rx_capacity = 0;
+    peer->video_rx_expected = 0;
+    peer->video_rx_received = 0;
     ctx->num_peers++;
 
     char fingerprint[32];

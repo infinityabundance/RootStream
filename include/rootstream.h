@@ -84,6 +84,7 @@ typedef struct {
 typedef struct {
     uint8_t *data;             /* Frame pixel data (RGBA) */
     uint32_t size;             /* Total size in bytes */
+    uint32_t capacity;         /* Allocated buffer size in bytes */
     uint32_t width;            /* Frame width */
     uint32_t height;           /* Frame height */
     uint32_t pitch;            /* Bytes per row (stride) */
@@ -218,6 +219,16 @@ typedef PACKED_STRUCT {
 } control_packet_t;
 PACKED_STRUCT_END
 
+/* Fragmented video payload header (inside encrypted payload) */
+typedef PACKED_STRUCT {
+    uint32_t frame_id;     /* Frame sequence number */
+    uint32_t total_size;   /* Total encoded frame size */
+    uint32_t offset;       /* Offset of this chunk */
+    uint16_t chunk_size;   /* Size of this chunk */
+    uint16_t flags;        /* Reserved for future use */
+} video_chunk_header_t;
+PACKED_STRUCT_END
+
 /* Encrypted input event payload */
 typedef PACKED_STRUCT {
     uint8_t type;              /* EV_KEY, EV_REL, etc */
@@ -250,6 +261,12 @@ typedef struct {
     uint64_t handshake_sent_time;                    /* Handshake timestamp for timeout */
     char hostname[64];                               /* Peer hostname */
     bool is_streaming;                               /* Currently streaming? */
+    uint32_t video_tx_frame_id;                      /* Outgoing video frame counter */
+    uint32_t video_rx_frame_id;                      /* Current incoming frame id */
+    uint8_t *video_rx_buffer;                        /* Reassembly buffer */
+    size_t video_rx_capacity;                        /* Reassembly buffer size */
+    size_t video_rx_expected;                        /* Expected frame size */
+    size_t video_rx_received;                        /* Bytes received so far */
 } peer_t;
 
 /* ============================================================================
@@ -472,6 +489,8 @@ void recording_cleanup(rootstream_ctx_t *ctx);
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
 int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
                                   uint8_t type, const void *data, size_t size);
+int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
+                              const uint8_t *data, size_t size);
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
 

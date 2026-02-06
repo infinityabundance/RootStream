@@ -461,6 +461,7 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
                 /* Fill output frame info */
                 out->data = mf->frame_buffer;
                 out->size = (uint32_t)copy_size;
+                out->capacity = (uint32_t)mf->frame_buffer_size;
                 out->width = mf->width;
                 out->height = mf->height;
                 out->pitch = mf->width;  /* NV12 Y-plane pitch */
