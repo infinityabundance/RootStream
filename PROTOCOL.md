@@ -45,12 +45,14 @@ PKT_PONG      = 0x07
 
 ## Handshake
 
-Handshake is unencrypted and establishes a shared session key.
+Handshake is unencrypted and establishes a shared session key. It also carries optional protocol metadata.
 
 Payload format:
 ```
 [32 bytes] Ed25519 public key
 [N bytes]  hostname (null‑terminated)
+[1 byte]   protocol version (optional)
+[1 byte]   protocol flags (optional)
 ```
 
 Flow:
@@ -59,6 +61,8 @@ Flow:
 3. Server responds with its own PKT_HANDSHAKE.
 4. Client derives the same shared secret.
 5. Both sides set `session.authenticated = true` and start encrypted traffic.
+
+If version/flags are missing, peers assume protocol version 1 and flags 0.
 
 ## Encryption
 
@@ -144,7 +148,7 @@ CTRL_DISCONNECT       0x07
 ## Versioning
 
 Protocol version is in the header. Compatibility rules:
-- Major version must match.
+- Accept versions in `[PROTOCOL_MIN_VERSION, PROTOCOL_VERSION]`.
 - New fields should be appended to payloads with safe defaults.
 - Unknown packet types should be ignored.
 

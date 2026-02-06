@@ -47,6 +47,9 @@
  */
 
 #define ROOTSTREAM_VERSION "1.0.0"
+#define PROTOCOL_VERSION 1
+#define PROTOCOL_MIN_VERSION 1
+#define PROTOCOL_FLAGS 0
 #define MAX_DISPLAYS 4
 #define MAX_PACKET_SIZE 1400
 #define MAX_PEERS 16
@@ -279,6 +282,8 @@ typedef struct {
     size_t video_rx_received;                        /* Bytes received so far */
     uint64_t last_sent;                              /* Last outbound packet time (ms) */
     uint64_t last_ping;                              /* Last keepalive ping time (ms) */
+    uint8_t protocol_version;                       /* Peer protocol version */
+    uint8_t protocol_flags;                         /* Peer protocol flags */
 } peer_t;
 
 /* ============================================================================

@@ -14,7 +14,7 @@ int rootstream_net_validate_packet(const uint8_t *buffer, size_t len) {
         return -1;
     }
 
-    if (hdr->version != 1) {
+    if (hdr->version < PROTOCOL_MIN_VERSION || hdr->version > PROTOCOL_VERSION) {
         return -1;
     }
 

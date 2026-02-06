@@ -301,7 +301,7 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
 
     /* Build header */
     hdr->magic = PACKET_MAGIC;
-    hdr->version = 1;
+    hdr->version = PROTOCOL_VERSION;
     hdr->type = type;
     hdr->flags = 0;
     hdr->nonce = nonce;
@@ -431,10 +431,38 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
             memcpy(peer_public_key, payload, CRYPTO_PUBLIC_KEY_BYTES);
 
             /* Extract hostname (null-terminated string after public key) */
-            size_t hostname_len = hdr->payload_size - CRYPTO_PUBLIC_KEY_BYTES;
-            if (hostname_len > 0 && hostname_len < sizeof(peer_hostname)) {
-                memcpy(peer_hostname, payload + CRYPTO_PUBLIC_KEY_BYTES, hostname_len);
-                peer_hostname[hostname_len] = '\0';  /* Ensure null termination */
+            size_t hostname_len = 0;
+            if (hdr->payload_size > CRYPTO_PUBLIC_KEY_BYTES) {
+                size_t max_len = hdr->payload_size - CRYPTO_PUBLIC_KEY_BYTES;
+                size_t i = 0;
+                for (; i < max_len; i++) {
+                    if (payload[CRYPTO_PUBLIC_KEY_BYTES + i] == '\0') {
+                        hostname_len = i;
+                        break;
+                    }
+                }
+                if (hostname_len > 0 && hostname_len < sizeof(peer_hostname)) {
+                    memcpy(peer_hostname, payload + CRYPTO_PUBLIC_KEY_BYTES, hostname_len);
+                    peer_hostname[hostname_len] = '\0';  /* Ensure null termination */
+                }
+            }
+
+            /* Optional protocol version + flags after hostname */
+            size_t extensions_offset = CRYPTO_PUBLIC_KEY_BYTES;
+            if (hdr->payload_size > CRYPTO_PUBLIC_KEY_BYTES + hostname_len) {
+                extensions_offset = CRYPTO_PUBLIC_KEY_BYTES + hostname_len + 1;
+            }
+            uint8_t peer_version = PROTOCOL_VERSION;
+            uint8_t peer_flags = 0;
+            if (hdr->payload_size >= extensions_offset + 2) {
+                peer_version = payload[extensions_offset];
+                peer_flags = payload[extensions_offset + 1];
+            }
+
+            if (peer_version < PROTOCOL_MIN_VERSION || peer_version > PROTOCOL_VERSION) {
+                fprintf(stderr, "WARNING: Peer protocol version %u unsupported\n", peer_version);
+                peer->state = PEER_DISCONNECTED;
+                return 0;
             }
 
             printf("✓ Received handshake from %s\n", peer_hostname[0] ? peer_hostname : "unknown");
@@ -444,6 +472,8 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
             if (peer_hostname[0]) {
                 snprintf(peer->hostname, sizeof(peer->hostname), "%s", peer_hostname);
             }
+            peer->protocol_version = peer_version;
+            peer->protocol_flags = peer_flags;
 
             /* Create encryption session (derive shared secret) */
             if (crypto_create_session(&peer->session, ctx->keypair.secret_key,
@@ -748,13 +778,18 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     uint8_t payload[256];
     memcpy(payload, ctx->keypair.public_key, CRYPTO_PUBLIC_KEY_BYTES);
     strcpy((char*)(payload + CRYPTO_PUBLIC_KEY_BYTES), ctx->keypair.identity);
-    
+
     size_t payload_len = CRYPTO_PUBLIC_KEY_BYTES + strlen(ctx->keypair.identity) + 1;
+    if (payload_len + 2 <= sizeof(payload)) {
+        payload[payload_len] = PROTOCOL_VERSION;
+        payload[payload_len + 1] = PROTOCOL_FLAGS;
+        payload_len += 2;
+    }
 
     /* Send handshake (unencrypted for initial key exchange) */
     packet_header_t hdr = {0};
     hdr.magic = PACKET_MAGIC;
-    hdr.version = 1;
+    hdr.version = PROTOCOL_VERSION;
     hdr.type = PKT_HANDSHAKE;
     hdr.payload_size = payload_len;
 
