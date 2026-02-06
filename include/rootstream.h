@@ -322,6 +322,7 @@ typedef struct {
     uint32_t video_bitrate;    /* Target bitrate (bits/sec) */
     uint32_t video_framerate;  /* Target framerate (fps) */
     char video_codec[16];      /* Codec: "h264", "h265" */
+    int display_index;         /* Preferred display index */
 
     /* Audio settings */
     bool audio_enabled;        /* Enable audio streaming */

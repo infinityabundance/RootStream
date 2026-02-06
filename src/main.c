@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
     bool service_mode = false;
     bool no_discovery = false;
     uint16_t port = 9876;
-    int display_idx = 0;
+    int display_idx = -1;
     int bitrate = 10000;
     const char *record_file = NULL;
     bool latency_log = false;
@@ -389,6 +389,10 @@ int main(int argc, char **argv) {
     ctx.port = port;
     ctx.encoder.bitrate = (uint32_t)bitrate * 1000;
     ctx.is_host = false;
+
+    if (display_idx < 0) {
+        display_idx = ctx.settings.display_index;
+    }
 
     /* Handle --list-displays flag */
     if (list_displays) {

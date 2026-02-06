@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
@@ -365,6 +366,38 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
     GtkWidget *codec_label = gtk_label_new(codec_text);
     gtk_box_pack_start(GTK_BOX(video_box), codec_label, FALSE, FALSE, 0);
 
+    /* Display selection */
+    GtkWidget *display_label = gtk_label_new("Display:");
+    GtkWidget *display_combo = gtk_combo_box_text_new();
+    display_info_t displays[MAX_DISPLAYS];
+    int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
+    int active_index = 0;
+    if (num_displays > 0) {
+        for (int i = 0; i < num_displays; i++) {
+            char item[128];
+            snprintf(item, sizeof(item), "%d: %s (%dx%d @ %d Hz)",
+                     i, displays[i].name, displays[i].width,
+                     displays[i].height, displays[i].refresh_rate);
+            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(display_combo), item);
+            if (i == ctx->settings.display_index) {
+                active_index = i;
+            }
+        }
+        for (int i = 0; i < num_displays; i++) {
+            if (displays[i].fd >= 0) {
+                close(displays[i].fd);
+            }
+        }
+        gtk_combo_box_set_active(GTK_COMBO_BOX(display_combo), active_index);
+    } else {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(display_combo),
+                                       "No displays detected");
+        gtk_combo_box_set_active(GTK_COMBO_BOX(display_combo), 0);
+        gtk_widget_set_sensitive(display_combo, FALSE);
+    }
+    gtk_box_pack_start(GTK_BOX(video_box), display_label, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(video_box), display_combo, FALSE, FALSE, 0);
+
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), video_box,
                             gtk_label_new("Video"));
 
@@ -422,6 +455,10 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
             gtk_spin_button_get_value(GTK_SPIN_BUTTON(bitrate_spin)) * 1000000);
         ctx->settings.video_framerate = (uint32_t)
             gtk_spin_button_get_value(GTK_SPIN_BUTTON(fps_spin));
+        if (num_displays > 0) {
+            ctx->settings.display_index =
+                gtk_combo_box_get_active(GTK_COMBO_BOX(display_combo));
+        }
         ctx->settings.audio_enabled =
             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(audio_enabled));
         ctx->settings.audio_bitrate = (uint32_t)(
