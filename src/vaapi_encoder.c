@@ -181,6 +181,63 @@ static void rgba_to_nv12(const uint8_t *rgba, uint8_t *nv12_y, uint8_t *nv12_uv,
 }
 
 /*
+ * Check if VA-API encoder is available
+ *
+ * Attempts to open DRM device and check for VA-API support.
+ * Returns true if VA-API H.264 encoding is available.
+ */
+bool rootstream_encoder_vaapi_available(void) {
+    /* Try to open DRM device */
+    int drm_fd = open("/dev/dri/renderD128", O_RDWR);
+    if (drm_fd < 0) {
+        return false;
+    }
+
+    /* Try to get VA display */
+    VADisplay display = vaGetDisplayDRM(drm_fd);
+    if (!display) {
+        close(drm_fd);
+        return false;
+    }
+
+    /* Try to initialize VA-API */
+    int major, minor;
+    VAStatus status = vaInitialize(display, &major, &minor);
+    if (status != VA_STATUS_SUCCESS) {
+        close(drm_fd);
+        return false;
+    }
+
+    /* Check for H.264 encoding support */
+    int num_profiles = vaMaxNumProfiles(display);
+    VAProfile *profiles_list = malloc(num_profiles * sizeof(VAProfile));
+    if (!profiles_list) {
+        vaTerminate(display);
+        close(drm_fd);
+        return false;
+    }
+
+    int actual_num_profiles;
+    vaQueryConfigProfiles(display, profiles_list, &actual_num_profiles);
+
+    bool supported = false;
+    for (int i = 0; i < actual_num_profiles; i++) {
+        if (profiles_list[i] == VAProfileH264High ||
+            profiles_list[i] == VAProfileH264Main ||
+            profiles_list[i] == VAProfileH264ConstrainedBaseline) {
+            supported = true;
+            break;
+        }
+    }
+
+    free(profiles_list);
+    vaTerminate(display);
+    close(drm_fd);
+    
+    return supported;
+}
+
+/*
  * Initialize encoder (routes to VA-API or NVENC)
  */
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec) {

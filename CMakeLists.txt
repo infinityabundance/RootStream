@@ -78,6 +78,9 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(AVAHI avahi-client)
     pkg_check_modules(QRENCODE libqrencode)
     pkg_check_modules(PNG libpng)
+    
+    # FFmpeg for software encoding fallback (optional but recommended)
+    pkg_check_modules(FFMPEG libavcodec libavutil libswscale)
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -85,6 +88,14 @@ if(UNIX AND NOT APPLE)
 
     if(AVAHI_FOUND)
         add_compile_definitions(HAVE_AVAHI)
+    endif()
+    
+    if(FFMPEG_FOUND)
+        add_compile_definitions(HAVE_FFMPEG)
+        message(STATUS "  FFmpeg software encoding: ENABLED")
+    else()
+        message(STATUS "  FFmpeg software encoding: DISABLED (libavcodec not found)")
+        message(STATUS "    Install libavcodec-dev for software encoding fallback")
     endif()
 endif()
 
@@ -130,6 +141,8 @@ set(LINUX_SOURCES
     src/drm_capture.c
     src/vaapi_encoder.c
     src/nvenc_encoder.c
+    src/ffmpeg_encoder.c
+    src/raw_encoder.c
     src/vaapi_decoder.c
     src/audio_capture.c
     src/audio_playback.c
@@ -226,6 +239,11 @@ if(UNIX AND NOT APPLE)
     if(PNG_FOUND)
         target_link_libraries(rootstream PRIVATE ${PNG_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${PNG_INCLUDE_DIRS})
+    endif()
+    
+    if(FFMPEG_FOUND)
+        target_link_libraries(rootstream PRIVATE ${FFMPEG_LIBRARIES})
+        target_include_directories(rootstream PRIVATE ${FFMPEG_INCLUDE_DIRS})
     endif()
 
     # Recording player tool

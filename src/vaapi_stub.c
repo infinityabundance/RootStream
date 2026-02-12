@@ -7,6 +7,10 @@
 #include "../include/rootstream.h"
 #include <stdio.h>
 
+bool rootstream_encoder_vaapi_available(void) {
+    return false;
+}
+
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     (void)ctx;
     (void)type;
