@@ -192,6 +192,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
     if (ctx->settings.audio_enabled) {
         printf("INFO: Initializing audio capture...\n");
 
+        /* Backend list has static storage duration - safe to store pointers */
         static const audio_capture_backend_t capture_backends[] = {
             {
                 .name = "ALSA",
@@ -423,6 +424,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
     if (ctx->settings.audio_enabled) {
         printf("INFO: Initializing audio playback...\n");
 
+        /* Backend list has static storage duration - safe to store pointers */
         static const audio_playback_backend_t playback_backends[] = {
             {
                 .name = "ALSA",
