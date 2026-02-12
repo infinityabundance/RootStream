@@ -73,8 +73,9 @@ typedef enum {
     CAPTURE_MMAP,         /* Memory mapped framebuffer fallback */
 } capture_mode_t;
 
-/* Forward declaration for capture backend */
+/* Forward declarations */
 typedef struct rootstream_ctx rootstream_ctx_t;
+typedef struct frame_buffer frame_buffer_t;
 
 /* Capture backend interface */
 typedef struct capture_backend {
@@ -95,7 +96,7 @@ typedef struct {
     char name[64];             /* Display name (e.g., "HDMI-A-1") */
 } display_info_t;
 
-typedef struct {
+typedef struct frame_buffer {
     uint8_t *data;             /* Frame pixel data (RGBA) */
     uint32_t size;             /* Total size in bytes */
     uint32_t capacity;         /* Allocated buffer size in bytes */

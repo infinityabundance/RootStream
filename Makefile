@@ -89,6 +89,16 @@ else
     $(warning ALSA not found - audio will not work. Install libasound2-dev or alsa-lib-devel)
 endif
 
+# X11 (optional, for X11 capture fallback)
+X11_FOUND := $(shell pkg-config --exists x11 && echo yes)
+ifeq ($(X11_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags x11)
+    LIBS += $(shell pkg-config --libs x11)
+    CFLAGS += -DHAVE_X11
+else
+    $(info X11 not found - X11 capture backend will be disabled)
+endif
+
 # NVENC (optional, for NVIDIA GPU encoding)
 # Check both CUDA and NVENC SDK headers
 CUDA_FOUND := $(shell pkg-config --exists cuda && echo yes)
@@ -132,6 +142,8 @@ PLAYER := tools/rstr-player
 # Source files
 SRCS := src/main.c \
         src/drm_capture.c \
+        src/x11_capture.c \
+        src/dummy_capture.c \
         src/vaapi_encoder.c \
         src/vaapi_decoder.c \
         src/nvenc_encoder.c \
@@ -149,7 +161,8 @@ SRCS := src/main.c \
         src/config.c \
         src/latency.c \
         src/recording.c \
-        src/platform/platform_linux.c
+        src/platform/platform_linux.c \
+        src/packet_validate.c
 
 ifdef HEADLESS
     SRCS := $(filter-out src/tray.c,$(SRCS))
@@ -215,7 +228,7 @@ $(TARGET): $(OBJS)
 
 # Build rstr-player tool
 # Note: Needs many modules for dependencies - simplified player would be better long-term
-$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c src/platform/platform_linux.c
+$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c src/platform/platform_linux.c src/packet_validate.c
 	@echo "🔗 Building rstr-player..."
 	@$(CC) $(CFLAGS) $^ -o $(PLAYER) $(LDFLAGS) $(LIBS)
 	@echo "✓ Build complete: $(PLAYER)"

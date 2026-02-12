@@ -1079,6 +1079,7 @@ static int resolve_hostname(const char *hostname, uint16_t port,
         goto try_dns;
 #else
         printf("INFO: mDNS not available, trying DNS for %s\n", hostname);
+        goto try_dns;
 #endif
     }
 

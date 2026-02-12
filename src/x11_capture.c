@@ -115,7 +115,6 @@ int rootstream_capture_frame_x11(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     }
 
     /* Convert to RGBA format */
-    uint8_t *src = (uint8_t *)image->data;
     uint8_t *dst = frame->data;
     
     for (unsigned int y = 0; y < ctx->display.height; y++) {
