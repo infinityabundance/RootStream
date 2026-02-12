@@ -266,11 +266,9 @@ int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
     /* Check if we should force keyframe */
     if (ctx->encoder.force_keyframe) {
         ff->frame->pict_type = AV_PICTURE_TYPE_I;
-        ff->frame->key_frame = 1;
         ctx->encoder.force_keyframe = false;
     } else {
         ff->frame->pict_type = AV_PICTURE_TYPE_NONE;
-        ff->frame->key_frame = 0;
     }
 
     /* Send frame to encoder */

@@ -210,6 +210,13 @@ bool rootstream_encoder_vaapi_available(void) {
 
     /* Check for H.264 encoding support */
     int num_profiles = vaMaxNumProfiles(display);
+    if (num_profiles <= 0 || num_profiles > 256) {
+        /* Invalid profile count - reject to avoid excessive memory allocation */
+        vaTerminate(display);
+        close(drm_fd);
+        return false;
+    }
+
     VAProfile *profiles_list = malloc(num_profiles * sizeof(VAProfile));
     if (!profiles_list) {
         vaTerminate(display);
@@ -218,7 +225,13 @@ bool rootstream_encoder_vaapi_available(void) {
     }
 
     int actual_num_profiles;
-    vaQueryConfigProfiles(display, profiles_list, &actual_num_profiles);
+    VAStatus status = vaQueryConfigProfiles(display, profiles_list, &actual_num_profiles);
+    if (status != VA_STATUS_SUCCESS) {
+        free(profiles_list);
+        vaTerminate(display);
+        close(drm_fd);
+        return false;
+    }
 
     bool supported = false;
     for (int i = 0; i < actual_num_profiles; i++) {

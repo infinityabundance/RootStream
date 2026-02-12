@@ -69,11 +69,11 @@ int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec) {
     ctx->encoder.max_output_size = sizeof(raw_header_t) + 
                                    (size_t)raw->width * raw->height * 4;
 
-    size_t bandwidth_mbps = (ctx->encoder.max_output_size * ctx->display.refresh_rate * 8) / (1024 * 1024);
+    size_t bandwidth_mb_per_sec = (ctx->encoder.max_output_size * ctx->display.refresh_rate) / (1024 * 1024);
 
     printf("✓ Raw pass-through encoder ready: %dx%d (debug mode)\n",
            raw->width, raw->height);
-    printf("  ⚠ WARNING: Uncompressed - ~%zu MB/s bandwidth required\n", bandwidth_mbps);
+    printf("  ⚠ WARNING: Uncompressed - ~%zu MB/s bandwidth required\n", bandwidth_mb_per_sec);
     printf("  Use only for testing/debugging on high-bandwidth networks\n");
 
     return 0;

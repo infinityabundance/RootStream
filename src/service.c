@@ -130,6 +130,11 @@ int service_daemonize(void) {
 #endif
 }
 
+/* Wrapper function for VA-API init (converts 2-param to 3-param signature) */
+static int vaapi_init_wrapper(rootstream_ctx_t *ctx, codec_type_t codec) {
+    return rootstream_encoder_init(ctx, ENCODER_VAAPI, codec);
+}
+
 /*
  * Run as host service
  * 
@@ -161,11 +166,6 @@ int service_run_host(rootstream_ctx_t *ctx) {
      * Priority order: NVENC → VA-API → FFmpeg → Raw
      * Each encoder is tried in sequence until one succeeds
      */
-    
-    /* Wrapper function for VA-API init (converts 2-param to 3-param signature) */
-    int vaapi_init_wrapper(rootstream_ctx_t *ctx, codec_type_t codec) {
-        return rootstream_encoder_init(ctx, ENCODER_VAAPI, codec);
-    }
     
     /* Define encoder backends in priority order */
     const encoder_backend_t encoder_backends[] = {
