@@ -141,6 +141,7 @@ PLAYER := tools/rstr-player
 
 # Source files
 SRCS := src/main.c \
+        src/core.c \
         src/drm_capture.c \
         src/x11_capture.c \
         src/dummy_capture.c \
