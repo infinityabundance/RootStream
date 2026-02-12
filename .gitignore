@@ -9,3 +9,4 @@ build/
 *.pdb
 rootstream
 tools/rstr-player
+_codeql_build_dir/

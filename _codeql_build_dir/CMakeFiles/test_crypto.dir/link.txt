@@ -1,1 +1,0 @@
-/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_crypto.dir/link.d CMakeFiles/test_crypto.dir/tests/unit/test_crypto.c.o CMakeFiles/test_crypto.dir/src/crypto.c.o CMakeFiles/test_crypto.dir/src/platform/platform_linux.c.o -o test_crypto  -lsodium
