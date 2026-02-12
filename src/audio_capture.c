@@ -29,7 +29,7 @@ typedef struct {
     int channels;
     int frame_size;
     bool initialized;
-} audio_capture_ctx_t;
+} alsa_capture_ctx_t;
 
 /*
  * Check if ALSA is available
@@ -58,7 +58,7 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     }
 
     /* Allocate capture context */
-    audio_capture_ctx_t *capture = calloc(1, sizeof(audio_capture_ctx_t));
+    alsa_capture_ctx_t *capture = calloc(1, sizeof(alsa_capture_ctx_t));
     if (!capture) {
         fprintf(stderr, "ERROR: Cannot allocate audio capture context\n");
         return -1;
@@ -187,7 +187,7 @@ int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
         return -1;
     }
 
-    audio_capture_ctx_t *capture = (audio_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
     if (!capture || !capture->initialized) {
         return -1;
     }
@@ -237,7 +237,7 @@ void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx) {
         return;
     }
 
-    audio_capture_ctx_t *capture = (audio_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
 
     if (capture->handle) {
         snd_pcm_drain(capture->handle);
