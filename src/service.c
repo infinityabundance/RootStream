@@ -150,8 +150,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
                ctx->latency.report_interval_ms, ctx->latency.capacity);
     }
 
-    /* Initialize capture with fallback chain */
-    const capture_backend_t backends[] = {
+    /* Initialize capture with fallback chain (static to persist beyond function scope) */
+    static const capture_backend_t backends[] = {
         {
             .name = "DRM/KMS",
             .init_fn = rootstream_capture_init_drm,
