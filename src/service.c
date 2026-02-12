@@ -218,8 +218,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
 
     if (rootstream_input_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Input init failed\n");
-        return -1;
+        fprintf(stderr, "WARNING: Input init failed (continuing without input)\n");
     }
 
     /* Initialize audio capture and Opus encoder */
