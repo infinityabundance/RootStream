@@ -188,16 +188,73 @@ int service_run_host(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    /* Initialize audio capture and Opus encoder */
+    /* Initialize audio capture with fallback */
     if (ctx->settings.audio_enabled) {
-        if (audio_capture_init(ctx) < 0) {
-            fprintf(stderr, "WARNING: Audio capture init failed (continuing without audio)\n");
-        } else if (rootstream_opus_encoder_init(ctx) < 0) {
-            fprintf(stderr, "WARNING: Opus encoder init failed (continuing without audio)\n");
-            audio_capture_cleanup(ctx);
+        printf("INFO: Initializing audio capture...\n");
+
+        static const audio_capture_backend_t capture_backends[] = {
+            {
+                .name = "ALSA",
+                .init_fn = audio_capture_init_alsa,
+                .capture_fn = audio_capture_frame_alsa,
+                .cleanup_fn = audio_capture_cleanup_alsa,
+                .is_available_fn = audio_capture_alsa_available,
+            },
+            {
+                .name = "PulseAudio",
+                .init_fn = audio_capture_init_pulse,
+                .capture_fn = audio_capture_frame_pulse,
+                .cleanup_fn = audio_capture_cleanup_pulse,
+                .is_available_fn = audio_capture_pulse_available,
+            },
+            {
+                .name = "Dummy (Silent)",
+                .init_fn = audio_capture_init_dummy,
+                .capture_fn = audio_capture_frame_dummy,
+                .cleanup_fn = audio_capture_cleanup_dummy,
+                .is_available_fn = NULL,  /* Always available */
+            },
+            {NULL}
+        };
+
+        int capture_idx = 0;
+        while (capture_backends[capture_idx].name) {
+            printf("INFO: Attempting audio capture backend: %s\n", capture_backends[capture_idx].name);
+            
+            if (capture_backends[capture_idx].is_available_fn && 
+                !capture_backends[capture_idx].is_available_fn()) {
+                printf("  → Not available on this system\n");
+                capture_idx++;
+                continue;
+            }
+            
+            if (capture_backends[capture_idx].init_fn(ctx) == 0) {
+                printf("✓ Audio capture backend '%s' initialized\n", capture_backends[capture_idx].name);
+                ctx->audio_capture_backend = &capture_backends[capture_idx];
+                break;
+            } else {
+                printf("WARNING: Audio capture backend '%s' failed, trying next...\n", 
+                       capture_backends[capture_idx].name);
+                capture_idx++;
+            }
+        }
+
+        if (!ctx->audio_capture_backend) {
+            printf("WARNING: All audio capture backends failed, streaming video only\n");
+        } else {
+            /* Initialize Opus encoder */
+            printf("INFO: Initializing Opus encoder...\n");
+            if (rootstream_opus_encoder_init(ctx) < 0) {
+                printf("WARNING: Opus encoder init failed, audio disabled\n");
+                if (ctx->audio_capture_backend && ctx->audio_capture_backend->cleanup_fn) {
+                    ctx->audio_capture_backend->cleanup_fn(ctx);
+                }
+                ctx->audio_capture_backend = NULL;
+            }
         }
     } else {
         printf("INFO: Audio disabled in settings\n");
+        ctx->audio_capture_backend = NULL;
     }
 
     /* Announce service */
@@ -260,8 +317,16 @@ int service_run_host(rootstream_ctx_t *ctx) {
         size_t audio_size = 0;
         size_t num_samples = 0;
 
-        if (ctx->settings.audio_enabled &&
-            audio_capture_frame(ctx, audio_samples, &num_samples) == 0) {
+        if (ctx->audio_capture_backend && ctx->audio_capture_backend->capture_fn) {
+            int audio_result = ctx->audio_capture_backend->capture_fn(ctx, audio_samples, &num_samples);
+            if (audio_result < 0) {
+                /* Audio capture failed, continue with video only */
+                num_samples = 0;
+            }
+        }
+
+        /* Encode audio if we have samples */
+        if (num_samples > 0) {
             if (rootstream_opus_encode(ctx, audio_samples, audio_buf, &audio_size) < 0) {
                 /* Audio encode failed, continue with video only */
                 audio_size = 0;
@@ -354,16 +419,73 @@ int service_run_client(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    /* Initialize audio playback and Opus decoder */
+    /* Initialize audio playback with fallback */
     if (ctx->settings.audio_enabled) {
-        if (audio_playback_init(ctx) < 0) {
-            fprintf(stderr, "WARNING: Audio playback init failed (continuing without audio)\n");
-        } else if (rootstream_opus_decoder_init(ctx) < 0) {
-            fprintf(stderr, "WARNING: Opus decoder init failed (continuing without audio)\n");
-            audio_playback_cleanup(ctx);
+        printf("INFO: Initializing audio playback...\n");
+
+        static const audio_playback_backend_t playback_backends[] = {
+            {
+                .name = "ALSA",
+                .init_fn = audio_playback_init_alsa,
+                .playback_fn = audio_playback_write_alsa,
+                .cleanup_fn = audio_playback_cleanup_alsa,
+                .is_available_fn = audio_playback_alsa_available,
+            },
+            {
+                .name = "PulseAudio",
+                .init_fn = audio_playback_init_pulse,
+                .playback_fn = audio_playback_write_pulse,
+                .cleanup_fn = audio_playback_cleanup_pulse,
+                .is_available_fn = audio_playback_pulse_available,
+            },
+            {
+                .name = "Dummy (Silent)",
+                .init_fn = audio_playback_init_dummy,
+                .playback_fn = audio_playback_write_dummy,
+                .cleanup_fn = audio_playback_cleanup_dummy,
+                .is_available_fn = NULL,  /* Always available */
+            },
+            {NULL}
+        };
+
+        int playback_idx = 0;
+        while (playback_backends[playback_idx].name) {
+            printf("INFO: Attempting audio playback backend: %s\n", playback_backends[playback_idx].name);
+            
+            if (playback_backends[playback_idx].is_available_fn && 
+                !playback_backends[playback_idx].is_available_fn()) {
+                printf("  → Not available on this system\n");
+                playback_idx++;
+                continue;
+            }
+            
+            if (playback_backends[playback_idx].init_fn(ctx) == 0) {
+                printf("✓ Audio playback backend '%s' initialized\n", playback_backends[playback_idx].name);
+                ctx->audio_playback_backend = &playback_backends[playback_idx];
+                break;
+            } else {
+                printf("WARNING: Audio playback backend '%s' failed, trying next...\n", 
+                       playback_backends[playback_idx].name);
+                playback_idx++;
+            }
+        }
+
+        if (!ctx->audio_playback_backend) {
+            printf("WARNING: All audio playback backends failed, watching video only\n");
+        } else {
+            /* Initialize Opus decoder */
+            printf("INFO: Initializing Opus decoder...\n");
+            if (rootstream_opus_decoder_init(ctx) < 0) {
+                printf("WARNING: Opus decoder init failed, audio disabled\n");
+                if (ctx->audio_playback_backend && ctx->audio_playback_backend->cleanup_fn) {
+                    ctx->audio_playback_backend->cleanup_fn(ctx);
+                }
+                ctx->audio_playback_backend = NULL;
+            }
         }
     } else {
         printf("INFO: Audio disabled in settings\n");
+        ctx->audio_playback_backend = NULL;
     }
 
     printf("✓ Client initialized - ready to receive video and audio\n");
@@ -429,8 +551,8 @@ int service_run_client(rootstream_ctx_t *ctx) {
         free(decoded_frame.data);
     }
 
-    if (ctx->settings.audio_enabled) {
-        audio_playback_cleanup(ctx);
+    if (ctx->audio_playback_backend && ctx->audio_playback_backend->cleanup_fn) {
+        ctx->audio_playback_backend->cleanup_fn(ctx);
         rootstream_opus_cleanup(ctx);
     }
     display_cleanup(ctx);

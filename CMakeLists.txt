@@ -78,6 +78,7 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(AVAHI avahi-client)
     pkg_check_modules(QRENCODE libqrencode)
     pkg_check_modules(PNG libpng)
+    pkg_check_modules(PULSEAUDIO libpulse-simple)
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -85,6 +86,10 @@ if(UNIX AND NOT APPLE)
 
     if(AVAHI_FOUND)
         add_compile_definitions(HAVE_AVAHI)
+    endif()
+
+    if(PULSEAUDIO_FOUND)
+        add_compile_definitions(HAVE_PULSEAUDIO)
     endif()
 endif()
 
@@ -133,6 +138,10 @@ set(LINUX_SOURCES
     src/vaapi_decoder.c
     src/audio_capture.c
     src/audio_playback.c
+    src/audio_capture_pulse.c
+    src/audio_playback_pulse.c
+    src/audio_capture_dummy.c
+    src/audio_playback_dummy.c
     src/input.c
     src/discovery.c
     src/service.c
@@ -208,6 +217,11 @@ if(UNIX AND NOT APPLE)
         target_include_directories(rootstream PRIVATE ${ALSA_INCLUDE_DIRS})
     endif()
 
+    if(PULSEAUDIO_FOUND)
+        target_link_libraries(rootstream PRIVATE ${PULSEAUDIO_LIBRARIES})
+        target_include_directories(rootstream PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
+    endif()
+
     if(NOT HEADLESS AND GTK3_FOUND)
         target_link_libraries(rootstream PRIVATE ${GTK3_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${GTK3_INCLUDE_DIRS})
@@ -241,6 +255,8 @@ if(UNIX AND NOT APPLE)
         src/input.c
         src/opus_codec.c
         src/audio_playback.c
+        src/audio_playback_pulse.c
+        src/audio_playback_dummy.c
         src/latency.c
         ${PLATFORM_SOURCES}
     )
@@ -258,6 +274,11 @@ if(UNIX AND NOT APPLE)
         ${AVAHI_LIBRARIES}
         m pthread
     )
+
+    if(PULSEAUDIO_FOUND)
+        target_link_libraries(rstr-player PRIVATE ${PULSEAUDIO_LIBRARIES})
+        target_include_directories(rstr-player PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
+    endif()
 
     if(Opus_FOUND)
         target_link_libraries(rstr-player PRIVATE Opus::opus)

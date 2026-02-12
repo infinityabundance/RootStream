@@ -357,10 +357,33 @@ typedef struct {
 } recording_ctx_t;
 
 /* ============================================================================
+ * AUDIO BACKEND ABSTRACTION - Multi-fallback support
+ * ============================================================================ */
+
+/* Forward declaration */
+typedef struct rootstream_ctx rootstream_ctx_t;
+
+typedef struct {
+    const char *name;
+    int (*init_fn)(rootstream_ctx_t *ctx);
+    int (*capture_fn)(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
+    void (*cleanup_fn)(rootstream_ctx_t *ctx);
+    bool (*is_available_fn)(void);
+} audio_capture_backend_t;
+
+typedef struct {
+    const char *name;
+    int (*init_fn)(rootstream_ctx_t *ctx);
+    int (*playback_fn)(rootstream_ctx_t *ctx, int16_t *samples, size_t num_samples);
+    void (*cleanup_fn)(rootstream_ctx_t *ctx);
+    bool (*is_available_fn)(void);
+} audio_playback_backend_t;
+
+/* ============================================================================
  * MAIN CONTEXT - Application state
  * ============================================================================ */
 
-typedef struct {
+typedef struct rootstream_ctx {
     /* Identity */
     keypair_t keypair;         /* This device's keys */
 
@@ -378,6 +401,10 @@ typedef struct {
 
     /* Audio (client) */
     audio_playback_ctx_t audio_playback;
+
+    /* Audio backends (Phase 3) */
+    const audio_capture_backend_t *audio_capture_backend;
+    const audio_playback_backend_t *audio_playback_backend;
 
     /* Network */
     rs_socket_t sock_fd;       /* UDP socket */
@@ -490,6 +517,7 @@ int rootstream_opus_get_frame_size(void);
 int rootstream_opus_get_sample_rate(void);
 int rootstream_opus_get_channels(void);
 
+/* Audio capture/playback - backward compatibility */
 int audio_capture_init(rootstream_ctx_t *ctx);
 int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
                        size_t *num_samples);
@@ -499,6 +527,43 @@ int audio_playback_init(rootstream_ctx_t *ctx);
 int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
                         size_t num_samples);
 void audio_playback_cleanup(rootstream_ctx_t *ctx);
+
+/* Audio backends - ALSA */
+bool audio_capture_alsa_available(void);
+int audio_capture_init_alsa(rootstream_ctx_t *ctx);
+int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
+                             size_t *num_samples);
+void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx);
+
+bool audio_playback_alsa_available(void);
+int audio_playback_init_alsa(rootstream_ctx_t *ctx);
+int audio_playback_write_alsa(rootstream_ctx_t *ctx, int16_t *samples,
+                              size_t num_samples);
+void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx);
+
+/* Audio backends - PulseAudio */
+bool audio_capture_pulse_available(void);
+int audio_capture_init_pulse(rootstream_ctx_t *ctx);
+int audio_capture_frame_pulse(rootstream_ctx_t *ctx, int16_t *samples,
+                              size_t *num_samples);
+void audio_capture_cleanup_pulse(rootstream_ctx_t *ctx);
+
+bool audio_playback_pulse_available(void);
+int audio_playback_init_pulse(rootstream_ctx_t *ctx);
+int audio_playback_write_pulse(rootstream_ctx_t *ctx, int16_t *samples,
+                               size_t num_samples);
+void audio_playback_cleanup_pulse(rootstream_ctx_t *ctx);
+
+/* Audio backends - Dummy (silent/discard) */
+int audio_capture_init_dummy(rootstream_ctx_t *ctx);
+int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples,
+                              size_t *num_samples);
+void audio_capture_cleanup_dummy(rootstream_ctx_t *ctx);
+
+int audio_playback_init_dummy(rootstream_ctx_t *ctx);
+int audio_playback_write_dummy(rootstream_ctx_t *ctx, int16_t *samples,
+                               size_t num_samples);
+void audio_playback_cleanup_dummy(rootstream_ctx_t *ctx);
 
 /* --- Recording (Phase 7) --- */
 int recording_init(rootstream_ctx_t *ctx, const char *filename);
