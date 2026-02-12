@@ -162,6 +162,11 @@ int service_run_host(rootstream_ctx_t *ctx) {
      * Each encoder is tried in sequence until one succeeds
      */
     
+    /* Wrapper function for VA-API init (converts 2-param to 3-param signature) */
+    int vaapi_init_wrapper(rootstream_ctx_t *ctx, codec_type_t codec) {
+        return rootstream_encoder_init(ctx, ENCODER_VAAPI, codec);
+    }
+    
     /* Define encoder backends in priority order */
     const encoder_backend_t encoder_backends[] = {
         {
@@ -174,7 +179,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         },
         {
             .name = "VA-API (Intel/AMD GPU)",
-            .init_fn = rootstream_encoder_init,  /* Routes to VA-API internally */
+            .init_fn = vaapi_init_wrapper,
             .encode_fn = rootstream_encode_frame,
             .encode_ex_fn = rootstream_encode_frame_ex,
             .cleanup_fn = rootstream_encoder_cleanup,
@@ -224,13 +229,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         }
         
         /* Try to initialize */
-        int init_result;
-        if (backend_idx == 1) {
-            /* VA-API uses special routing through rootstream_encoder_init */
-            init_result = backend->init_fn(ctx, ENCODER_VAAPI, codec);
-        } else {
-            init_result = backend->init_fn(ctx, codec);
-        }
+        int init_result = backend->init_fn(ctx, codec);
 
         if (init_result == 0) {
             printf("✓ Encoder backend '%s' initialized successfully\n", backend->name);

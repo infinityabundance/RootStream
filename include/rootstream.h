@@ -148,8 +148,8 @@ typedef struct {
     size_t max_output_size;    /* Max encoded output size (bytes) */
 } encoder_ctx_t;
 
-/* Forward declaration */
-struct encoder_backend_t;
+/* Forward declaration for encoder_backend_t */
+typedef struct encoder_backend_t encoder_backend_t;
 
 typedef struct {
     codec_type_t codec;        /* Video codec */
@@ -165,16 +165,6 @@ typedef struct {
     int channels;              /* Number of channels */
     bool initialized;          /* Audio initialized? */
 } audio_playback_ctx_t;
-
-/* Encoder backend abstraction for multi-tier fallback */
-typedef struct encoder_backend_t {
-    const char *name;
-    int (*init_fn)(struct rootstream_ctx_t *ctx, codec_type_t codec);
-    int (*encode_fn)(struct rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size);
-    int (*encode_ex_fn)(struct rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size, bool *is_keyframe);
-    void (*cleanup_fn)(struct rootstream_ctx_t *ctx);
-    bool (*is_available_fn)(void);
-} encoder_backend_t;
 
 
 /* ============================================================================
@@ -429,6 +419,16 @@ typedef struct rootstream_ctx_t {
     uint64_t last_video_ts_us; /* Last received video timestamp */
     uint64_t last_audio_ts_us; /* Last received audio timestamp */
 } rootstream_ctx_t;
+
+/* Encoder backend abstraction for multi-tier fallback */
+struct encoder_backend_t {
+    const char *name;
+    int (*init_fn)(rootstream_ctx_t *ctx, codec_type_t codec);
+    int (*encode_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size);
+    int (*encode_ex_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size, bool *is_keyframe);
+    void (*cleanup_fn)(rootstream_ctx_t *ctx);
+    bool (*is_available_fn)(void);
+};
 
 /* ============================================================================
  * API FUNCTIONS
