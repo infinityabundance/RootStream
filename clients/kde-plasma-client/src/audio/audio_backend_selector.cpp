@@ -54,21 +54,11 @@ bool AudioBackendSelector::check_pulseaudio_available() {
     }
 #endif
     
-    // Also check if PulseAudio process is running
-    if (system("pgrep -x pulseaudio > /dev/null 2>&1") == 0) {
-        return true;
-    }
-    
     return false;
 }
 
 bool AudioBackendSelector::check_pipewire_available() {
 #ifdef HAVE_PIPEWIRE
-    // Check if PipeWire daemon is running
-    if (system("pgrep -x pipewire > /dev/null 2>&1") == 0) {
-        return true;
-    }
-    
     // Check for PipeWire runtime directory
     const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
     if (runtime_dir) {

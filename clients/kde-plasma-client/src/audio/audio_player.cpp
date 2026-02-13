@@ -11,6 +11,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 
 AudioPlayer::AudioPlayer(QObject *parent)
@@ -71,52 +72,49 @@ int AudioPlayer::init(int sample_rate, int channels) {
     fprintf(stderr, "Audio backend: %s\n", 
             AudioBackendSelector::get_backend_name(backend));
     
-    switch (backend) {
+    bool backend_initialized = false;
+    
+    // Try backends in order
 #ifdef HAVE_PULSEAUDIO
-        case AudioBackendSelector::AUDIO_BACKEND_PULSEAUDIO: {
-            PulseAudioPlayback *pa = new PulseAudioPlayback();
-            if (pa->init(output_sample_rate, channels) < 0) {
-                delete pa;
-                fprintf(stderr, "Failed to initialize PulseAudio, trying fallback\n");
-                backend = AudioBackendSelector::AUDIO_BACKEND_ALSA;
-                goto try_alsa;
-            }
+    if (backend == AudioBackendSelector::AUDIO_BACKEND_PULSEAUDIO && !backend_initialized) {
+        PulseAudioPlayback *pa = new PulseAudioPlayback();
+        if (pa->init(output_sample_rate, channels) == 0) {
             playback_backend = pa;
             backend_type = backend;
-            break;
+            backend_initialized = true;
+        } else {
+            delete pa;
+            fprintf(stderr, "Failed to initialize PulseAudio, trying fallback\n");
         }
+    }
 #endif
-        
+    
 #ifdef HAVE_PIPEWIRE
-        case AudioBackendSelector::AUDIO_BACKEND_PIPEWIRE: {
-            PipeWirePlayback *pw = new PipeWirePlayback();
-            if (pw->init(output_sample_rate, channels) < 0) {
-                delete pw;
-                fprintf(stderr, "Failed to initialize PipeWire, trying fallback\n");
-                backend = AudioBackendSelector::AUDIO_BACKEND_ALSA;
-                goto try_alsa;
-            }
+    if (backend == AudioBackendSelector::AUDIO_BACKEND_PIPEWIRE && !backend_initialized) {
+        PipeWirePlayback *pw = new PipeWirePlayback();
+        if (pw->init(output_sample_rate, channels) == 0) {
             playback_backend = pw;
             backend_type = backend;
-            break;
+            backend_initialized = true;
+        } else {
+            delete pw;
+            fprintf(stderr, "Failed to initialize PipeWire, trying fallback\n");
         }
+    }
 #endif
-        
-        case AudioBackendSelector::AUDIO_BACKEND_ALSA:
-        default:
-try_alsa:
-        {
-            ALSAPlayback *alsa = new ALSAPlayback();
-            if (alsa->init(output_sample_rate, channels) < 0) {
-                delete alsa;
-                fprintf(stderr, "Failed to initialize ALSA\n");
-                cleanup();
-                return -1;
-            }
-            playback_backend = alsa;
-            backend_type = AudioBackendSelector::AUDIO_BACKEND_ALSA;
-            break;
+    
+    // Always try ALSA as final fallback
+    if (!backend_initialized) {
+        ALSAPlayback *alsa = new ALSAPlayback();
+        if (alsa->init(output_sample_rate, channels) < 0) {
+            delete alsa;
+            fprintf(stderr, "Failed to initialize ALSA\n");
+            cleanup();
+            return -1;
         }
+        playback_backend = alsa;
+        backend_type = AudioBackendSelector::AUDIO_BACKEND_ALSA;
+        backend_initialized = true;
     }
     
     return 0;
@@ -353,7 +351,7 @@ void AudioPlayer::on_video_frame_received(uint64_t timestamp_us) {
         int64_t offset_us = sync_manager->calculate_sync_offset();
         int offset_ms = (int)(offset_us / 1000);
         
-        if (abs(offset_ms) > 100) {
+        if (llabs(offset_us) > 100000) {  // > 100ms
             emit sync_warning(offset_ms);
         }
     }
