@@ -205,28 +205,12 @@ public:
     // ========================================================================
     
     /**
-     * Subscribe to a channel
-     * @param channel Channel name
-     * @param callback Function to call when message received
-     * @return 0 on success, negative on error
-     */
-    int subscribe(const std::string& channel, 
-                 std::function<void(const std::string&)> callback);
-    
-    /**
      * Publish a message to a channel
      * @param channel Channel name
      * @param message Message to publish
      * @return 0 on success, negative on error
      */
     int publish(const std::string& channel, const std::string& message);
-    
-    /**
-     * Unsubscribe from a channel
-     * @param channel Channel name
-     * @return 0 on success, negative on error
-     */
-    int unsubscribe(const std::string& channel);
     
     // ========================================================================
     // Transaction Operations

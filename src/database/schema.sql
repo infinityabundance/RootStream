@@ -128,6 +128,9 @@ CREATE INDEX IF NOT EXISTS idx_recordings_available ON recordings(is_available);
 -- ============================================================================
 -- Usage Tracking Table
 -- ============================================================================
+-- Usage Tracking Table
+-- Note: stream_id uses SET NULL to preserve usage history after stream deletion
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS usage_logs (
     id BIGSERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

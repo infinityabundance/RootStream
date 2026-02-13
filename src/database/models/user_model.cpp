@@ -21,12 +21,11 @@ int User::createUser(DatabaseManager& db,
                      const std::string& email,
                      const std::string& passwordHash) {
     try {
-        std::stringstream query;
-        query << "INSERT INTO users (username, email, password_hash, is_active, is_verified) "
-              << "VALUES ('" << username << "', '" << email << "', '" 
-              << passwordHash << "', true, false) RETURNING id";
+        std::string query = "INSERT INTO users (username, email, password_hash, is_active, is_verified) "
+                           "VALUES ($1, $2, $3, true, false) RETURNING id";
         
-        auto result = db.executeSelect(query.str());
+        std::vector<std::string> params = {username, email, passwordHash};
+        auto result = db.executeParams(query, params);
         
         if (result.size() > 0) {
             std::cout << "User created successfully with ID: " << result[0][0].c_str() << std::endl;
@@ -80,15 +79,15 @@ int User::load(DatabaseManager& db, uint32_t userId) {
 
 int User::loadByUsername(DatabaseManager& db, const std::string& username) {
     try {
-        std::stringstream query;
-        query << "SELECT id, username, email, password_hash, display_name, avatar_url, "
-              << "is_verified, is_active, "
-              << "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
-              << "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
-              << "EXTRACT(EPOCH FROM last_login_at) * 1000000 as last_login_us "
-              << "FROM users WHERE username = '" << username << "'";
+        std::string query = "SELECT id, username, email, password_hash, display_name, avatar_url, "
+                           "is_verified, is_active, "
+                           "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
+                           "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
+                           "EXTRACT(EPOCH FROM last_login_at) * 1000000 as last_login_us "
+                           "FROM users WHERE username = $1";
         
-        auto result = db.executeSelect(query.str());
+        std::vector<std::string> params = {username};
+        auto result = db.executeParams(query, params);
         
         if (result.size() == 0) {
             std::cerr << "User not found: " << username << std::endl;
@@ -118,15 +117,15 @@ int User::loadByUsername(DatabaseManager& db, const std::string& username) {
 
 int User::loadByEmail(DatabaseManager& db, const std::string& email) {
     try {
-        std::stringstream query;
-        query << "SELECT id, username, email, password_hash, display_name, avatar_url, "
-              << "is_verified, is_active, "
-              << "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
-              << "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
-              << "EXTRACT(EPOCH FROM last_login_at) * 1000000 as last_login_us "
-              << "FROM users WHERE email = '" << email << "'";
+        std::string query = "SELECT id, username, email, password_hash, display_name, avatar_url, "
+                           "is_verified, is_active, "
+                           "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
+                           "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
+                           "EXTRACT(EPOCH FROM last_login_at) * 1000000 as last_login_us "
+                           "FROM users WHERE email = $1";
         
-        auto result = db.executeSelect(query.str());
+        std::vector<std::string> params = {email};
+        auto result = db.executeParams(query, params);
         
         if (result.size() == 0) {
             std::cerr << "User not found: " << email << std::endl;
@@ -161,18 +160,23 @@ int User::save(DatabaseManager& db) {
     }
     
     try {
-        std::stringstream query;
-        query << "UPDATE users SET "
-              << "username = '" << data_.username << "', "
-              << "email = '" << data_.email << "', "
-              << "display_name = " << (data_.display_name.empty() ? "NULL" : "'" + data_.display_name + "'") << ", "
-              << "avatar_url = " << (data_.avatar_url.empty() ? "NULL" : "'" + data_.avatar_url + "'") << ", "
-              << "is_verified = " << (data_.is_verified ? "true" : "false") << ", "
-              << "is_active = " << (data_.is_active ? "true" : "false") << " "
-              << "WHERE id = " << data_.id;
+        std::string query = "UPDATE users SET "
+                           "username = $1, email = $2, display_name = $3, avatar_url = $4, "
+                           "is_verified = $5, is_active = $6 "
+                           "WHERE id = $7";
         
-        int result = db.executeQuery(query.str());
-        return (result >= 0) ? 0 : -1;
+        std::vector<std::string> params = {
+            data_.username,
+            data_.email,
+            data_.display_name.empty() ? "" : data_.display_name,
+            data_.avatar_url.empty() ? "" : data_.avatar_url,
+            data_.is_verified ? "true" : "false",
+            data_.is_active ? "true" : "false",
+            std::to_string(data_.id)
+        };
+        
+        auto result = db.executeParams(query, params);
+        return (result.affected_rows() > 0) ? 0 : -1;
     } catch (const std::exception& e) {
         std::cerr << "Failed to save user: " << e.what() << std::endl;
         return -1;
@@ -269,9 +273,15 @@ int User::deleteUser(DatabaseManager& db) {
 }
 
 bool User::validatePassword(const std::string& password) const {
-    // Note: In production, this should use proper password hashing (bcrypt, argon2, etc.)
-    // This is a simplified implementation
-    return false; // Placeholder
+    // TODO: Implement proper password validation with bcrypt or argon2
+    // This requires linking against a password hashing library
+    // Example with bcrypt: return bcrypt::check_password(password, data_.password_hash);
+    
+    // WARNING: This is a placeholder that always returns false
+    // Do not use in production without implementing proper password hashing
+    std::cerr << "WARNING: validatePassword not implemented - integrate bcrypt or argon2" << std::endl;
+    (void)password; // Suppress unused parameter warning
+    return false;
 }
 
 } // namespace models

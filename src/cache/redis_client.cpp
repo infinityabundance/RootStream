@@ -270,14 +270,6 @@ int RedisClient::llen(const std::string& key) {
 // Pub/Sub Operations
 // ============================================================================
 
-int RedisClient::subscribe(const std::string& channel, 
-                           std::function<void(const std::string&)> callback) {
-    // Note: Actual pub/sub requires a dedicated connection
-    // This is a simplified implementation
-    std::cerr << "Pub/Sub subscribe not fully implemented yet" << std::endl;
-    return -1;
-}
-
 int RedisClient::publish(const std::string& channel, const std::string& message) {
     std::lock_guard<std::mutex> lock(mutex_);
     
@@ -291,10 +283,9 @@ int RedisClient::publish(const std::string& channel, const std::string& message)
     return result;
 }
 
-int RedisClient::unsubscribe(const std::string& channel) {
-    std::cerr << "Pub/Sub unsubscribe not fully implemented yet" << std::endl;
-    return -1;
-}
+// Note: Subscribe/Unsubscribe require a dedicated connection and blocking operation
+// For full pub/sub support, use a separate Redis client library or implement
+// with threading support
 
 // ============================================================================
 // Transaction Operations

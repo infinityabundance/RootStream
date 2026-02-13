@@ -38,34 +38,26 @@ int EventStore::appendEvent(const Event& event) {
     try {
         std::string eventDataStr = event.event_data.dump();
         
-        // Escape single quotes in JSON string
-        size_t pos = 0;
-        while ((pos = eventDataStr.find("'", pos)) != std::string::npos) {
-            eventDataStr.replace(pos, 1, "''");
-            pos += 2;
-        }
+        std::string query = "INSERT INTO event_log "
+                           "(aggregate_type, aggregate_id, event_type, event_data, version, user_id) "
+                           "VALUES ($1, $2, $3, $4::jsonb, $5, $6)";
         
-        std::stringstream query;
-        query << "INSERT INTO event_log "
-              << "(aggregate_type, aggregate_id, event_type, event_data, version, user_id) "
-              << "VALUES ('" << event.aggregate_type << "', " << event.aggregate_id 
-              << ", '" << event.event_type << "', '" << eventDataStr << "'::jsonb, "
-              << event.version << ", ";
+        std::vector<std::string> params = {
+            event.aggregate_type,
+            std::to_string(event.aggregate_id),
+            event.event_type,
+            eventDataStr,
+            std::to_string(event.version),
+            event.user_id > 0 ? std::to_string(event.user_id) : ""
+        };
         
-        if (event.user_id > 0) {
-            query << event.user_id;
-        } else {
-            query << "NULL";
-        }
-        
-        query << ")";
-        
-        int result = db_->executeQuery(query.str());
-        if (result >= 0) {
+        auto result = db_->executeParams(query, params);
+        if (result.affected_rows() > 0) {
             std::cout << "Event appended: " << event.event_type << " for " 
                      << event.aggregate_type << ":" << event.aggregate_id << std::endl;
+            return 0;
         }
-        return (result >= 0) ? 0 : -1;
+        return -1;
     } catch (const std::exception& e) {
         std::cerr << "Failed to append event: " << e.what() << std::endl;
         return -1;
@@ -132,27 +124,26 @@ int EventStore::createSnapshot(const std::string& aggregateType,
     try {
         std::string stateStr = state.dump();
         
-        // Escape single quotes
-        size_t pos = 0;
-        while ((pos = stateStr.find("'", pos)) != std::string::npos) {
-            stateStr.replace(pos, 1, "''");
-            pos += 2;
-        }
+        std::string query = "INSERT INTO snapshots "
+                           "(aggregate_type, aggregate_id, version, state) "
+                           "VALUES ($1, $2, $3, $4::jsonb) "
+                           "ON CONFLICT (aggregate_type, aggregate_id, version) "
+                           "DO UPDATE SET state = EXCLUDED.state";
         
-        std::stringstream query;
-        query << "INSERT INTO snapshots "
-              << "(aggregate_type, aggregate_id, version, state) "
-              << "VALUES ('" << aggregateType << "', " << aggregateId 
-              << ", " << version << ", '" << stateStr << "'::jsonb) "
-              << "ON CONFLICT (aggregate_type, aggregate_id, version) "
-              << "DO UPDATE SET state = EXCLUDED.state";
+        std::vector<std::string> params = {
+            aggregateType,
+            std::to_string(aggregateId),
+            std::to_string(version),
+            stateStr
+        };
         
-        int result = db_->executeQuery(query.str());
-        if (result >= 0) {
+        auto result = db_->executeParams(query, params);
+        if (result.affected_rows() > 0) {
             std::cout << "Snapshot created for " << aggregateType << ":" 
                      << aggregateId << " v" << version << std::endl;
+            return 0;
         }
-        return (result >= 0) ? 0 : -1;
+        return -1;
     } catch (const std::exception& e) {
         std::cerr << "Failed to create snapshot: " << e.what() << std::endl;
         return -1;

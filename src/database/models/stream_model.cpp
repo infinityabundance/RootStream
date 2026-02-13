@@ -40,12 +40,16 @@ int StreamModel::create(DatabaseManager& db, uint32_t userId, const std::string&
     try {
         std::string streamKey = generateStreamKey();
         
-        std::stringstream query;
-        query << "INSERT INTO streams (user_id, name, stream_key, is_live, is_public) "
-              << "VALUES (" << userId << ", '" << name << "', '" << streamKey 
-              << "', false, true) RETURNING id";
+        std::string query = "INSERT INTO streams (user_id, name, stream_key, is_live, is_public) "
+                           "VALUES ($1, $2, $3, false, true) RETURNING id";
         
-        auto result = db.executeSelect(query.str());
+        std::vector<std::string> params = {
+            std::to_string(userId),
+            name,
+            streamKey
+        };
+        
+        auto result = db.executeParams(query, params);
         
         if (result.size() > 0) {
             data_.id = std::stoul(result[0][0].c_str());
@@ -116,17 +120,17 @@ int StreamModel::load(DatabaseManager& db, uint32_t streamId) {
 
 int StreamModel::loadByStreamKey(DatabaseManager& db, const std::string& key) {
     try {
-        std::stringstream query;
-        query << "SELECT id, user_id, name, description, stream_key, stream_url, "
-              << "thumbnail_url, is_live, viewer_count, bitrate_kbps, resolution, "
-              << "fps, codec, is_public, "
-              << "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
-              << "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
-              << "EXTRACT(EPOCH FROM started_at) * 1000000 as started_at_us, "
-              << "EXTRACT(EPOCH FROM ended_at) * 1000000 as ended_at_us "
-              << "FROM streams WHERE stream_key = '" << key << "'";
+        std::string query = "SELECT id, user_id, name, description, stream_key, stream_url, "
+                           "thumbnail_url, is_live, viewer_count, bitrate_kbps, resolution, "
+                           "fps, codec, is_public, "
+                           "EXTRACT(EPOCH FROM created_at) * 1000000 as created_at_us, "
+                           "EXTRACT(EPOCH FROM updated_at) * 1000000 as updated_at_us, "
+                           "EXTRACT(EPOCH FROM started_at) * 1000000 as started_at_us, "
+                           "EXTRACT(EPOCH FROM ended_at) * 1000000 as ended_at_us "
+                           "FROM streams WHERE stream_key = $1";
         
-        auto result = db.executeSelect(query.str());
+        std::vector<std::string> params = {key};
+        auto result = db.executeParams(query, params);
         
         if (result.size() == 0) {
             std::cerr << "Stream not found with key: " << key << std::endl;
@@ -278,16 +282,22 @@ int StreamModel::save(DatabaseManager& db) {
     }
     
     try {
-        std::stringstream query;
-        query << "UPDATE streams SET "
-              << "name = '" << data_.name << "', "
-              << "description = " << (data_.description.empty() ? "NULL" : "'" + data_.description + "'") << ", "
-              << "stream_url = " << (data_.stream_url.empty() ? "NULL" : "'" + data_.stream_url + "'") << ", "
-              << "thumbnail_url = " << (data_.thumbnail_url.empty() ? "NULL" : "'" + data_.thumbnail_url + "'") << ", "
-              << "is_public = " << (data_.is_public ? "true" : "false") << " "
-              << "WHERE id = " << data_.id;
+        std::string query = "UPDATE streams SET "
+                           "name = $1, description = $2, stream_url = $3, thumbnail_url = $4, "
+                           "is_public = $5 "
+                           "WHERE id = $6";
         
-        return db.executeQuery(query.str()) >= 0 ? 0 : -1;
+        std::vector<std::string> params = {
+            data_.name,
+            data_.description,
+            data_.stream_url,
+            data_.thumbnail_url,
+            data_.is_public ? "true" : "false",
+            std::to_string(data_.id)
+        };
+        
+        auto result = db.executeParams(query, params);
+        return (result.affected_rows() > 0) ? 0 : -1;
     } catch (const std::exception& e) {
         std::cerr << "Failed to save stream: " << e.what() << std::endl;
         return -1;
