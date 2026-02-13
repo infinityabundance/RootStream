@@ -35,7 +35,7 @@ typedef struct {
  * @param ctx RootStream context
  * @return    0 on success, -1 on error
  */
-int audio_playback_init(rootstream_ctx_t *ctx) {
+int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     if (!ctx) {
         fprintf(stderr, "ERROR: Invalid context for audio playback\n");
         return -1;
@@ -174,8 +174,8 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success, -1 on error
  */
-int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
-                        size_t num_samples) {
+int audio_playback_write_alsa(rootstream_ctx_t *ctx, int16_t *samples,
+                              size_t num_samples) {
     if (!ctx || !samples || num_samples == 0) {
         return -1;
     }
@@ -224,7 +224,7 @@ int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
 /*
  * Cleanup audio playback
  */
-void audio_playback_cleanup(rootstream_ctx_t *ctx) {
+void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx) {
     if (!ctx || !ctx->tray.menu) {
         return;
     }
@@ -240,4 +240,17 @@ void audio_playback_cleanup(rootstream_ctx_t *ctx) {
     ctx->tray.menu = NULL;
 
     printf("✓ Audio playback cleanup complete\n");
+}
+
+/* Backward compatibility wrappers */
+int audio_playback_init(rootstream_ctx_t *ctx) {
+    return audio_playback_init_alsa(ctx);
+}
+
+int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples, size_t num_samples) {
+    return audio_playback_write_alsa(ctx, samples, num_samples);
+}
+
+void audio_playback_cleanup(rootstream_ctx_t *ctx) {
+    audio_playback_cleanup_alsa(ctx);
 }

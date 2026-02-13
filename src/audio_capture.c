@@ -29,7 +29,21 @@ typedef struct {
     int channels;
     int frame_size;
     bool initialized;
-} audio_capture_ctx_t;
+} alsa_capture_ctx_t;
+
+/*
+ * Check if ALSA is available
+ */
+bool audio_capture_alsa_available(void) {
+    /* Try to open and immediately close a test handle */
+    snd_pcm_t *handle = NULL;
+    int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0);
+    if (err >= 0 && handle) {
+        snd_pcm_close(handle);
+        return true;
+    }
+    return false;
+}
 
 /*
  * Initialize ALSA audio capture
@@ -37,14 +51,14 @@ typedef struct {
  * @param ctx RootStream context
  * @return    0 on success, -1 on error
  */
-int audio_capture_init(rootstream_ctx_t *ctx) {
+int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     if (!ctx) {
         fprintf(stderr, "ERROR: Invalid context for audio capture\n");
         return -1;
     }
 
     /* Allocate capture context */
-    audio_capture_ctx_t *capture = calloc(1, sizeof(audio_capture_ctx_t));
+    alsa_capture_ctx_t *capture = calloc(1, sizeof(alsa_capture_ctx_t));
     if (!capture) {
         fprintf(stderr, "ERROR: Cannot allocate audio capture context\n");
         return -1;
@@ -167,13 +181,13 @@ int audio_capture_init(rootstream_ctx_t *ctx) {
  * @param num_samples Output sample count
  * @return            0 on success, -1 on error
  */
-int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
-                       size_t *num_samples) {
+int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
+                             size_t *num_samples) {
     if (!ctx || !samples || !num_samples) {
         return -1;
     }
 
-    audio_capture_ctx_t *capture = (audio_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
     if (!capture || !capture->initialized) {
         return -1;
     }
@@ -218,12 +232,12 @@ int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
 /*
  * Cleanup audio capture
  */
-void audio_capture_cleanup(rootstream_ctx_t *ctx) {
+void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx) {
     if (!ctx || !ctx->uinput_mouse_fd) {
         return;
     }
 
-    audio_capture_ctx_t *capture = (audio_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
 
     if (capture->handle) {
         snd_pcm_drain(capture->handle);
@@ -234,4 +248,17 @@ void audio_capture_cleanup(rootstream_ctx_t *ctx) {
     ctx->uinput_mouse_fd = 0;
 
     printf("✓ Audio capture cleanup complete\n");
+}
+
+/* Backward compatibility wrappers */
+int audio_capture_init(rootstream_ctx_t *ctx) {
+    return audio_capture_init_alsa(ctx);
+}
+
+int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples) {
+    return audio_capture_frame_alsa(ctx, samples, num_samples);
+}
+
+void audio_capture_cleanup(rootstream_ctx_t *ctx) {
+    audio_capture_cleanup_alsa(ctx);
 }
