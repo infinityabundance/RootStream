@@ -101,6 +101,7 @@ if(ENABLE_METRICS)
         src/metrics/hud_renderer.cpp
         src/metrics/performance_logger.cpp
         src/metrics/alert_system.cpp
+        src/metrics/metrics_manager.cpp
     )
 endif()
 

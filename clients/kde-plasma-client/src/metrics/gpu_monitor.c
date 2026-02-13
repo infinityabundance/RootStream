@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <unistd.h>
 
+#define _POSIX_C_SOURCE 200809L
+
 typedef enum {
     GPU_VENDOR_UNKNOWN,
     GPU_VENDOR_NVIDIA,
@@ -74,7 +76,6 @@ static void read_nvidia_stats(gpu_monitor_t* monitor) {
     char line[256];
     if (fgets(line, sizeof(line), fp)) {
         uint32_t mem_used, mem_total, util, temp;
-        char name[64] = {0};
         
         // Parse CSV line
         if (sscanf(line, "%u, %u, %u, %u", &mem_used, &mem_total, &util, &temp) == 4) {

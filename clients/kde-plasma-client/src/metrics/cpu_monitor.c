@@ -41,8 +41,6 @@ static void read_cpu_stats(cpu_monitor_t* monitor) {
     if (!fp) return;
     
     char line[256];
-    uint64_t total_idle = 0;
-    uint64_t total_sum = 0;
     int core_idx = 0;
     
     while (fgets(line, sizeof(line), fp) && core_idx <= monitor->num_cores) {
