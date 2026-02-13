@@ -268,9 +268,8 @@ bool audio_playback_alsa_available(void) {
         return false;
     }
     
-    if (test_handle) {
-        snd_pcm_close(test_handle);
-    }
+    /* Close handle after successful open */
+    snd_pcm_close(test_handle);
     
     return true;
 }
