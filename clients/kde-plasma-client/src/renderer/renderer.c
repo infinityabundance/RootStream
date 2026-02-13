@@ -8,6 +8,9 @@
 #ifdef HAVE_VULKAN_RENDERER
 #include "vulkan_renderer.h"
 #endif
+#ifdef HAVE_PROTON_RENDERER
+#include "proton_renderer.h"
+#endif
 #include "frame_buffer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,11 +68,19 @@ renderer_t* renderer_create(renderer_backend_t backend, int width, int height) {
     
     // Auto-detect backend if requested
     if (backend == RENDERER_AUTO) {
-        // Prefer OpenGL, fall back to Vulkan if OpenGL not available
-        renderer->backend = RENDERER_OPENGL;
-#ifdef HAVE_VULKAN_RENDERER
-        // Future: Add detection logic here if OpenGL fails
+#ifdef HAVE_PROTON_RENDERER
+        // Check if running under Proton first
+        if (proton_is_available()) {
+            renderer->backend = RENDERER_PROTON;
+        } else
 #endif
+        {
+            // Prefer OpenGL, fall back to Vulkan if OpenGL not available
+            renderer->backend = RENDERER_OPENGL;
+#ifdef HAVE_VULKAN_RENDERER
+            // Future: Add detection logic here if OpenGL fails
+#endif
+        }
     }
     
     return renderer;
@@ -107,9 +118,19 @@ int renderer_init(renderer_t *renderer, void *native_window) {
             break;
             
         case RENDERER_PROTON:
+#ifdef HAVE_PROTON_RENDERER
+            renderer->impl = proton_init(native_window);
+            if (!renderer->impl) {
+                snprintf(renderer->last_error, sizeof(renderer->last_error),
+                        "Failed to initialize Proton backend");
+                return -1;
+            }
+#else
             snprintf(renderer->last_error, sizeof(renderer->last_error),
-                    "Proton backend not yet implemented (Phase 13)");
+                    "Proton backend not compiled in");
             return -1;
+#endif
+            break;
             
         default:
             snprintf(renderer->last_error, sizeof(renderer->last_error),
@@ -157,6 +178,12 @@ int renderer_present(renderer_t *renderer) {
         else if (renderer->backend == RENDERER_VULKAN && renderer->impl) {
             vulkan_render((vulkan_context_t*)renderer->impl);
             vulkan_present((vulkan_context_t*)renderer->impl);
+        }
+#endif
+#ifdef HAVE_PROTON_RENDERER
+        else if (renderer->backend == RENDERER_PROTON && renderer->impl) {
+            proton_render((proton_context_t*)renderer->impl);
+            proton_present((proton_context_t*)renderer->impl);
         }
 #endif
         return 0;
@@ -251,6 +278,14 @@ int renderer_set_vsync(renderer_t *renderer, bool enabled) {
             break;
 #endif
             
+#ifdef HAVE_PROTON_RENDERER
+        case RENDERER_PROTON:
+            if (renderer->impl) {
+                return proton_set_vsync((proton_context_t*)renderer->impl, enabled);
+            }
+            break;
+#endif
+            
         default:
             break;
     }
@@ -289,6 +324,14 @@ int renderer_resize(renderer_t *renderer, int width, int height) {
         case RENDERER_VULKAN:
             if (renderer->impl) {
                 return vulkan_resize((vulkan_context_t*)renderer->impl, width, height);
+            }
+            break;
+#endif
+            
+#ifdef HAVE_PROTON_RENDERER
+        case RENDERER_PROTON:
+            if (renderer->impl) {
+                return proton_resize((proton_context_t*)renderer->impl, width, height);
             }
             break;
 #endif
@@ -339,6 +382,14 @@ void renderer_cleanup(renderer_t *renderer) {
         case RENDERER_VULKAN:
             if (renderer->impl) {
                 vulkan_cleanup((vulkan_context_t*)renderer->impl);
+            }
+            break;
+#endif
+            
+#ifdef HAVE_PROTON_RENDERER
+        case RENDERER_PROTON:
+            if (renderer->impl) {
+                proton_cleanup((proton_context_t*)renderer->impl);
             }
             break;
 #endif
