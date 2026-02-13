@@ -65,13 +65,25 @@
 #define ROOTSTREAM_CODE_MAX_LEN 128
 
 /* ============================================================================
- * CAPTURE - DRM/KMS framebuffer capture
+ * CAPTURE - Multi-backend framebuffer capture
  * ============================================================================ */
 
 typedef enum {
     CAPTURE_DRM_KMS,      /* Direct kernel DRM/KMS (default) */
     CAPTURE_MMAP,         /* Memory mapped framebuffer fallback */
 } capture_mode_t;
+
+/* Forward declarations */
+typedef struct rootstream_ctx rootstream_ctx_t;
+typedef struct frame_buffer frame_buffer_t;
+
+/* Capture backend interface */
+typedef struct capture_backend {
+    const char *name;
+    int (*init_fn)(rootstream_ctx_t *ctx);
+    int (*capture_fn)(rootstream_ctx_t *ctx, frame_buffer_t *frame);
+    void (*cleanup_fn)(rootstream_ctx_t *ctx);
+} capture_backend_t;
 
 typedef struct {
     int fd;                    /* DRM device file descriptor */
@@ -84,7 +96,7 @@ typedef struct {
     char name[64];             /* Display name (e.g., "HDMI-A-1") */
 } display_info_t;
 
-typedef struct {
+typedef struct frame_buffer {
     uint8_t *data;             /* Frame pixel data (RGBA) */
     uint32_t size;             /* Total size in bytes */
     uint32_t capacity;         /* Allocated buffer size in bytes */
@@ -392,6 +404,7 @@ typedef struct rootstream_ctx {
 
     /* Capture & Encoding */
     capture_mode_t capture_mode;
+    const capture_backend_t *capture_backend;  /* Currently active backend */
     display_info_t display;
     frame_buffer_t current_frame;
     encoder_ctx_t encoder;
@@ -475,6 +488,22 @@ int rootstream_select_display(rootstream_ctx_t *ctx, int display_index);
 int rootstream_capture_init(rootstream_ctx_t *ctx);
 int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
 void rootstream_capture_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Capture Backend Implementations --- */
+/* DRM/KMS backend */
+int rootstream_capture_init_drm(rootstream_ctx_t *ctx);
+int rootstream_capture_frame_drm(rootstream_ctx_t *ctx, frame_buffer_t *frame);
+void rootstream_capture_cleanup_drm(rootstream_ctx_t *ctx);
+
+/* X11 SHM backend */
+int rootstream_capture_init_x11(rootstream_ctx_t *ctx);
+int rootstream_capture_frame_x11(rootstream_ctx_t *ctx, frame_buffer_t *frame);
+void rootstream_capture_cleanup_x11(rootstream_ctx_t *ctx);
+
+/* Dummy test pattern backend */
+int rootstream_capture_init_dummy(rootstream_ctx_t *ctx);
+int rootstream_capture_frame_dummy(rootstream_ctx_t *ctx, frame_buffer_t *frame);
+void rootstream_capture_cleanup_dummy(rootstream_ctx_t *ctx);
 
 /* --- Encoding (existing, polished) --- */
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec);

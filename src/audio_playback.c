@@ -27,21 +27,7 @@ typedef struct {
     int sample_rate;
     int channels;
     bool initialized;
-} alsa_playback_ctx_t;
-
-/*
- * Check if ALSA is available
- */
-bool audio_playback_alsa_available(void) {
-    /* Try to open and immediately close a test handle */
-    snd_pcm_t *handle = NULL;
-    int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
-    if (err >= 0 && handle) {
-        snd_pcm_close(handle);
-        return true;
-    }
-    return false;
-}
+} alsa_internal_ctx_t;
 
 /*
  * Initialize ALSA audio playback
@@ -56,7 +42,7 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     }
 
     /* Allocate playback context */
-    alsa_playback_ctx_t *playback = calloc(1, sizeof(alsa_playback_ctx_t));
+    alsa_internal_ctx_t *playback = calloc(1, sizeof(alsa_internal_ctx_t));
     if (!playback) {
         fprintf(stderr, "ERROR: Cannot allocate audio playback context\n");
         return -1;
@@ -194,7 +180,7 @@ int audio_playback_write_alsa(rootstream_ctx_t *ctx, int16_t *samples,
         return -1;
     }
 
-    alsa_playback_ctx_t *playback = (alsa_playback_ctx_t*)ctx->tray.menu;
+    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t*)ctx->tray.menu;
     if (!playback || !playback->initialized) {
         return -1;
     }
@@ -243,7 +229,7 @@ void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx) {
         return;
     }
 
-    alsa_playback_ctx_t *playback = (alsa_playback_ctx_t*)ctx->tray.menu;
+    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t*)ctx->tray.menu;
 
     if (playback->handle) {
         snd_pcm_drain(playback->handle);

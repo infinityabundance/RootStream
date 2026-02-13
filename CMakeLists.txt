@@ -78,7 +78,7 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(AVAHI avahi-client)
     pkg_check_modules(QRENCODE libqrencode)
     pkg_check_modules(PNG libpng)
-    pkg_check_modules(PULSEAUDIO libpulse-simple)
+    pkg_check_modules(X11 x11)
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -88,8 +88,8 @@ if(UNIX AND NOT APPLE)
         add_compile_definitions(HAVE_AVAHI)
     endif()
 
-    if(PULSEAUDIO_FOUND)
-        add_compile_definitions(HAVE_PULSEAUDIO)
+    if(X11_FOUND)
+        add_compile_definitions(HAVE_X11)
     endif()
 endif()
 
@@ -133,6 +133,8 @@ set(COMMON_SOURCES
 
 set(LINUX_SOURCES
     src/drm_capture.c
+    src/x11_capture.c
+    src/dummy_capture.c
     src/vaapi_encoder.c
     src/nvenc_encoder.c
     src/vaapi_decoder.c
@@ -230,6 +232,11 @@ if(UNIX AND NOT APPLE)
     if(AVAHI_FOUND)
         target_link_libraries(rootstream PRIVATE ${AVAHI_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${AVAHI_INCLUDE_DIRS})
+    endif()
+
+    if(X11_FOUND)
+        target_link_libraries(rootstream PRIVATE ${X11_LIBRARIES})
+        target_include_directories(rootstream PRIVATE ${X11_INCLUDE_DIRS})
     endif()
 
     if(QRENCODE_FOUND)

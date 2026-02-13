@@ -150,10 +150,44 @@ int service_run_host(rootstream_ctx_t *ctx) {
                ctx->latency.report_interval_ms, ctx->latency.capacity);
     }
 
-    /* Initialize components */
-    if (rootstream_capture_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Capture init failed\n");
-        fprintf(stderr, "DETAILS: %s\n", rootstream_get_error());
+    /* Initialize capture with fallback chain (static to persist beyond function scope) */
+    static const capture_backend_t backends[] = {
+        {
+            .name = "DRM/KMS",
+            .init_fn = rootstream_capture_init_drm,
+            .capture_fn = rootstream_capture_frame_drm,
+            .cleanup_fn = rootstream_capture_cleanup_drm,
+        },
+        {
+            .name = "X11 SHM",
+            .init_fn = rootstream_capture_init_x11,
+            .capture_fn = rootstream_capture_frame_x11,
+            .cleanup_fn = rootstream_capture_cleanup_x11,
+        },
+        {
+            .name = "Dummy Pattern",
+            .init_fn = rootstream_capture_init_dummy,
+            .capture_fn = rootstream_capture_frame_dummy,
+            .cleanup_fn = rootstream_capture_cleanup_dummy,
+        },
+        {NULL, NULL, NULL, NULL}  /* Sentinel */
+    };
+
+    int backend_idx = 0;
+    while (backends[backend_idx].name) {
+        printf("INFO: Attempting capture backend: %s\n", backends[backend_idx].name);
+        if (backends[backend_idx].init_fn(ctx) == 0) {
+            printf("✓ Capture backend '%s' initialized successfully\n", backends[backend_idx].name);
+            ctx->capture_backend = &backends[backend_idx];
+            break;
+        } else {
+            printf("WARNING: Capture backend '%s' failed, trying next...\n", backends[backend_idx].name);
+            backend_idx++;
+        }
+    }
+
+    if (!ctx->capture_backend) {
+        fprintf(stderr, "ERROR: All capture backends failed!\n");
         return -1;
     }
 
@@ -184,8 +218,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
 
     if (rootstream_input_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Input init failed\n");
-        return -1;
+        fprintf(stderr, "WARNING: Input init failed (continuing without input)\n");
     }
 
     /* Initialize audio capture with fallback */
@@ -285,7 +318,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         uint64_t loop_start_us = get_timestamp_us();
 
         /* Capture frame */
-        if (rootstream_capture_frame(ctx, &ctx->current_frame) < 0) {
+        if (ctx->capture_backend->capture_fn(ctx, &ctx->current_frame) < 0) {
             fprintf(stderr, "ERROR: Capture failed (display=%s)\n", ctx->display.name);
             fprintf(stderr, "DETAILS: %s\n", rootstream_get_error());
             usleep(16000);
