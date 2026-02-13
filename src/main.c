@@ -146,43 +146,55 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
     printf("\n");
     ctx->is_host = true;
 
-    /* Detect and select display */
+    /* Detect and select display (DRM-based) */
     display_info_t displays[MAX_DISPLAYS];
     int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
     
     if (num_displays < 0) {
-        fprintf(stderr, "ERROR: %s\n", rootstream_get_error());
-        return -1;
+        printf("WARNING: DRM display detection failed: %s\n", rootstream_get_error());
+        printf("INFO: Will attempt fallback capture backends in service_run_host()\n");
+        num_displays = 0;  /* Continue with fallback backends */
     }
 
-    printf("INFO: Found %d display(s)\n", num_displays);
-    for (int i = 0; i < num_displays; i++) {
-        printf("  [%d] %s - %dx%d @ %d Hz\n", i,
-               displays[i].name, displays[i].width,
-               displays[i].height, displays[i].refresh_rate);
-    }
-
-    if (display_idx < 0 || display_idx >= num_displays) {
-        fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n",
-                display_idx, num_displays - 1);
+    if (num_displays > 0) {
+        printf("INFO: Found %d DRM display(s)\n", num_displays);
         for (int i = 0; i < num_displays; i++) {
-            if (displays[i].fd >= 0) {
+            printf("  [%d] %s - %dx%d @ %d Hz\n", i,
+                   displays[i].name, displays[i].width,
+                   displays[i].height, displays[i].refresh_rate);
+        }
+
+        if (display_idx < 0 || display_idx >= num_displays) {
+            fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n",
+                    display_idx, num_displays - 1);
+            for (int i = 0; i < num_displays; i++) {
+                if (displays[i].fd >= 0) {
+                    close(displays[i].fd);
+                }
+            }
+            return -1;
+        }
+
+        ctx->display = displays[display_idx];
+        for (int i = 0; i < num_displays; i++) {
+            if (i != display_idx && displays[i].fd >= 0) {
                 close(displays[i].fd);
             }
         }
-        return -1;
-    }
 
-    ctx->display = displays[display_idx];
-    for (int i = 0; i < num_displays; i++) {
-        if (i != display_idx && displays[i].fd >= 0) {
-            close(displays[i].fd);
+        if (ctx->display.refresh_rate == 0) {
+            ctx->display.refresh_rate = 60;
+            printf("WARNING: Display refresh rate unknown, defaulting to 60 Hz\n");
         }
-    }
-
-    if (ctx->display.refresh_rate == 0) {
+    } else {
+        /* No DRM displays detected - fallback backends will be used */
+        printf("INFO: No DRM displays available, will use fallback capture backend\n");
+        /* Initialize display info to defaults for fallback backends */
+        ctx->display.fd = -1;
+        ctx->display.width = 0;  /* Let backend set this */
+        ctx->display.height = 0;
         ctx->display.refresh_rate = 60;
-        printf("WARNING: Display refresh rate unknown, defaulting to 60 Hz\n");
+        snprintf(ctx->display.name, sizeof(ctx->display.name), "Fallback");
     }
 
     printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
@@ -190,41 +202,14 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
            ctx->display.height, ctx->display.refresh_rate);
     printf("INFO: Target video bitrate: %u kbps\n", ctx->encoder.bitrate / 1000);
 
-    /* Initialize components */
-    if (rootstream_capture_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Capture init failed\n");
-        return -1;
-    }
-
-    /* Use H.264 by default (host mode doesn't use settings file) */
-    {
-        extern bool rootstream_encoder_nvenc_available(void);
-        if (rootstream_encoder_nvenc_available()) {
-            printf("INFO: NVENC detected, trying NVIDIA encoder...\n");
-            if (rootstream_encoder_init(ctx, ENCODER_NVENC, CODEC_H264) == 0) {
-                printf("✓ Using NVENC encoder\n");
-            } else {
-                printf("WARNING: NVENC init failed, falling back to VA-API\n");
-                if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
-                    fprintf(stderr, "ERROR: Encoder init failed\n");
-                    return -1;
-                }
-            }
-        } else if (rootstream_encoder_init(ctx, ENCODER_VAAPI, CODEC_H264) < 0) {
-            fprintf(stderr, "ERROR: Encoder init failed\n");
-            return -1;
-        }
-    }
+    /* Capture and encoder initialization will be handled by service_run_host() with fallback logic */
 
     if (rootstream_net_init(ctx, ctx->port) < 0) {
         fprintf(stderr, "ERROR: Network init failed\n");
         return -1;
     }
 
-    if (rootstream_input_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Input init failed\n");
-        return -1;
-    }
+    /* Input initialization will be handled by service_run_host() */
 
     /* Initialize discovery */
     if (no_discovery) {
