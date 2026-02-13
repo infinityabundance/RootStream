@@ -190,10 +190,15 @@ set(LINUX_SOURCES
     src/service.c
     src/recording.c
     src/qrcode.c
-    # PHASE 18: Recording system
-    src/recording/disk_manager.cpp
-    src/recording/recording_manager.cpp
 )
+
+# PHASE 18: Recording system (optional, requires FFmpeg)
+if(FFMPEG_FOUND)
+    list(APPEND LINUX_SOURCES
+        src/recording/disk_manager.cpp
+        src/recording/recording_manager.cpp
+    )
+endif()
 
 if(NOT HEADLESS)
     list(APPEND LINUX_SOURCES src/tray.c src/tray_cli.c src/tray_tui.c)
