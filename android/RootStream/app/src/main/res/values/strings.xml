@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RootStream</string>
+    <string name="app_description">Secure Peer-to-Peer Game Streaming</string>
+
+    <!-- Navigation -->
+    <string name="nav_login">Login</string>
+    <string name="nav_discovery">Discovery</string>
+    <string name="nav_stream">Stream</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Login Screen -->
+    <string name="login_title">Welcome to RootStream</string>
+    <string name="login_subtitle">Secure P2P Game Streaming</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="login_button">Login</string>
+    <string name="login_biometric">Use Biometric</string>
+    <string name="login_error">Login failed</string>
+
+    <!-- Peer Discovery -->
+    <string name="discovery_title">Available Peers</string>
+    <string name="discovery_scanning">Scanning for peers…</string>
+    <string name="discovery_no_peers">No peers found</string>
+    <string name="discovery_connect">Connect</string>
+    <string name="discovery_refresh">Refresh</string>
+
+    <!-- Stream Screen -->
+    <string name="stream_connecting">Connecting…</string>
+    <string name="stream_connected">Connected</string>
+    <string name="stream_disconnected">Disconnected</string>
+    <string name="stream_error">Stream error</string>
+    <string name="stream_fps">FPS: %1$d</string>
+    <string name="stream_latency">Latency: %1$d ms</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_video">Video</string>
+    <string name="settings_audio">Audio</string>
+    <string name="settings_input">Input</string>
+    <string name="settings_network">Network</string>
+    <string name="settings_security">Security</string>
+    <string name="settings_renderer">Renderer</string>
+    <string name="settings_renderer_vulkan">Vulkan</string>
+    <string name="settings_renderer_opengl">OpenGL ES</string>
+    <string name="settings_resolution">Resolution</string>
+    <string name="settings_fps_limit">FPS Limit</string>
+    <string name="settings_bitrate">Bitrate</string>
+    <string name="settings_audio_enabled">Enable Audio</string>
+    <string name="settings_audio_volume">Volume</string>
+    <string name="settings_haptic_feedback">Haptic Feedback</string>
+    <string name="settings_battery_optimization">Battery Optimization</string>
+
+    <!-- Controls -->
+    <string name="control_pause">Pause</string>
+    <string name="control_resume">Resume</string>
+    <string name="control_disconnect">Disconnect</string>
+    <string name="control_settings">Settings</string>
+    <string name="control_toggle_controls">Toggle Controls</string>
+
+    <!-- Picture in Picture -->
+    <string name="pip_title">RootStream - Streaming</string>
+    <string name="pip_pause">Pause</string>
+    <string name="pip_play">Play</string>
+    <string name="pip_close">Close</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Streaming Service</string>
+    <string name="notification_channel_description">Background streaming notifications</string>
+    <string name="notification_streaming_title">RootStream Active</string>
+    <string name="notification_streaming_text">Streaming from %1$s</string>
+
+    <!-- Errors -->
+    <string name="error_network">Network error</string>
+    <string name="error_decoder">Decoder error</string>
+    <string name="error_renderer">Renderer error</string>
+    <string name="error_permission">Permission required</string>
+
+    <!-- Permissions -->
+    <string name="permission_audio_rationale">Microphone access is required for voice chat</string>
+    <string name="permission_camera_rationale">Camera access is required for video streaming</string>
+</resources>
