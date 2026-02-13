@@ -112,19 +112,21 @@ Frame Capture (DRM/KMS)
     └─────────┘
 ```
 
-### Latency Budget (Target: <30ms)
+### Latency Budget (Design Target: <30ms)
+
+> These are design targets. Actual latency varies by hardware and network conditions.
 
 | Stage | Target | Notes |
 |-------|--------|-------|
 | Capture | 1-2ms | DRM atomic commit timing |
-| Colorspace | 1ms | SIMD-optimized |
-| Encode | 2-5ms | Hardware encoder |
+| Colorspace | ~1ms | SIMD-optimized |
+| Encode | 2-5ms | Hardware encoder (varies by GPU) |
 | Encrypt | <1ms | ChaCha20 is fast |
-| Network | 5-15ms | LAN latency |
+| Network | 5-15ms | LAN latency (varies by network) |
 | Decrypt | <1ms | - |
-| Decode | 2-5ms | Hardware decoder |
+| Decode | 2-5ms | Hardware decoder (varies by GPU) |
 | Display | 1-2ms | GPU texture upload |
-| **Total** | **15-30ms** | End-to-end |
+| **Total** | **15-30ms** | End-to-end (example range) |
 
 ---
 
