@@ -158,6 +158,8 @@ SRCS := src/main.c \
         src/input.c \
         src/crypto.c \
         src/discovery.c \
+        src/discovery_broadcast.c \
+        src/discovery_manual.c \
         src/tray.c \
         src/service.c \
         src/qrcode.c \

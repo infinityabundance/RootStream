@@ -348,6 +348,14 @@ typedef struct {
  * DISCOVERY - mDNS/Avahi service discovery
  * ============================================================================ */
 
+/* Peer history entry for quick reconnection (PHASE 5) */
+typedef struct {
+    char hostname[256];
+    char address[256];         /* IP:port format */
+    uint16_t port;
+    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];
+} peer_history_entry_t;
+
 typedef struct {
     void *avahi_client;        /* Avahi client (opaque) */
     void *avahi_group;         /* Avahi entry group (opaque) */
@@ -476,6 +484,10 @@ typedef struct rootstream_ctx {
 
     /* Discovery */
     discovery_ctx_t discovery;
+    
+    /* Peer history (PHASE 5) */
+    peer_history_entry_t peer_history_entries[MAX_PEER_HISTORY];
+    int num_peer_history;
 
     /* Input */
     int uinput_kbd_fd;         /* Virtual keyboard */
@@ -738,6 +750,20 @@ int discovery_init(rootstream_ctx_t *ctx);
 int discovery_announce(rootstream_ctx_t *ctx);
 int discovery_browse(rootstream_ctx_t *ctx);
 void discovery_cleanup(rootstream_ctx_t *ctx);
+
+/* Discovery - Broadcast (PHASE 5) */
+int discovery_broadcast_announce(rootstream_ctx_t *ctx);
+int discovery_broadcast_listen(rootstream_ctx_t *ctx, int timeout_ms);
+
+/* Discovery - Manual (PHASE 5) */
+int discovery_manual_add_peer(rootstream_ctx_t *ctx, const char *address_or_code);
+int discovery_save_peer_to_history(rootstream_ctx_t *ctx, const char *hostname,
+                                   uint16_t port, const char *rootstream_code);
+void discovery_list_peer_history(rootstream_ctx_t *ctx);
+int discovery_parse_address(const char *address, char *hostname, uint16_t *port);
+int discovery_parse_rootstream_code(rootstream_ctx_t *ctx, const char *code, 
+                                    char *hostname, uint16_t *port);
+
 
 /* --- Input (existing, polished) --- */
 int rootstream_input_init(rootstream_ctx_t *ctx);

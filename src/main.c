@@ -60,11 +60,18 @@ static void print_usage(const char *progname) {
     printf("  --latency-log       Enable latency percentile logging\n");
     printf("  --latency-interval MS  Latency log interval in ms (default: 1000)\n");
     printf("\n");
+    printf("Manual Peer Entry (PHASE 5):\n");
+    printf("  --peer-add IP:PORT  Manually add peer by IP address and port\n");
+    printf("  --peer-code CODE    Connect using RootStream code from history\n");
+    printf("  --peer-list         List saved peer history\n");
+    printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
     printf("  %s --qr                               # Show your code\n", progname);
     printf("  %s connect kXx7Y...@gaming-pc         # Connect to peer\n", progname);
     printf("  %s host --display 1 --bitrate 15000   # Host on 2nd display\n", progname);
+    printf("  %s --peer-add 192.168.1.100:9876      # Manually add peer\n", progname);
+    printf("  %s --peer-list                        # Show saved peers\n", progname);
     printf("\n");
     printf("First time setup:\n");
     printf("  1. Run 'rootstream --qr' to get your code\n");
@@ -286,6 +293,9 @@ int main(int argc, char **argv) {
         {"latency-log", no_argument,       0, 'l'},
         {"latency-interval", required_argument, 0, 'i'},
         {"backend-verbose", no_argument,   0, 0},
+        {"peer-add",    required_argument, 0, 0},
+        {"peer-list",   no_argument,       0, 0},
+        {"peer-code",   required_argument, 0, 0},
         {0, 0, 0, 0}
     };
 
@@ -293,6 +303,9 @@ int main(int argc, char **argv) {
     bool list_displays = false;
     bool service_mode = false;
     bool no_discovery = false;
+    bool show_peer_list = false;
+    const char *peer_add = NULL;
+    const char *peer_code = NULL;
     uint16_t port = 9876;
     int display_idx = -1;
     int bitrate = 10000;
@@ -310,6 +323,12 @@ int main(int argc, char **argv) {
                 if (strcmp(long_options[option_index].name, "backend-verbose") == 0) {
                     backend_verbose = true;
                     printf("INFO: Backend selection verbose mode enabled\n");
+                } else if (strcmp(long_options[option_index].name, "peer-add") == 0) {
+                    peer_add = optarg;
+                } else if (strcmp(long_options[option_index].name, "peer-list") == 0) {
+                    show_peer_list = true;
+                } else if (strcmp(long_options[option_index].name, "peer-code") == 0) {
+                    peer_code = optarg;
                 }
                 break;
             case 'h':
@@ -436,6 +455,44 @@ int main(int argc, char **argv) {
         if (qrcode_generate(ctx.keypair.rootstream_code, qr_path) == 0) {
             printf("QR code saved to: %s\n", qr_path);
         }
+
+        printf("\nYour RootStream code:\n");
+        printf("  %s\n\n", ctx.keypair.rootstream_code);
+
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
+
+    /* Handle --peer-list flag (PHASE 5) */
+    if (show_peer_list) {
+        discovery_list_peer_history(&ctx);
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
+
+    /* Handle --peer-add flag (PHASE 5) */
+    if (peer_add) {
+        if (discovery_manual_add_peer(&ctx, peer_add) < 0) {
+            fprintf(stderr, "ERROR: Failed to add peer\n");
+            rootstream_cleanup(&ctx);
+            return 1;
+        }
+        printf("INFO: Peer added successfully\n");
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
+
+    /* Handle --peer-code flag (PHASE 5) */
+    if (peer_code) {
+        if (discovery_manual_add_peer(&ctx, peer_code) < 0) {
+            fprintf(stderr, "ERROR: Failed to connect to peer\n");
+            rootstream_cleanup(&ctx);
+            return 1;
+        }
+        printf("INFO: Peer connection initiated\n");
+        rootstream_cleanup(&ctx);
+        return 0;
+    }
 
         rootstream_cleanup(&ctx);
         return 0;
