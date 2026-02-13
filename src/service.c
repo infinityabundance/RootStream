@@ -542,6 +542,12 @@ int service_run_client(rootstream_ctx_t *ctx) {
         fprintf(stderr, "ERROR: Decoder initialization failed\n");
         return -1;
     }
+    /* Set decoder backend name based on platform */
+    #ifdef _WIN32
+        ctx->active_backend.decoder_name = "Media Foundation";
+    #else
+        ctx->active_backend.decoder_name = "VA-API";
+    #endif
 
     /* Initialize display (SDL2 window) */
     if (display_init(ctx, "RootStream Client", 1920, 1080) < 0) {
