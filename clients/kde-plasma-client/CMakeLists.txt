@@ -15,9 +15,16 @@ endif()
 
 # Options
 option(ENABLE_AI_LOGGING "Enable AI logging support" ON)
+option(ENABLE_RENDERER_OPENGL "Enable OpenGL renderer backend" ON)
 
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets OpenGL)
+
+# Find OpenGL
+if(ENABLE_RENDERER_OPENGL)
+    find_package(OpenGL REQUIRED)
+    find_package(X11 REQUIRED)
+endif()
 
 # Find KDE Frameworks  
 find_package(ECM QUIET NO_MODULE)
@@ -50,6 +57,17 @@ set(SOURCES
     src/mainwindow.cpp
 )
 
+# Renderer sources (C)
+if(ENABLE_RENDERER_OPENGL)
+    list(APPEND SOURCES
+        src/renderer/renderer.c
+        src/renderer/opengl_renderer.c
+        src/renderer/opengl_utils.c
+        src/renderer/color_space.c
+        src/renderer/frame_buffer.c
+    )
+endif()
+
 # Headers (for MOC)
 set(HEADERS
     src/rootstreamclient.h
@@ -81,6 +99,18 @@ target_link_libraries(rootstream-kde-client PRIVATE
     Qt6::OpenGL
     ${OPUS_LIBRARIES}
 )
+
+# Link OpenGL if renderer is enabled
+if(ENABLE_RENDERER_OPENGL)
+    target_link_libraries(rootstream-kde-client PRIVATE
+        OpenGL::GL
+        ${X11_LIBRARIES}
+    )
+    target_include_directories(rootstream-kde-client PRIVATE
+        ${X11_INCLUDE_DIR}
+    )
+    target_compile_definitions(rootstream-kde-client PRIVATE HAVE_OPENGL_RENDERER)
+endif()
 
 # Link KDE Frameworks if available
 if(KF6_FOUND)
@@ -145,4 +175,5 @@ message(STATUS "  VA-API:         ${VAAPI_FOUND}")
 message(STATUS "  PulseAudio:     ${PULSEAUDIO_FOUND}")
 message(STATUS "  PipeWire:       ${PIPEWIRE_FOUND}")
 message(STATUS "  AI Logging:     ${ENABLE_AI_LOGGING}")
+message(STATUS "  OpenGL Renderer: ${ENABLE_RENDERER_OPENGL}")
 message(STATUS "")
