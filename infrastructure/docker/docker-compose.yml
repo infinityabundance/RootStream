@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  rootstream-server:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/rootstream-server.Dockerfile
+    image: rootstream/server:latest
+    container_name: rootstream-server
+    ports:
+      - "5000:5000/udp"
+      - "5001:5001/tcp"
+    environment:
+      - ROOTSTREAM_MODE=server
+      - ROOTSTREAM_LOG_LEVEL=info
+      - DATABASE_URL=postgresql://rootstream:password@postgres:5432/rootstream
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    networks:
+      - rootstream-net
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: rootstream-postgres
+    environment:
+      - POSTGRES_DB=rootstream
+      - POSTGRES_USER=rootstream
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - rootstream-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rootstream"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rootstream-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - rootstream-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: rootstream-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - rootstream-net
+    restart: unless-stopped
+    depends_on:
+      - rootstream-server
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  rootstream-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
