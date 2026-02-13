@@ -620,6 +620,13 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                         /* Use audio playback backend if available */
                         if (ctx->audio_playback_backend && ctx->audio_playback_backend->playback_fn) {
                             ctx->audio_playback_backend->playback_fn(ctx, pcm_buffer, pcm_samples);
+                        } else {
+                            /* Warn once if audio backend is not available */
+                            static bool warned_no_backend = false;
+                            if (!warned_no_backend) {
+                                fprintf(stderr, "WARNING: No audio playback backend available, audio will be dropped\n");
+                                warned_no_backend = true;
+                            }
                         }
                         ctx->last_audio_ts_us = header.timestamp_us;
                     }
