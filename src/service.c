@@ -406,8 +406,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
     printf("╚════════════════════════════════════════════════╝\n");
     printf("Capture:       %s\n", ctx->active_backend.capture_name);
     printf("Encoder:       %s\n", ctx->active_backend.encoder_name);
-    printf("Audio Cap:     %s\n", ctx->active_backend.audio_cap_name ? ctx->active_backend.audio_cap_name : "disabled");
-    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name ? ctx->active_backend.audio_play_name : "disabled");
+    printf("Audio Cap:     %s\n", ctx->active_backend.audio_cap_name);
+    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name);
     printf("\n");
 
     /* Main loop */
@@ -635,9 +635,9 @@ int service_run_client(rootstream_ctx_t *ctx) {
     printf("╔════════════════════════════════════════════════╗\n");
     printf("║  RootStream Client Backend Status              ║\n");
     printf("╚════════════════════════════════════════════════╝\n");
-    printf("Decoder:       %s\n", ctx->active_backend.decoder_name ? ctx->active_backend.decoder_name : "uninitialized");
-    printf("Display:       %s\n", "SDL2");  /* Hardcoded for now */
-    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name ? ctx->active_backend.audio_play_name : "disabled");
+    printf("Decoder:       %s\n", ctx->active_backend.decoder_name);
+    printf("Display:       SDL2\n");
+    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name);
     printf("\n");
 
     /* Allocate decode buffer */
