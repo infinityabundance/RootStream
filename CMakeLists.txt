@@ -83,6 +83,7 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(QRENCODE libqrencode)
     pkg_check_modules(PNG libpng)
     pkg_check_modules(X11 x11)
+    pkg_check_modules(NCURSES ncurses)
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -102,6 +103,10 @@ if(UNIX AND NOT APPLE)
 
     if(PIPEWIRE_FOUND)
         add_compile_definitions(HAVE_PIPEWIRE)
+    endif()
+    
+    if(NCURSES_FOUND)
+        add_compile_definitions(HAVE_NCURSES)
     endif()
 endif()
 
@@ -161,14 +166,21 @@ set(LINUX_SOURCES
     src/audio_capture_dummy.c
     src/audio_playback_dummy.c
     src/input.c
+    src/input_xdotool.c
+    src/input_logging.c
     src/discovery.c
+    src/discovery_broadcast.c
+    src/discovery_manual.c
+    src/network_tcp.c
+    src/network_reconnect.c
+    src/diagnostics.c
     src/service.c
     src/recording.c
     src/qrcode.c
 )
 
 if(NOT HEADLESS)
-    list(APPEND LINUX_SOURCES src/tray.c)
+    list(APPEND LINUX_SOURCES src/tray.c src/tray_cli.c src/tray_tui.c)
 else()
     list(APPEND LINUX_SOURCES src/tray_stub.c)
 endif()
@@ -270,6 +282,11 @@ if(UNIX AND NOT APPLE)
         target_include_directories(rootstream PRIVATE ${PNG_INCLUDE_DIRS})
     endif()
     
+    if(NCURSES_FOUND)
+        target_link_libraries(rootstream PRIVATE ${NCURSES_LIBRARIES})
+        target_include_directories(rootstream PRIVATE ${NCURSES_INCLUDE_DIRS})
+    endif()
+    
     if(FFMPEG_FOUND)
         target_link_libraries(rootstream PRIVATE ${FFMPEG_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${FFMPEG_INCLUDE_DIRS})
@@ -282,6 +299,8 @@ if(UNIX AND NOT APPLE)
         src/vaapi_decoder.c
         src/display_sdl2.c
         src/network.c
+        src/network_tcp.c
+        src/network_reconnect.c
         src/packet_validate.c
         src/crypto.c
         src/config.c
@@ -410,6 +429,14 @@ add_executable(test_packet tests/unit/test_packet.c src/packet_validate.c)
 target_include_directories(test_packet PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME packet_tests COMMAND test_packet)
 
+# PHASE 8: Integration and Unit Tests
+option(ENABLE_UNIT_TESTS "Build PHASE 8 unit tests" ON)
+option(ENABLE_INTEGRATION_TESTS "Build PHASE 8 integration tests" ON)
+
+if(ENABLE_UNIT_TESTS OR ENABLE_INTEGRATION_TESTS)
+    add_subdirectory(tests)
+endif()
+
 # =============================================================================
 # Summary
 # =============================================================================
@@ -426,5 +453,13 @@ if(UNIX)
     message(STATUS "  PulseAudio:    ${PULSEAUDIO_FOUND}")
     message(STATUS "  PipeWire:      ${PIPEWIRE_FOUND}")
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
+endif()
+message(STATUS "")
+message(STATUS "PHASE 8 Testing:")
+if(ENABLE_UNIT_TESTS)
+    message(STATUS "  Unit tests: ENABLED (run with: ctest -L unit)")
+endif()
+if(ENABLE_INTEGRATION_TESTS)
+    message(STATUS "  Integration tests: ENABLED (run with: ctest -L integration)")
 endif()
 message(STATUS "")
