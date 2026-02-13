@@ -24,11 +24,10 @@ Encoder
 ```
 
 **Problems:**
-- Each layer adds 2-10ms latency
-- Any layer can break (and they do)
-- Wayland security model requires constant permissions
-- PipeWire is unstable
-- Compositor crashes kill everything
+- Each layer adds latency (estimated 2-10ms per layer)
+- Any layer can break
+- Wayland security model may require permissions
+- Compositor crashes can affect dependent layers
 
 ### The RootStream Stack
 ```
@@ -43,10 +42,10 @@ UDP socket
 
 **Benefits:**
 - 3 layers instead of 7+
-- All kernel APIs (stable for 10+ years)
-- No permissions needed (user owns /dev/dri)
-- Survives compositor crashes
-- 14-24ms total latency vs 30-56ms
+- Uses kernel APIs (stable for 10+ years)
+- Reduced permission requirements (video group membership)
+- Reduced compositor dependencies
+- Target latency: 14-24ms (varies by hardware; see Performance section)
 
 ## Component Details
 
@@ -91,14 +90,14 @@ munmap(pixels, size);
 
 **Limitations:**
 - Captures entire framebuffer (all windows)
-- Can't capture individual windows (that requires compositor)
-- Perfect for fullscreen games
-- For desktop streaming, captures everything
+- Can't capture individual windows (requires compositor integration)
+- Ideal for fullscreen applications
+- For desktop streaming, captures all visible content
 
-**Performance:**
-- ~1-2ms capture time (direct memory copy)
-- No GPU→CPU overhead (already in system RAM)
-- Zero-copy possible with proper setup
+**Performance (example measurements):**
+- Capture time: ~1-2ms (direct memory copy)
+- No GPU→CPU transfer overhead (framebuffer in system RAM)
+- Zero-copy optimizations possible with proper configuration
 
 ### 2. VA-API Encoding (`vaapi_encoder.c`)
 
@@ -154,10 +153,12 @@ vaMapBuffer(display, coded_buffer_id, &output_data);
 - Missing: SPS/PPS parameter generation
 - Missing: Rate control optimization
 
-**Performance:**
+**Performance (example measurements on specific hardware):**
 - Intel UHD 730: ~8-12ms encode time (1080p60)
 - AMD RX 6600: ~6-10ms encode time (1080p60)
-- CPU usage: <5% (all in hardware)
+- CPU usage: <5% (hardware encoder offload)
+
+> Actual encode time varies by GPU model, driver version, and encode parameters.
 
 ### 3. Network Protocol (`network.c`)
 
@@ -179,10 +180,10 @@ vaMapBuffer(display, coded_buffer_id, &output_data);
 ```
 
 **Why UDP?**
-- TCP adds 20-40ms latency due to retransmission
-- For game streaming, old frames are useless
-- Better to drop a frame than delay 10 frames
-- UDP gives us full control
+- TCP can add significant latency due to retransmission on packet loss
+- For real-time streaming, dropped frames are preferable to delayed frames
+- UDP provides fine-grained control over packet handling
+- Drawback: No built-in reliability; application must handle packet loss
 
 **MTU Consideration:**
 - Ethernet MTU: 1500 bytes
@@ -312,56 +313,62 @@ write(fd, &ev, sizeof(ev));
 
 ## Performance Analysis
 
-### Latency Breakdown (1080p60)
+> **Note**: These are example measurements from specific test configurations.
+> Actual performance varies by hardware, drivers, network conditions, and system load.
+
+### Example Latency Breakdown (1080p60, LAN)
 
 **Capture:**
-- DRM query: 0.1ms
-- mmap: 0.2ms
+- DRM query: ~0.1ms
+- mmap: ~0.2ms
 - memcpy: 1-2ms
 - **Total: ~2ms**
 
-**Encoding:**
+**Encoding (VA-API, Intel UHD 730):**
 - Color conversion: 2-3ms
-- VA-API upload: 1ms
+- VA-API upload: ~1ms
 - Hardware encode: 8-12ms
-- Download: 1ms
+- Download: ~1ms
 - **Total: ~12-17ms**
 
-**Network (LAN):**
-- Packetization: 0.1ms
-- UDP send: 0.1ms
-- Network transit: 1-5ms
-- Receive: 0.1ms
+**Network (LAN, gigabit ethernet):**
+- Packetization: ~0.1ms
+- UDP send: ~0.1ms
+- Network transit: 1-5ms (varies by network)
+- Receive: ~0.1ms
 - **Total: ~1-5ms**
 
-**Decoding (client, estimate):**
+**Decoding (client, estimated, VA-API):**
 - VA-API decode: 5-8ms
 - Display: 1-2ms
 - **Total: ~6-10ms**
 
-**Input (reverse):**
-- Capture: 0.1ms
+**Input (reverse path, estimated):**
+- Capture: ~0.1ms
 - Network: 1-5ms
-- uinput: 0.1ms
+- uinput: ~0.1ms
 - **Total: ~1-5ms**
 
-**Total End-to-End Latency:**
-- **Best case: 20ms** (local network, optimal conditions)
-- **Typical: 25-30ms** (home network)
-- **Worst case: 40ms** (network congestion)
+**Total End-to-End Latency (estimated):**
+- **Best case: ~20ms** (optimal conditions, local network)
+- **Typical: 25-30ms** (home network, typical conditions)
+- **Worst case: 40ms+** (network congestion, Wi-Fi interference)
 
-### CPU Usage
+> These measurements are from Intel i5-11400 + Intel UHD 730 on gigabit LAN.
+> Your results will vary based on hardware, network, and configuration.
 
-At 1080p60:
+### Example CPU Usage
+
+At 1080p60 (Intel i5-11400 with VA-API):
 - **Capture**: 1-2%
 - **Color conversion**: 2-3%
 - **Encoding overhead**: <1%
 - **Network**: <1%
-- **Total**: ~5-8% on modern CPU
+- **Total**: ~5-8%
 
-Hardware does the heavy lifting (encoding).
+Hardware encoder does most work; software encoder (x264) would use 40-60% CPU.
 
-### Memory Usage
+### Example Memory Usage
 
 - Frame buffers: 8MB (4 surfaces × 2MB)
 - Encoding buffers: 2MB

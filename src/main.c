@@ -13,6 +13,7 @@
  */
 
 #include "../include/rootstream.h"
+#include "ai_logging.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,10 @@ static void print_usage(const char *progname) {
     printf("  --gui MODE          Select GUI backend (gtk/tui/cli)\n");
     printf("  --input MODE        Select input backend (uinput/xdotool/logging)\n");
     printf("  --diagnostics       Show system diagnostics and exit\n");
+    printf("\n");
+    printf("AI Coding Logging (PHASE 9):\n");
+    printf("  --ai-coding-logs[=FILE]  Enable AI-assisted development logging\n");
+    printf("                           (also activated by AI_COPILOT_MODE=1)\n");
     printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
@@ -378,6 +383,7 @@ int main(int argc, char **argv) {
         {"gui",         required_argument, 0, 0},
         {"input",       required_argument, 0, 0},
         {"diagnostics", no_argument,       0, 0},
+        {"ai-coding-logs", optional_argument, 0, 0},
         {0, 0, 0, 0}
     };
 
@@ -387,6 +393,8 @@ int main(int argc, char **argv) {
     bool no_discovery = false;
     bool show_peer_list = false;
     bool show_diagnostics = false;
+    bool enable_ai_logging = false;
+    const char *ai_log_file = NULL;
     const char *peer_add = NULL;
     const char *peer_code = NULL;
     const char *gui_override = NULL;
@@ -420,6 +428,9 @@ int main(int argc, char **argv) {
                     input_override = optarg;
                 } else if (strcmp(long_options[option_index].name, "diagnostics") == 0) {
                     show_diagnostics = true;
+                } else if (strcmp(long_options[option_index].name, "ai-coding-logs") == 0) {
+                    enable_ai_logging = true;
+                    ai_log_file = optarg;  /* May be NULL for stderr */
                 }
                 break;
             case 'h':
@@ -486,6 +497,20 @@ int main(int argc, char **argv) {
         fprintf(stderr, "ERROR: Initialization failed\n");
         return 1;
     }
+
+    /* Initialize AI logging module (PHASE 9) */
+    ai_logging_init(&ctx);
+    if (enable_ai_logging) {
+        ai_logging_set_enabled(&ctx, true);
+        if (ai_log_file) {
+            if (ai_logging_set_output(&ctx, ai_log_file) < 0) {
+                fprintf(stderr, "WARNING: Failed to set AI log file, using stderr\n");
+            }
+        }
+    }
+    
+    AI_LOG_CORE("startup: RootStream version=%s", ROOTSTREAM_VERSION);
+    AI_LOG_CORE("startup: port=%d bitrate=%d service_mode=%d", port, bitrate, service_mode);
 
     /* Set backend verbose mode if requested */
     ctx.backend_prefs.verbose = backend_verbose;
@@ -634,7 +659,9 @@ int main(int argc, char **argv) {
 
 cleanup:
     /* Print statistics and cleanup */
+    AI_LOG_CORE("shutdown: cleaning up");
     rootstream_print_stats(&ctx);
+    ai_logging_shutdown(&ctx);
     rootstream_cleanup(&ctx);
 
     return ret;
