@@ -17,6 +17,7 @@ endif()
 option(ENABLE_AI_LOGGING "Enable AI logging support" ON)
 option(ENABLE_RENDERER_OPENGL "Enable OpenGL renderer backend" ON)
 option(ENABLE_RENDERER_VULKAN "Enable Vulkan renderer backend" ON)
+option(ENABLE_RENDERER_PROTON "Enable Proton compatibility layer" ON)
 
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets OpenGL)
@@ -99,6 +100,18 @@ if(ENABLE_RENDERER_VULKAN)
     )
 endif()
 
+# Proton renderer sources
+if(ENABLE_RENDERER_PROTON)
+    list(APPEND SOURCES
+        src/renderer/proton_detector.c
+        src/renderer/proton_renderer.c
+        src/renderer/dxvk_interop.c
+        src/renderer/vkd3d_interop.c
+        src/renderer/proton_game_db.c
+        src/renderer/proton_settings.c
+    )
+endif()
+
 # Headers (for MOC)
 set(HEADERS
     src/rootstreamclient.h
@@ -158,6 +171,16 @@ if(ENABLE_RENDERER_VULKAN)
         target_include_directories(rootstream-kde-client PRIVATE ${WAYLAND_INCLUDE_DIRS})
     endif()
     target_compile_definitions(rootstream-kde-client PRIVATE HAVE_VULKAN_RENDERER)
+endif()
+
+# Link Proton renderer dependencies
+if(ENABLE_RENDERER_PROTON)
+    # Proton renderer requires Vulkan as backend
+    if(NOT ENABLE_RENDERER_VULKAN)
+        message(WARNING "Proton renderer requires Vulkan backend, enabling ENABLE_RENDERER_VULKAN")
+        set(ENABLE_RENDERER_VULKAN ON)
+    endif()
+    target_compile_definitions(rootstream-kde-client PRIVATE HAVE_PROTON_RENDERER)
 endif()
 
 # Link KDE Frameworks if available
@@ -229,4 +252,5 @@ if(ENABLE_RENDERER_VULKAN)
     message(STATUS "    - Wayland:    ${WAYLAND_FOUND}")
     message(STATUS "    - X11:        ${X11_FOUND}")
 endif()
+message(STATUS "  Proton Renderer: ${ENABLE_RENDERER_PROTON}")
 message(STATUS "")
