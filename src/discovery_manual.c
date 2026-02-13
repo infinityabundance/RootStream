@@ -25,7 +25,8 @@ int discovery_parse_rootstream_code(rootstream_ctx_t *ctx, const char *code,
     /* Check peer history/favorites */
     for (int i = 0; i < ctx->num_peer_history; i++) {
         if (strcmp(ctx->peer_history_entries[i].rootstream_code, code) == 0) {
-            strcpy(hostname, ctx->peer_history_entries[i].hostname);
+            strncpy(hostname, ctx->peer_history_entries[i].hostname, 255);
+            hostname[255] = '\0';
             *port = ctx->peer_history_entries[i].port;
             printf("✓ Found code in history: %s:%u\n", hostname, *port);
             return 0;
@@ -56,7 +57,10 @@ int discovery_parse_address(const char *address, char *hostname, uint16_t *port)
     }
 
     *colon = '\0';
-    strcpy(hostname, buf);
+    
+    /* Copy hostname safely (assume 256 byte destination) */
+    strncpy(hostname, buf, 255);
+    hostname[255] = '\0';
 
     char *port_str = colon + 1;
     int port_num = atoi(port_str);
