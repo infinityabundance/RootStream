@@ -191,6 +191,10 @@ set(LINUX_SOURCES
     src/network/qos_manager.c
     src/network/bandwidth_estimator.c
     src/network/socket_tuning.c
+    src/network/jitter_buffer.c
+    src/network/loss_recovery.c
+    src/network/load_balancer.c
+    src/network/network_config.c
     src/network/network_optimizer.c
     src/diagnostics.c
     src/ai_logging.c

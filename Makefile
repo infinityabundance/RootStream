@@ -177,6 +177,10 @@ SRCS := src/main.c \
         src/network/qos_manager.c \
         src/network/bandwidth_estimator.c \
         src/network/socket_tuning.c \
+        src/network/jitter_buffer.c \
+        src/network/loss_recovery.c \
+        src/network/load_balancer.c \
+        src/network/network_config.c \
         src/network/network_optimizer.c \
         src/input.c \
         src/input_xdotool.c \
