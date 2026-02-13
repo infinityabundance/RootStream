@@ -60,6 +60,20 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     printf("  %s\n", ctx->keypair.rootstream_code);
     printf("\n");
 
+    /* Initialize backend tracking (PHASE 0) */
+    ctx->active_backend.capture_name = "uninitialized";
+    ctx->active_backend.encoder_name = "uninitialized";
+    ctx->active_backend.audio_cap_name = "uninitialized";
+    ctx->active_backend.audio_play_name = "uninitialized";
+    ctx->active_backend.decoder_name = "uninitialized";
+    ctx->active_backend.display_name = "uninitialized";
+
+    ctx->backend_prefs.capture_override = NULL;
+    ctx->backend_prefs.encoder_override = NULL;
+    ctx->backend_prefs.verbose = false;
+
+    printf("INFO: Backend infrastructure initialized\n");
+
     return 0;
 }
 
