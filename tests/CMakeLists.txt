@@ -67,11 +67,10 @@ if(ENABLE_UNIT_TESTS)
     
     # PHASE 15: Input Manager tests
     add_executable(test_input_manager unit/test_input_manager.c
+        unit/test_util_stubs.c
         ${CMAKE_SOURCE_DIR}/src/input/input_manager.c
         ${CMAKE_SOURCE_DIR}/src/input_logging.c
         ${CMAKE_SOURCE_DIR}/src/input_xdotool.c
-        ${CMAKE_SOURCE_DIR}/src/latency.c
-        ${CMAKE_SOURCE_DIR}/src/platform/platform_linux.c
     )
     target_include_directories(test_input_manager PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_link_libraries(test_input_manager test_harness pthread m)

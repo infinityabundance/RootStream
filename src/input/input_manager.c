@@ -537,7 +537,7 @@ int input_manager_register_client(rootstream_ctx_t *ctx, uint32_t client_id,
             }
             mgr->clients[i].active = true;
             mgr->clients[i].event_count = 0;
-            mgr->clients[i].last_sequence_number = 0;
+            mgr->clients[i].last_sequence_number = 0xFFFF;  /* Sentinel - no sequence seen yet */
             mgr->active_client_count++;
             
             printf("Input Manager: Registered client %u (%s)\n",

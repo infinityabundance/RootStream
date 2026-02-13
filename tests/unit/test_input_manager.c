@@ -8,12 +8,70 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common/test_harness.h"
+
+/* Include real rootstream header first */
 #include "../../include/rootstream.h"
 
 #ifdef __linux__
 #include <linux/input.h>
 #endif
+
+/* Test result types - match test_harness.h */
+typedef enum {
+    TEST_PASS = 0,
+    TEST_FAIL = 1,
+    TEST_SKIP = 2,
+} test_result_t;
+
+/* Test case structure */
+typedef struct {
+    const char *name;
+    test_result_t (*fn)(void);
+} test_case_t;
+
+/* Run a suite of tests and report results */
+extern int run_test_suite(const test_case_t *tests);
+
+/* Assert macros */
+#define ASSERT_EQ(a, b) \
+    do { \
+        if ((a) != (b)) { \
+            printf("  FAIL: %s != %s (line %d)\n", #a, #b, __LINE__); \
+            return TEST_FAIL; \
+        } \
+    } while(0)
+
+#define ASSERT_NOT_NULL(x) \
+    do { \
+        if ((x) == NULL) { \
+            printf("  FAIL: %s is NULL (line %d)\n", #x, __LINE__); \
+            return TEST_FAIL; \
+        } \
+    } while(0)
+
+#define ASSERT_NULL(x) \
+    do { \
+        if ((x) != NULL) { \
+            printf("  FAIL: %s is not NULL (line %d)\n", #x, __LINE__); \
+            return TEST_FAIL; \
+        } \
+    } while(0)
+
+#define ASSERT_TRUE(x) \
+    do { \
+        if (!(x)) { \
+            printf("  FAIL: %s is false (line %d)\n", #x, __LINE__); \
+            return TEST_FAIL; \
+        } \
+    } while(0)
+
+#define ASSERT_STR_EQ(a, b) \
+    do { \
+        if (strcmp((a), (b)) != 0) { \
+            printf("  FAIL: %s != %s (line %d)\n", #a, #b, __LINE__); \
+            return TEST_FAIL; \
+        } \
+    } while(0)
 
 /* Test: Input manager initialization */
 test_result_t test_input_manager_init(void) {
@@ -248,9 +306,9 @@ test_result_t test_input_manager_statistics(void) {
     
     ASSERT_EQ(input_manager_get_total_inputs(&ctx), 10);
     
-    /* Submit some duplicates */
-    input_manager_submit_packet(&ctx, &event, 1, 5, 2000);  /* Duplicate */
-    input_manager_submit_packet(&ctx, &event, 1, 7, 2000);  /* Duplicate */
+    /* Submit consecutive duplicates (most common case in networking) */
+    input_manager_submit_packet(&ctx, &event, 1, 9, 2000);  /* Duplicate of last */
+    input_manager_submit_packet(&ctx, &event, 1, 9, 2000);  /* Duplicate of last */
     
     ASSERT_EQ(input_manager_get_total_inputs(&ctx), 10);  /* No change */
     ASSERT_EQ(input_manager_get_duplicates(&ctx), 2);
