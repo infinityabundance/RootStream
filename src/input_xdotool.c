@@ -23,9 +23,21 @@ typedef struct {
  * Check if xdotool is installed
  */
 bool input_xdotool_available(void) {
-    /* Try to run xdotool --version */
-    int ret = system("which xdotool > /dev/null 2>&1");
-    return ret == 0;
+    /* Check common installation paths for xdotool */
+    const char *paths[] = {
+        "/usr/bin/xdotool",
+        "/usr/local/bin/xdotool",
+        "/bin/xdotool",
+        NULL
+    };
+    
+    for (int i = 0; paths[i] != NULL; i++) {
+        if (access(paths[i], X_OK) == 0) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 /*

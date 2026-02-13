@@ -33,13 +33,24 @@ void diagnostics_print_system_info(void) {
     printf("  PID: %d\n", getpid());
     printf("  UID: %d (running as %s)\n", getuid(), getuid() == 0 ? "root" : "user");
     
-    /* Check for render group */
+    /* Check for render group (gid 44) */
     if (getuid() != 0) {
         printf("  GPU Group Access: ");
-        if (system("id -G | grep -q 44 2>/dev/null") == 0) {  /* 44 = render group */
-            printf("YES (can use DRM)\n");
+        
+        /* Get list of supplementary groups */
+        gid_t groups[64];
+        int ngroups = sizeof(groups) / sizeof(groups[0]);
+        if (getgroups(ngroups, groups) >= 0) {
+            bool has_render_group = false;
+            for (int i = 0; i < ngroups; i++) {
+                if (groups[i] == 44) {  /* 44 = render group */
+                    has_render_group = true;
+                    break;
+                }
+            }
+            printf("%s\n", has_render_group ? "YES (can use DRM)" : "NO (DRM may be limited)");
         } else {
-            printf("NO (DRM may be limited)\n");
+            printf("(unknown)\n");
         }
     }
     printf("\n");
@@ -101,8 +112,12 @@ void diagnostics_print_available_backends(rootstream_ctx_t *ctx) {
     printf("\n  Input Injection:\n");
     printf("    Primary (uinput):      %s\n",
            access("/dev/uinput", F_OK) == 0 ? "✓ Available" : "✗ Not available");
+    /* Check for xdotool in common paths */
+    bool xdotool_found = (access("/usr/bin/xdotool", X_OK) == 0 ||
+                          access("/usr/local/bin/xdotool", X_OK) == 0 ||
+                          access("/bin/xdotool", X_OK) == 0);
     printf("    Fallback (xdotool):    %s\n",
-           system("which xdotool > /dev/null 2>&1") == 0 ? "✓ Installed" : "✗ Not installed");
+           xdotool_found ? "✓ Installed" : "✗ Not installed");
     printf("    Fallback (Logging):    ✓ Always available\n");
     
     printf("\n  GUI:\n");
@@ -141,7 +156,7 @@ void diagnostics_print_active_backends(rootstream_ctx_t *ctx) {
     printf("  Encoder:       %s\n", ctx->active_backend.encoder_name);
     printf("  Audio Capture: %s\n", ctx->active_backend.audio_cap_name ? 
            ctx->active_backend.audio_cap_name : "disabled");
-    printf("  Audio Playback:%s\n", ctx->active_backend.audio_play_name ? 
+    printf("  Audio Playback: %s\n", ctx->active_backend.audio_play_name ? 
            ctx->active_backend.audio_play_name : "disabled");
     printf("  Discovery:     %s\n", ctx->active_backend.discovery_name ? 
            ctx->active_backend.discovery_name : "uninitialized");

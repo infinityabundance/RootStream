@@ -32,6 +32,9 @@ int tray_init_tui(rootstream_ctx_t *ctx, int argc, char **argv) {
     tui_ctx_t *tui = calloc(1, sizeof(tui_ctx_t));
     if (!tui) return -1;
 
+    /* Print message before initializing ncurses */
+    printf("✓ Terminal UI initialized\n");
+    
     /* Initialize ncurses */
     initscr();
     cbreak();
@@ -45,7 +48,6 @@ int tray_init_tui(rootstream_ctx_t *ctx, int argc, char **argv) {
 
     signal(SIGWINCH, handle_resize);
 
-    printf("✓ Terminal UI initialized\n");
     return 0;
 }
 
@@ -113,9 +115,8 @@ void tray_show_peers_tui(rootstream_ctx_t *ctx) {
     mvprintw(0, 0, "Connected Peers (%d):", ctx->num_peers);
     
     for (int i = 0; i < ctx->num_peers && i < LINES - 5; i++) {
-        mvprintw(i + 2, 2, "%d. %s (%s:%u) - %s",
+        mvprintw(i + 2, 2, "%d. %s - %s",
                 i + 1, ctx->peers[i].hostname,
-                ctx->peers[i].hostname, ctx->port,
                 ctx->peers[i].state == PEER_CONNECTED ? "online" : "offline");
     }
 

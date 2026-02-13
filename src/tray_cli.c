@@ -61,9 +61,8 @@ void tray_show_peers_cli(rootstream_ctx_t *ctx) {
         printf("  No peers connected.\n");
     } else {
         for (int i = 0; i < ctx->num_peers; i++) {
-            printf("  %d. %s (%s) - %s\n",
+            printf("  %d. %s - %s\n",
                    i + 1, ctx->peers[i].hostname,
-                   ctx->peers[i].hostname,
                    ctx->peers[i].state == PEER_CONNECTED ? "online" : "offline");
         }
     }
