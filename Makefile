@@ -153,6 +153,8 @@ SRCS := src/main.c \
         src/audio_capture.c \
         src/audio_playback.c \
         src/network.c \
+        src/network_tcp.c \
+        src/network_reconnect.c \
         src/input.c \
         src/crypto.c \
         src/discovery.c \
@@ -173,6 +175,8 @@ endif
 ifdef NO_CRYPTO
     SRCS := $(filter-out src/crypto.c,$(SRCS))
     SRCS := $(filter-out src/network.c,$(SRCS))
+    SRCS := $(filter-out src/network_tcp.c,$(SRCS))
+    SRCS := $(filter-out src/network_reconnect.c,$(SRCS))
     SRCS += src/crypto_stub.c
     SRCS += src/network_stub.c
 endif
@@ -229,7 +233,7 @@ $(TARGET): $(OBJS)
 
 # Build rstr-player tool
 # Note: Needs many modules for dependencies - simplified player would be better long-term
-$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c src/platform/platform_linux.c src/packet_validate.c
+$(PLAYER): tools/rstr-player.c src/recording.c src/vaapi_decoder.c src/display_sdl2.c src/network.c src/network_tcp.c src/network_reconnect.c src/crypto.c src/config.c src/input.c src/opus_codec.c src/audio_playback.c src/latency.c src/platform/platform_linux.c src/packet_validate.c
 	@echo "🔗 Building rstr-player..."
 	@$(CC) $(CFLAGS) $^ -o $(PLAYER) $(LDFLAGS) $(LIBS)
 	@echo "✓ Build complete: $(PLAYER)"

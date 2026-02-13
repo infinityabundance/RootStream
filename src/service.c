@@ -512,6 +512,23 @@ int service_run_host(rootstream_ctx_t *ctx) {
         rootstream_net_recv(ctx, 1);
         rootstream_net_tick(ctx);
 
+        /* Check peer health and reconnect if needed (PHASE 4) */
+        uint64_t now = get_timestamp_ms();
+        for (int i = 0; i < ctx->num_peers; i++) {
+            peer_t *peer = &ctx->peers[i];
+            
+            /* Check for stale connections (30 second timeout) */
+            if (peer->state == PEER_CONNECTED) {
+                if (peer->last_received > 0 && now - peer->last_received > 30000) {
+                    printf("WARNING: Peer %s timeout (no packets in 30s)\n", peer->hostname);
+                    peer->state = PEER_DISCONNECTED;
+                    if (peer->reconnect_ctx) {
+                        peer_try_reconnect(ctx, peer);
+                    }
+                }
+            }
+        }
+
         /* Rate limiting */
         uint32_t refresh_rate = ctx->display.refresh_rate ? ctx->display.refresh_rate : 60;
         usleep(1000000 / refresh_rate);
@@ -670,6 +687,23 @@ int service_run_client(rootstream_ctx_t *ctx) {
         rootstream_net_recv(ctx, 16);
         uint64_t recv_end_us = get_timestamp_us();
         rootstream_net_tick(ctx);
+
+        /* Check peer health and reconnect if needed (PHASE 4) */
+        uint64_t now = get_timestamp_ms();
+        for (int i = 0; i < ctx->num_peers; i++) {
+            peer_t *peer = &ctx->peers[i];
+            
+            /* Check for stale connections (30 second timeout) */
+            if (peer->state == PEER_CONNECTED) {
+                if (peer->last_received > 0 && now - peer->last_received > 30000) {
+                    printf("WARNING: Peer %s timeout (no packets in 30s)\n", peer->hostname);
+                    peer->state = PEER_DISCONNECTED;
+                    if (peer->reconnect_ctx) {
+                        peer_try_reconnect(ctx, peer);
+                    }
+                }
+            }
+        }
 
         /* Check if we received a video frame */
         if (ctx->current_frame.data && ctx->current_frame.size > 0) {

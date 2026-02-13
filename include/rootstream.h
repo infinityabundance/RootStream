@@ -306,7 +306,14 @@ typedef enum {
     PEER_HANDSHAKE_RECEIVED,   /* Received handshake, session established */
     PEER_CONNECTED,            /* Fully authenticated */
     PEER_DISCONNECTED,         /* Lost connection */
+    PEER_FAILED,               /* Max reconnection attempts exceeded */
 } peer_state_t;
+
+/* Network transport types (PHASE 4) */
+typedef enum {
+    TRANSPORT_UDP = 1,         /* UDP P2P (primary) */
+    TRANSPORT_TCP = 2,         /* TCP fallback */
+} transport_type_t;
 
 typedef struct {
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];  /* Peer's code */
@@ -329,6 +336,12 @@ typedef struct {
     uint64_t last_ping;                              /* Last keepalive ping time (ms) */
     uint8_t protocol_version;                       /* Peer protocol version */
     uint8_t protocol_flags;                         /* Peer protocol flags */
+    
+    /* Network resilience (PHASE 4) */
+    transport_type_t transport;                      /* Current transport (UDP/TCP) */
+    void *transport_priv;                            /* Transport-specific private data */
+    void *reconnect_ctx;                             /* Reconnection tracking */
+    uint64_t last_received;                          /* Last inbound packet time (ms) */
 } peer_t;
 
 /* ============================================================================
@@ -691,6 +704,21 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
 void rootstream_net_tick(rootstream_ctx_t *ctx);
 int rootstream_net_validate_packet(const uint8_t *buffer, size_t len);
+
+/* --- Network TCP Fallback (PHASE 4) --- */
+int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer);
+int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
+                           const uint8_t *data, size_t size);
+int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
+                           uint8_t *buffer, size_t *buffer_len);
+void rootstream_net_tcp_cleanup(peer_t *peer);
+bool rootstream_net_tcp_is_healthy(peer_t *peer);
+
+/* --- Peer Reconnection (PHASE 4) --- */
+int peer_reconnect_init(peer_t *peer);
+int peer_try_reconnect(rootstream_ctx_t *ctx, peer_t *peer);
+void peer_reconnect_cleanup(peer_t *peer);
+void peer_reconnect_reset(peer_t *peer);
 
 /* --- Peer Management --- */
 peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
