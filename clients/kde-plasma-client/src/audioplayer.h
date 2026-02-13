@@ -1,14 +1,8 @@
-/* AudioPlayer - Audio Playback (Stub) */
+/* AudioPlayer - Audio Playback */
 #ifndef AUDIOPLAYER_H
 #define AUDIOPLAYER_H
 
-#include <QObject>
-
-class AudioPlayer : public QObject
-{
-    Q_OBJECT
-public:
-    explicit AudioPlayer(QObject *parent = nullptr) : QObject(parent) {}
-};
+// Include the actual audio player implementation
+#include "audio/audio_player.h"
 
 #endif
