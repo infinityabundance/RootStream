@@ -7,6 +7,7 @@
 #define VULKAN_HEADLESS_H
 
 #include "vulkan_renderer.h"
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

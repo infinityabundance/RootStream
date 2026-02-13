@@ -8,9 +8,12 @@
 #include <string.h>
 
 #ifdef __linux__
+#if __has_include(<vulkan/vulkan.h>) && __has_include(<vulkan/vulkan_wayland.h>) && __has_include(<wayland-client.h>)
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_wayland.h>
 #include <wayland-client.h>
+#define HAVE_WAYLAND_VULKAN 1
+#endif
 #endif
 
 struct vulkan_wayland_context_s {
@@ -33,6 +36,7 @@ void vulkan_wayland_cleanup(void *ctx) {
         return;
     }
     
+#ifdef HAVE_WAYLAND_VULKAN
     vulkan_wayland_context_t *wl_ctx = (vulkan_wayland_context_t*)ctx;
     
     if (wl_ctx->surface) {
@@ -42,6 +46,7 @@ void vulkan_wayland_cleanup(void *ctx) {
     if (wl_ctx->display) {
         wl_display_disconnect(wl_ctx->display);
     }
+#endif
     
-    free(wl_ctx);
+    free(ctx);
 }

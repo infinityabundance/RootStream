@@ -8,7 +8,17 @@
 #include <string.h>
 
 #ifdef __linux__
+#if __has_include(<vulkan/vulkan.h>)
 #include <vulkan/vulkan.h>
+#define HAVE_HEADLESS_VULKAN 1
+#endif
+#endif
+
+// Forward declarations for when Vulkan headers are not available
+#ifndef HAVE_HEADLESS_VULKAN
+typedef void* VkImage;
+typedef void* VkDeviceMemory;
+typedef void* VkImageView;
 #endif
 
 struct vulkan_headless_context_s {

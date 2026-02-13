@@ -8,9 +8,18 @@
 #include <string.h>
 
 #ifdef __linux__
+#if __has_include(<vulkan/vulkan.h>) && __has_include(<vulkan/vulkan_xlib.h>) && __has_include(<X11/Xlib.h>)
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_xlib.h>
 #include <X11/Xlib.h>
+#define HAVE_X11_VULKAN 1
+#endif
+#endif
+
+// Forward declarations for when X11 headers are not available
+#ifndef HAVE_X11_VULKAN
+typedef void* Display;
+typedef unsigned long Window;
 #endif
 
 struct vulkan_x11_context_s {
@@ -33,11 +42,13 @@ void vulkan_x11_cleanup(void *ctx) {
         return;
     }
     
+#ifdef HAVE_X11_VULKAN
     vulkan_x11_context_t *x11_ctx = (vulkan_x11_context_t*)ctx;
     
     if (x11_ctx->display) {
         XCloseDisplay(x11_ctx->display);
     }
+#endif
     
-    free(x11_ctx);
+    free(ctx);
 }

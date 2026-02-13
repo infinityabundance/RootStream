@@ -8,11 +8,50 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Vulkan headers
+// Platform detection
 #ifdef __linux__
+#include <unistd.h>
+
+// Vulkan headers (only if available)
+#if __has_include(<vulkan/vulkan.h>)
 #include <vulkan/vulkan.h>
+#define HAVE_VULKAN_HEADERS 1
+#endif
+
+// Wayland headers (only if available)
+#if __has_include(<wayland-client.h>)
 #include <wayland-client.h>
+#define HAVE_WAYLAND_HEADERS 1
+#endif
+
+// X11 headers (usually available)
+#if __has_include(<X11/Xlib.h>)
 #include <X11/Xlib.h>
+#define HAVE_X11_HEADERS 1
+#endif
+
+#endif // __linux__
+
+// Fallback definitions if Vulkan headers not available
+#ifndef HAVE_VULKAN_HEADERS
+typedef void* VkInstance;
+typedef void* VkPhysicalDevice;
+typedef void* VkDevice;
+typedef void* VkQueue;
+typedef void* VkSurfaceKHR;
+typedef void* VkSwapchainKHR;
+typedef void* VkImage;
+typedef void* VkImageView;
+typedef void* VkDeviceMemory;
+typedef void* VkCommandPool;
+typedef void* VkCommandBuffer;
+typedef void* VkSemaphore;
+typedef void* VkFence;
+typedef uint32_t VkFormat;
+typedef struct { uint32_t width, height; } VkExtent2D;
+typedef uint32_t VkResult;
+#define VK_NULL_HANDLE NULL
+#define VK_SUCCESS 0
 #endif
 
 /**
@@ -66,25 +105,34 @@ struct vulkan_context_s {
 };
 
 vulkan_backend_t vulkan_detect_backend(void) {
+#ifdef HAVE_WAYLAND_HEADERS
     // Priority 1: Check for Wayland
     struct wl_display *wl_display = wl_display_connect(NULL);
     if (wl_display) {
         wl_display_disconnect(wl_display);
         return VULKAN_BACKEND_WAYLAND;
     }
+#endif
     
+#ifdef HAVE_X11_HEADERS
     // Priority 2: Check for X11
     Display *x11_display = XOpenDisplay(NULL);
     if (x11_display) {
         XCloseDisplay(x11_display);
         return VULKAN_BACKEND_X11;
     }
+#endif
     
     // Priority 3: Fallback to headless
     return VULKAN_BACKEND_HEADLESS;
 }
 
 static int create_vulkan_instance(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
     VkApplicationInfo app_info = {0};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "RootStream Client";
@@ -127,9 +175,15 @@ static int create_vulkan_instance(vulkan_context_t *ctx) {
     }
     
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 static int select_physical_device(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(ctx->instance, &device_count, NULL);
     
@@ -158,9 +212,15 @@ static int select_physical_device(vulkan_context_t *ctx) {
     ctx->physical_device = devices[0];
     free(devices);
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 static int find_queue_families(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(ctx->physical_device, &queue_family_count, NULL);
     
@@ -201,9 +261,15 @@ static int find_queue_families(vulkan_context_t *ctx) {
     }
     
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 static int create_logical_device(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
     float queue_priority = 1.0f;
     
     VkDeviceQueueCreateInfo queue_create_infos[2];
@@ -218,7 +284,6 @@ static int create_logical_device(vulkan_context_t *ctx) {
     queue_create_infos[queue_create_info_count].pQueuePriorities = &queue_priority;
     queue_create_info_count++;
     
-    // Present queue (if different)
     if (ctx->present_queue_family != ctx->graphics_queue_family) {
         queue_create_infos[queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_create_infos[queue_create_info_count].pNext = NULL;
@@ -260,6 +325,7 @@ static int create_logical_device(vulkan_context_t *ctx) {
     vkGetDeviceQueue(ctx->device, ctx->present_queue_family, 0, &ctx->present_queue);
     
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 vulkan_context_t* vulkan_init(void *native_window) {
@@ -379,6 +445,7 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
         return;
     }
     
+#ifdef HAVE_VULKAN_HEADERS
     // Wait for device to be idle
     if (ctx->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(ctx->device);
@@ -400,6 +467,7 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     if (ctx->instance != VK_NULL_HANDLE) {
         vkDestroyInstance(ctx->instance, NULL);
     }
+#endif
     
     free(ctx);
 }
