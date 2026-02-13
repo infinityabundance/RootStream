@@ -139,28 +139,64 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
     /* Initialize tray UI with fallback (PHASE 6) */
     printf("INFO: Initializing GUI backend...\n");
     
-    int gui_backend = 0;  /* 0=GTK, 1=TUI, 2=CLI */
+    int gui_backend = -1;  /* -1=uninitialized, 0=GTK, 1=TUI, 2=CLI */
     
-    /* Try GTK first (primary) */
-    if (tray_init(ctx, argc, argv) == 0) {
-        printf("✓ GUI backend 'GTK Tray' initialized\n");
-        ctx->active_backend.gui_name = "GTK Tray";
-        gui_backend = 0;
-    } else {
-        /* Try Terminal UI fallback */
-        printf("INFO: GTK unavailable, trying Terminal UI...\n");
-        if (tray_init_tui(ctx, argc, argv) == 0) {
-            ctx->active_backend.gui_name = "Terminal UI";
-            gui_backend = 1;
-        } else {
-            /* Fall back to CLI-only mode */
-            printf("INFO: Terminal UI unavailable, using CLI-only mode...\n");
-            if (tray_init_cli(ctx, argc, argv) == 0) {
-                ctx->active_backend.gui_name = "CLI-only";
-                gui_backend = 2;
+    /* Check for user override */
+    if (ctx->backend_prefs.gui_override) {
+        if (strcmp(ctx->backend_prefs.gui_override, "gtk") == 0) {
+            printf("INFO: User requested GTK backend\n");
+            if (tray_init(ctx, argc, argv) == 0) {
+                gui_backend = 0;
+                ctx->active_backend.gui_name = "GTK Tray";
             } else {
-                fprintf(stderr, "ERROR: All GUI backends failed\n");
+                fprintf(stderr, "ERROR: GTK backend requested but failed\n");
                 return -1;
+            }
+        } else if (strcmp(ctx->backend_prefs.gui_override, "tui") == 0) {
+            printf("INFO: User requested TUI backend\n");
+            if (tray_init_tui(ctx, argc, argv) == 0) {
+                gui_backend = 1;
+                ctx->active_backend.gui_name = "Terminal UI";
+            } else {
+                fprintf(stderr, "ERROR: TUI backend requested but failed\n");
+                return -1;
+            }
+        } else if (strcmp(ctx->backend_prefs.gui_override, "cli") == 0) {
+            printf("INFO: User requested CLI backend\n");
+            if (tray_init_cli(ctx, argc, argv) == 0) {
+                gui_backend = 2;
+                ctx->active_backend.gui_name = "CLI-only";
+            } else {
+                fprintf(stderr, "ERROR: CLI backend requested but failed\n");
+                return -1;
+            }
+        } else {
+            fprintf(stderr, "ERROR: Unknown GUI backend '%s'\n", ctx->backend_prefs.gui_override);
+            return -1;
+        }
+    } else {
+        /* Auto-detect with fallback chain */
+        /* Try GTK first (primary) */
+        if (tray_init(ctx, argc, argv) == 0) {
+            printf("✓ GUI backend 'GTK Tray' initialized\n");
+            ctx->active_backend.gui_name = "GTK Tray";
+            gui_backend = 0;
+        } else {
+            /* Try Terminal UI fallback */
+            printf("INFO: GTK unavailable, trying Terminal UI...\n");
+            if (tray_init_tui(ctx, argc, argv) == 0) {
+                ctx->active_backend.gui_name = "Terminal UI";
+                gui_backend = 1;
+            } else {
+                /* Fall back to CLI-only mode */
+                printf("INFO: Terminal UI unavailable, using CLI-only mode...\n");
+                if (tray_init_cli(ctx, argc, argv) == 0) {
+                    ctx->active_backend.gui_name = "CLI-only";
+                    gui_backend = 2;
+                } else {
+                    fprintf(stderr, "ERROR: All GUI backends failed\n");
+                    return -1;
+                }
             }
         }
     }
