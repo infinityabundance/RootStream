@@ -261,10 +261,16 @@ void audio_playback_cleanup(rootstream_ctx_t *ctx) {
 bool audio_playback_alsa_available(void) {
     /* Try to open ALSA device to check availability */
     snd_pcm_t *test_handle = NULL;
-    int err = snd_pcm_open(&test_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    
+    /* Suppress ALSA error output during availability check */
+    int err = snd_pcm_open(&test_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if (err < 0) {
         return false;
     }
-    snd_pcm_close(test_handle);
+    
+    if (test_handle) {
+        snd_pcm_close(test_handle);
+    }
+    
     return true;
 }
