@@ -168,6 +168,7 @@ set(LINUX_SOURCES
     src/input.c
     src/input_xdotool.c
     src/input_logging.c
+    src/input/input_manager.c
     src/discovery.c
     src/discovery_broadcast.c
     src/discovery_manual.c

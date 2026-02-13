@@ -296,6 +296,60 @@ typedef PACKED_STRUCT {
 PACKED_STRUCT_END
 
 /* ============================================================================
+ * INPUT MANAGER - Multi-client input injection (PHASE 15)
+ * ============================================================================ */
+
+#define INPUT_MAX_CLIENTS 4
+#define INPUT_QUEUE_SIZE 1024
+
+/* Input backend types */
+typedef enum {
+    INPUT_BACKEND_UINPUT,      /* Linux uinput (primary) */
+    INPUT_BACKEND_XDOTOOL,     /* Linux xdotool (fallback) */
+    INPUT_BACKEND_LOGGING,     /* Log-only (fallback) */
+} input_backend_type_t;
+
+/* Input event extended structure for manager */
+typedef struct {
+    input_event_pkt_t event;   /* Network packet event */
+    uint32_t client_id;        /* Which client sent this */
+    uint16_t sequence_number;  /* For deduplication */
+    uint64_t timestamp_us;     /* Client-side timestamp */
+    uint64_t received_us;      /* Host receive timestamp */
+} input_event_ext_t;
+
+/* Client tracking for input management */
+typedef struct {
+    uint32_t client_id;
+    char client_name[64];
+    uint64_t last_event_timestamp_us;
+    uint32_t event_count;
+    uint16_t last_sequence_number;
+    bool active;
+} input_client_info_t;
+
+/* Input manager context */
+typedef struct {
+    input_backend_type_t backend_type;
+    int device_fd_kbd;         /* Keyboard device FD */
+    int device_fd_mouse;       /* Mouse device FD */
+    int device_fd_gamepad;     /* Gamepad device FD */
+    
+    /* Multi-client tracking */
+    input_client_info_t clients[INPUT_MAX_CLIENTS];
+    int active_client_count;
+    
+    /* Statistics */
+    uint64_t total_inputs_processed;
+    uint64_t duplicate_inputs_detected;
+    uint64_t total_latency_us;
+    uint32_t latency_samples;
+    
+    /* Configuration */
+    bool initialized;
+} input_manager_ctx_t;
+
+/* ============================================================================
  * PEER MANAGEMENT - Connected peer tracking
  * ============================================================================ */
 
@@ -492,6 +546,9 @@ typedef struct rootstream_ctx {
     /* Input */
     int uinput_kbd_fd;         /* Virtual keyboard */
     int uinput_mouse_fd;       /* Virtual mouse */
+    
+    /* Input Manager (PHASE 15) */
+    input_manager_ctx_t *input_manager;
 
     /* UI */
     tray_ctx_t tray;
@@ -827,6 +884,19 @@ int input_inject_key_logging(uint32_t keycode, bool press);
 int input_inject_mouse_logging(int x, int y, uint32_t buttons);
 void input_cleanup_logging(rootstream_ctx_t *ctx);
 bool input_logging_available(void);
+
+/* --- Input Manager (PHASE 15) --- */
+int input_manager_init(rootstream_ctx_t *ctx, input_backend_type_t backend);
+int input_manager_submit_packet(rootstream_ctx_t *ctx, const input_event_pkt_t *event,
+                                uint32_t client_id, uint16_t sequence_number,
+                                uint64_t timestamp_us);
+int input_manager_register_client(rootstream_ctx_t *ctx, uint32_t client_id,
+                                  const char *client_name);
+int input_manager_unregister_client(rootstream_ctx_t *ctx, uint32_t client_id);
+uint32_t input_manager_get_latency_ms(rootstream_ctx_t *ctx);
+uint32_t input_manager_get_total_inputs(rootstream_ctx_t *ctx);
+uint32_t input_manager_get_duplicates(rootstream_ctx_t *ctx);
+void input_manager_cleanup(rootstream_ctx_t *ctx);
 
 /* --- Diagnostics (PHASE 6) --- */
 void diagnostics_print_report(rootstream_ctx_t *ctx);
