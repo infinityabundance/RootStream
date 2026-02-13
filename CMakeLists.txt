@@ -312,11 +312,6 @@ if(UNIX AND NOT APPLE)
         target_link_libraries(rootstream PRIVATE ${FFMPEG_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${FFMPEG_INCLUDE_DIRS})
     endif()
-    
-    if(FFMPEG_FOUND)
-        target_link_libraries(rootstream PRIVATE ${FFMPEG_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${FFMPEG_INCLUDE_DIRS})
-    endif()
 
     # Recording player tool
     add_executable(rstr-player

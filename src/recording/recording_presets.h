@@ -68,7 +68,7 @@ static const struct RecordingPresetConfig RECORDING_PRESETS[] = {
 
 // Get preset configuration
 static inline const struct RecordingPresetConfig* get_recording_preset(enum RecordingPreset preset) {
-    if (preset < 0 || preset >= sizeof(RECORDING_PRESETS) / sizeof(RECORDING_PRESETS[0])) {
+    if (preset >= sizeof(RECORDING_PRESETS) / sizeof(RECORDING_PRESETS[0])) {
         return &RECORDING_PRESETS[PRESET_BALANCED];  // Default
     }
     return &RECORDING_PRESETS[preset];

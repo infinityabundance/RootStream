@@ -87,7 +87,7 @@ int RecordingManager::start_recording(enum RecordingPreset preset, const char *g
     active_recording.video_codec = preset_cfg->video_codec;
     active_recording.audio_codec = preset_cfg->audio_codec;
     active_recording.container = preset_cfg->container;
-    active_recording.creation_time_us = (uint64_t)time(nullptr) * 1000000;
+    active_recording.creation_time_us = (uint64_t)time(nullptr) * 1000000ULL;
     active_recording.start_time_us = active_recording.creation_time_us;
     
     // Generate filename
@@ -153,7 +153,7 @@ int RecordingManager::stop_recording() {
     
     // Update recording info
     active_recording.is_complete = true;
-    active_recording.duration_us = (uint64_t)time(nullptr) * 1000000 - active_recording.start_time_us;
+    active_recording.duration_us = (uint64_t)time(nullptr) * 1000000ULL - active_recording.start_time_us;
     
     // Get file size
     struct stat st;
@@ -341,7 +341,7 @@ void RecordingManager::encoding_thread_main() {
 
 int RecordingManager::update_recording_metadata() {
     // Update duration
-    active_recording.duration_us = (uint64_t)time(nullptr) * 1000000 - active_recording.start_time_us;
+    active_recording.duration_us = (uint64_t)time(nullptr) * 1000000ULL - active_recording.start_time_us;
     
     // Update file size
     struct stat st;
