@@ -100,3 +100,59 @@ uint64_t get_timestamp_us(void) {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
+
+/* PHASE 4 stubs */
+int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
+    (void)ctx;
+    (void)peer;
+    fprintf(stderr, "ERROR: TCP transport unavailable (NO_CRYPTO build)\n");
+    return -1;
+}
+
+int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
+                           const uint8_t *data, size_t size) {
+    (void)ctx;
+    (void)peer;
+    (void)data;
+    (void)size;
+    fprintf(stderr, "ERROR: TCP transport unavailable (NO_CRYPTO build)\n");
+    return -1;
+}
+
+int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
+                           uint8_t *buffer, size_t *buffer_len) {
+    (void)ctx;
+    (void)peer;
+    (void)buffer;
+    (void)buffer_len;
+    return -1;
+}
+
+void rootstream_net_tcp_cleanup(peer_t *peer) {
+    (void)peer;
+}
+
+bool rootstream_net_tcp_is_healthy(peer_t *peer) {
+    (void)peer;
+    return false;
+}
+
+int peer_reconnect_init(peer_t *peer) {
+    (void)peer;
+    return 0;
+}
+
+int peer_try_reconnect(rootstream_ctx_t *ctx, peer_t *peer) {
+    (void)ctx;
+    (void)peer;
+    return -1;
+}
+
+void peer_reconnect_cleanup(peer_t *peer) {
+    (void)peer;
+}
+
+void peer_reconnect_reset(peer_t *peer) {
+    (void)peer;
+}
+

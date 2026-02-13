@@ -462,8 +462,6 @@ static int process_received_packet(rootstream_ctx_t *ctx, uint8_t *buffer, size_
                                    transport_type_t transport) {
     packet_header_t *hdr = (packet_header_t*)buffer;
 
-    packet_header_t *hdr = (packet_header_t*)buffer;
-
     /* Find or create peer */
     peer_t *peer = rootstream_find_peer_by_addr(ctx, from, fromlen);
     if (!peer) {
