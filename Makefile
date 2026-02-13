@@ -51,6 +51,7 @@ else
     ifeq ($(GTK_FOUND),yes)
         CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
         LIBS += $(shell pkg-config --libs $(GTK_PKG))
+        CFLAGS += -DHAVE_GTK
     else
         $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks. Alternatively set HEADLESS=1 for a non-GUI build.)
     endif
@@ -97,6 +98,16 @@ ifeq ($(X11_FOUND),yes)
     CFLAGS += -DHAVE_X11
 else
     $(info X11 not found - X11 capture backend will be disabled)
+endif
+
+# ncurses (optional, for Terminal UI fallback)
+NCURSES_FOUND := $(shell pkg-config --exists ncurses && echo yes)
+ifeq ($(NCURSES_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags ncurses)
+    LIBS += $(shell pkg-config --libs ncurses)
+    CFLAGS += -DHAVE_NCURSES
+else
+    $(info ncurses not found - Terminal UI will be disabled)
 endif
 
 # NVENC (optional, for NVIDIA GPU encoding)
@@ -162,16 +173,21 @@ SRCS := src/main.c \
         src/network_tcp.c \
         src/network_reconnect.c \
         src/input.c \
+        src/input_xdotool.c \
+        src/input_logging.c \
         src/crypto.c \
         src/discovery.c \
         src/discovery_broadcast.c \
         src/discovery_manual.c \
         src/tray.c \
+        src/tray_tui.c \
+        src/tray_cli.c \
         src/service.c \
         src/qrcode.c \
         src/config.c \
         src/latency.c \
         src/recording.c \
+        src/diagnostics.c \
         src/platform/platform_linux.c \
         src/packet_validate.c
 

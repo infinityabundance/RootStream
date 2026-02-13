@@ -322,8 +322,27 @@ int service_run_host(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    if (rootstream_input_init(ctx) < 0) {
-        fprintf(stderr, "WARNING: Input init failed (continuing without input)\n");
+    /* Initialize input with fallback (PHASE 6) */
+    printf("INFO: Initializing input backend...\n");
+    
+    /* Try uinput first (primary) */
+    if (rootstream_input_init(ctx) == 0) {
+        printf("✓ Input backend 'uinput' initialized\n");
+        ctx->active_backend.input_name = "uinput";
+    } else {
+        /* Try xdotool fallback */
+        printf("INFO: uinput unavailable, trying xdotool...\n");
+        if (input_init_xdotool(ctx) == 0) {
+            ctx->active_backend.input_name = "xdotool";
+        } else {
+            /* Fall back to logging mode */
+            printf("INFO: xdotool unavailable, using logging mode...\n");
+            if (input_init_logging(ctx) == 0) {
+                ctx->active_backend.input_name = "logging (debug)";
+            } else {
+                fprintf(stderr, "WARNING: All input backends failed\n");
+            }
+        }
     }
 
     /* Initialize audio capture with fallback */

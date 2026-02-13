@@ -520,14 +520,23 @@ typedef struct rootstream_ctx {
         const char *audio_play_name;   /* Name of active audio playback backend */
         const char *decoder_name;      /* Name of active decoder backend */
         const char *display_name;      /* Name of active display backend */
+        const char *discovery_name;    /* Name of active discovery backend (PHASE 6) */
+        const char *input_name;        /* Name of active input backend (PHASE 6) */
+        const char *gui_name;          /* Name of active GUI backend (PHASE 6) */
     } active_backend;
 
     /* User preferences for backend override */
     struct {
         const char *capture_override;  /* User-specified capture backend */
         const char *encoder_override;  /* User-specified encoder backend */
+        const char *input_override;    /* User-specified input backend (PHASE 6) */
+        const char *gui_override;      /* User-specified GUI backend (PHASE 6) */
         bool verbose;                  /* Print fallback attempts */
     } backend_prefs;
+
+    /* Private data pointers for fallback backends (PHASE 6) */
+    void *input_priv;                  /* Input backend private data */
+    void *tray_priv;                   /* Tray/GUI backend private data */
 } rootstream_ctx_t;
 
 /* Encoder backend abstraction for multi-tier fallback */
@@ -777,6 +786,43 @@ void tray_show_qr_code(rootstream_ctx_t *ctx);
 void tray_show_peers(rootstream_ctx_t *ctx);
 void tray_run(rootstream_ctx_t *ctx);
 void tray_cleanup(rootstream_ctx_t *ctx);
+
+/* --- Tray UI Backends (PHASE 6) --- */
+int tray_init_tui(rootstream_ctx_t *ctx, int argc, char **argv);
+void tray_update_status_tui(rootstream_ctx_t *ctx, tray_status_t status);
+void tray_show_qr_code_tui(rootstream_ctx_t *ctx);
+void tray_show_peers_tui(rootstream_ctx_t *ctx);
+void tray_run_tui(rootstream_ctx_t *ctx);
+void tray_cleanup_tui(rootstream_ctx_t *ctx);
+
+int tray_init_cli(rootstream_ctx_t *ctx, int argc, char **argv);
+void tray_update_status_cli(rootstream_ctx_t *ctx, tray_status_t status);
+void tray_show_qr_code_cli(rootstream_ctx_t *ctx);
+void tray_show_peers_cli(rootstream_ctx_t *ctx);
+void tray_run_cli(rootstream_ctx_t *ctx);
+void tray_cleanup_cli(rootstream_ctx_t *ctx);
+
+/* --- Input Injection Backends (PHASE 6) --- */
+int input_init_xdotool(rootstream_ctx_t *ctx);
+int input_inject_key_xdotool(uint32_t keycode, bool press);
+int input_inject_mouse_xdotool(int x, int y, uint32_t buttons);
+void input_cleanup_xdotool(rootstream_ctx_t *ctx);
+bool input_xdotool_available(void);
+
+int input_init_logging(rootstream_ctx_t *ctx);
+int input_inject_key_logging(uint32_t keycode, bool press);
+int input_inject_mouse_logging(int x, int y, uint32_t buttons);
+void input_cleanup_logging(rootstream_ctx_t *ctx);
+bool input_logging_available(void);
+
+/* --- Diagnostics (PHASE 6) --- */
+void diagnostics_print_report(rootstream_ctx_t *ctx);
+void diagnostics_print_header(void);
+void diagnostics_print_system_info(void);
+void diagnostics_print_display_info(void);
+void diagnostics_print_available_backends(rootstream_ctx_t *ctx);
+void diagnostics_print_active_backends(rootstream_ctx_t *ctx);
+void diagnostics_print_recommendations(rootstream_ctx_t *ctx);
 
 /* --- Service/Daemon --- */
 int service_daemonize(void);

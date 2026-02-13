@@ -65,6 +65,11 @@ static void print_usage(const char *progname) {
     printf("  --peer-code CODE    Connect using RootStream code from history\n");
     printf("  --peer-list         List saved peer history\n");
     printf("\n");
+    printf("Backend Selection (PHASE 6):\n");
+    printf("  --gui MODE          Select GUI backend (gtk/tui/cli)\n");
+    printf("  --input MODE        Select input backend (uinput/xdotool/logging)\n");
+    printf("  --diagnostics       Show system diagnostics and exit\n");
+    printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
     printf("  %s --qr                               # Show your code\n", progname);
@@ -131,15 +136,89 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
         }
     }
 
-    /* Initialize tray UI */
-    if (tray_init(ctx, argc, argv) < 0) {
-        fprintf(stderr, "ERROR: Tray initialization failed\n");
-        fprintf(stderr, "FIX: Ensure system tray is available\n");
-        return -1;
+    /* Initialize tray UI with fallback (PHASE 6) */
+    printf("INFO: Initializing GUI backend...\n");
+    
+    int gui_backend = -1;  /* -1=uninitialized, 0=GTK, 1=TUI, 2=CLI */
+    
+    /* Check for user override */
+    if (ctx->backend_prefs.gui_override) {
+        if (strcmp(ctx->backend_prefs.gui_override, "gtk") == 0) {
+            printf("INFO: User requested GTK backend\n");
+            if (tray_init(ctx, argc, argv) == 0) {
+                gui_backend = 0;
+                ctx->active_backend.gui_name = "GTK Tray";
+            } else {
+                fprintf(stderr, "ERROR: GTK backend requested but failed\n");
+                return -1;
+            }
+        } else if (strcmp(ctx->backend_prefs.gui_override, "tui") == 0) {
+            printf("INFO: User requested TUI backend\n");
+            if (tray_init_tui(ctx, argc, argv) == 0) {
+                gui_backend = 1;
+                ctx->active_backend.gui_name = "Terminal UI";
+            } else {
+                fprintf(stderr, "ERROR: TUI backend requested but failed\n");
+                return -1;
+            }
+        } else if (strcmp(ctx->backend_prefs.gui_override, "cli") == 0) {
+            printf("INFO: User requested CLI backend\n");
+            if (tray_init_cli(ctx, argc, argv) == 0) {
+                gui_backend = 2;
+                ctx->active_backend.gui_name = "CLI-only";
+            } else {
+                fprintf(stderr, "ERROR: CLI backend requested but failed\n");
+                return -1;
+            }
+        } else {
+            fprintf(stderr, "ERROR: Unknown GUI backend '%s'\n", ctx->backend_prefs.gui_override);
+            return -1;
+        }
+    } else {
+        /* Auto-detect with fallback chain */
+        /* Try GTK first (primary) */
+        if (tray_init(ctx, argc, argv) == 0) {
+            printf("✓ GUI backend 'GTK Tray' initialized\n");
+            ctx->active_backend.gui_name = "GTK Tray";
+            gui_backend = 0;
+        } else {
+            /* Try Terminal UI fallback */
+            printf("INFO: GTK unavailable, trying Terminal UI...\n");
+            if (tray_init_tui(ctx, argc, argv) == 0) {
+                ctx->active_backend.gui_name = "Terminal UI";
+                gui_backend = 1;
+            } else {
+                /* Fall back to CLI-only mode */
+                printf("INFO: Terminal UI unavailable, using CLI-only mode...\n");
+                if (tray_init_cli(ctx, argc, argv) == 0) {
+                    ctx->active_backend.gui_name = "CLI-only";
+                    gui_backend = 2;
+                } else {
+                    fprintf(stderr, "ERROR: All GUI backends failed\n");
+                    return -1;
+                }
+            }
+        }
     }
 
-    /* Run GTK main loop (blocks until quit) */
-    tray_run(ctx);
+    /* Run the selected GUI backend (blocks until quit) */
+    if (gui_backend == 0) {
+        tray_run(ctx);
+    } else if (gui_backend == 1) {
+        /* For TUI, we need a simple event loop */
+        while (ctx->running) {
+            tray_update_status_tui(ctx, ctx->tray.status);
+            tray_run_tui(ctx);
+            usleep(100000);  /* 100ms */
+        }
+    } else {
+        /* For CLI, just keep running until interrupted */
+        printf("INFO: Running in CLI-only mode (Ctrl+C to exit)\n");
+        while (ctx->running) {
+            tray_run_cli(ctx);
+            usleep(1000000);  /* 1 second */
+        }
+    }
 
     return 0;
 }
@@ -296,6 +375,9 @@ int main(int argc, char **argv) {
         {"peer-add",    required_argument, 0, 0},
         {"peer-list",   no_argument,       0, 0},
         {"peer-code",   required_argument, 0, 0},
+        {"gui",         required_argument, 0, 0},
+        {"input",       required_argument, 0, 0},
+        {"diagnostics", no_argument,       0, 0},
         {0, 0, 0, 0}
     };
 
@@ -304,8 +386,11 @@ int main(int argc, char **argv) {
     bool service_mode = false;
     bool no_discovery = false;
     bool show_peer_list = false;
+    bool show_diagnostics = false;
     const char *peer_add = NULL;
     const char *peer_code = NULL;
+    const char *gui_override = NULL;
+    const char *input_override = NULL;
     uint16_t port = 9876;
     int display_idx = -1;
     int bitrate = 10000;
@@ -329,6 +414,12 @@ int main(int argc, char **argv) {
                     show_peer_list = true;
                 } else if (strcmp(long_options[option_index].name, "peer-code") == 0) {
                     peer_code = optarg;
+                } else if (strcmp(long_options[option_index].name, "gui") == 0) {
+                    gui_override = optarg;
+                } else if (strcmp(long_options[option_index].name, "input") == 0) {
+                    input_override = optarg;
+                } else if (strcmp(long_options[option_index].name, "diagnostics") == 0) {
+                    show_diagnostics = true;
                 }
                 break;
             case 'h':
@@ -398,6 +489,8 @@ int main(int argc, char **argv) {
 
     /* Set backend verbose mode if requested */
     ctx.backend_prefs.verbose = backend_verbose;
+    ctx.backend_prefs.gui_override = gui_override;
+    ctx.backend_prefs.input_override = input_override;
 
     if (latency_init(&ctx.latency, 240, latency_interval_ms, latency_log) < 0) {
         fprintf(stderr, "WARNING: Latency logging disabled due to init failure\n");
@@ -409,6 +502,13 @@ int main(int argc, char **argv) {
 
     if (display_idx < 0) {
         display_idx = ctx.settings.display_index;
+    }
+
+    /* Handle --diagnostics flag */
+    if (show_diagnostics) {
+        diagnostics_print_report(&ctx);
+        rootstream_cleanup(&ctx);
+        return 0;
     }
 
     /* Handle --list-displays flag */
