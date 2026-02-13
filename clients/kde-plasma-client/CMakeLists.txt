@@ -18,6 +18,7 @@ option(ENABLE_AI_LOGGING "Enable AI logging support" ON)
 option(ENABLE_RENDERER_OPENGL "Enable OpenGL renderer backend" ON)
 option(ENABLE_RENDERER_VULKAN "Enable Vulkan renderer backend" ON)
 option(ENABLE_RENDERER_PROTON "Enable Proton compatibility layer" ON)
+option(ENABLE_METRICS "Enable performance metrics and HUD" ON)
 
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets OpenGL)
@@ -88,6 +89,21 @@ set(SOURCES
     src/audio/playback_pipewire.cpp
     src/audio/playback_alsa.cpp
 )
+
+# Metrics sources
+if(ENABLE_METRICS)
+    list(APPEND SOURCES
+        src/metrics/frame_rate_counter.c
+        src/metrics/cpu_monitor.c
+        src/metrics/memory_monitor.c
+        src/metrics/gpu_monitor.c
+        src/metrics/performance_aggregator.cpp
+        src/metrics/hud_renderer.cpp
+        src/metrics/performance_logger.cpp
+        src/metrics/alert_system.cpp
+        src/metrics/metrics_manager.cpp
+    )
+endif()
 
 # Renderer sources (C)
 if(ENABLE_RENDERER_OPENGL)
@@ -245,6 +261,12 @@ target_link_libraries(rootstream-kde-client PRIVATE
 # AI Logging support
 if(ENABLE_AI_LOGGING)
     target_compile_definitions(rootstream-kde-client PRIVATE ENABLE_AI_LOGGING)
+endif()
+
+# Metrics support
+if(ENABLE_METRICS)
+    target_compile_definitions(rootstream-kde-client PRIVATE ENABLE_METRICS)
+    target_include_directories(rootstream-kde-client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/metrics)
 endif()
 
 # Installation

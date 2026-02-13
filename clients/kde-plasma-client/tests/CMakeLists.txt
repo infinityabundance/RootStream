@@ -14,6 +14,13 @@ set(TEST_SOURCES
     audio/test_audio_components.cpp
 )
 
+# Metrics tests (if enabled)
+if(ENABLE_METRICS)
+    list(APPEND TEST_SOURCES
+        test_metrics.cpp
+    )
+endif()
+
 # Renderer unit tests
 if(ENABLE_RENDERER_OPENGL)
     list(APPEND TEST_SOURCES
@@ -78,6 +85,28 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
             target_include_directories(${TEST_NAME} PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
             target_compile_definitions(${TEST_NAME} PRIVATE HAVE_PIPEWIRE)
         endif()
+    endif()
+    
+    # Link metrics components for metrics tests
+    if(${TEST_SOURCE} MATCHES "metrics")
+        target_sources(${TEST_NAME} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/metrics/frame_rate_counter.c
+            ${CMAKE_SOURCE_DIR}/src/metrics/cpu_monitor.c
+            ${CMAKE_SOURCE_DIR}/src/metrics/memory_monitor.c
+            ${CMAKE_SOURCE_DIR}/src/metrics/gpu_monitor.c
+            ${CMAKE_SOURCE_DIR}/src/metrics/performance_aggregator.cpp
+            ${CMAKE_SOURCE_DIR}/src/metrics/hud_renderer.cpp
+            ${CMAKE_SOURCE_DIR}/src/metrics/performance_logger.cpp
+            ${CMAKE_SOURCE_DIR}/src/metrics/alert_system.cpp
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE
+            Qt6::OpenGL
+            OpenGL::GL
+        )
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/metrics
+        )
+        target_compile_definitions(${TEST_NAME} PRIVATE ENABLE_METRICS)
     endif()
     
     target_include_directories(${TEST_NAME} PRIVATE
