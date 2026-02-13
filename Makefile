@@ -148,16 +148,24 @@ SRCS := src/main.c \
         src/vaapi_encoder.c \
         src/vaapi_decoder.c \
         src/nvenc_encoder.c \
+        src/ffmpeg_encoder.c \
+        src/raw_encoder.c \
         src/display_sdl2.c \
         src/opus_codec.c \
         src/audio_capture.c \
+        src/audio_capture_pulse.c \
+        src/audio_capture_dummy.c \
         src/audio_playback.c \
+        src/audio_playback_pulse.c \
+        src/audio_playback_dummy.c \
         src/network.c \
         src/network_tcp.c \
         src/network_reconnect.c \
         src/input.c \
         src/crypto.c \
         src/discovery.c \
+        src/discovery_broadcast.c \
+        src/discovery_manual.c \
         src/tray.c \
         src/service.c \
         src/qrcode.c \

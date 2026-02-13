@@ -128,6 +128,7 @@ int audio_playback_init_pulse(rootstream_ctx_t *ctx) {
 
     return 0;
 #else
+    (void)ctx;
     fprintf(stderr, "ERROR: PulseAudio support not compiled\n");
     return -1;
 #endif

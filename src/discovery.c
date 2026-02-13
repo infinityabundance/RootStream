@@ -25,6 +25,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+/* Discovery timeout for UDP broadcast (milliseconds) */
+#define BROADCAST_DISCOVERY_TIMEOUT_MS 1000
+
 #ifdef HAVE_AVAHI
 #include <avahi-client/client.h>
 #include <avahi-client/publish.h>
@@ -261,7 +264,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state,
 #endif /* HAVE_AVAHI */
 
 /*
- * Initialize discovery system
+ * Initialize discovery system with fallback support (PHASE 5)
  */
 int discovery_init(rootstream_ctx_t *ctx) {
     if (!ctx) {
@@ -269,11 +272,16 @@ int discovery_init(rootstream_ctx_t *ctx) {
         return -1;
     }
 
+    printf("INFO: Initializing peer discovery...\n");
+
 #ifdef HAVE_AVAHI
+    /* Try mDNS/Avahi first (Tier 1) */
+    printf("INFO: Attempting discovery backend: mDNS/Avahi\n");
+    
     avahi_ctx_t *avahi = calloc(1, sizeof(avahi_ctx_t));
     if (!avahi) {
-        fprintf(stderr, "ERROR: Cannot allocate Avahi context\n");
-        return -1;
+        fprintf(stderr, "WARNING: Cannot allocate Avahi context\n");
+        goto try_broadcast;
     }
 
     avahi->ctx = ctx;
@@ -282,8 +290,8 @@ int discovery_init(rootstream_ctx_t *ctx) {
     avahi->simple_poll = avahi_simple_poll_new();
     if (!avahi->simple_poll) {
         free(avahi);
-        fprintf(stderr, "ERROR: Cannot create Avahi poll object\n");
-        return -1;
+        fprintf(stderr, "WARNING: Cannot create Avahi poll object\n");
+        goto try_broadcast;
     }
 
     /* Create client */
@@ -296,135 +304,158 @@ int discovery_init(rootstream_ctx_t *ctx) {
         &error);
 
     if (!avahi->client) {
-        fprintf(stderr, "ERROR: Cannot create Avahi client: %s\n",
+        fprintf(stderr, "WARNING: Cannot create Avahi client: %s\n",
                avahi_strerror(error));
         avahi_simple_poll_free(avahi->simple_poll);
         free(avahi);
-        return -1;
+        goto try_broadcast;
     }
 
     ctx->discovery.avahi_client = avahi;
     ctx->discovery.running = true;
 
-    printf("✓ Discovery initialized (Avahi)\n");
+    printf("✓ Discovery backend 'mDNS/Avahi' initialized\n");
     return 0;
 
-#else
-    fprintf(stderr, "WARNING: Built without Avahi support\n");
-    fprintf(stderr, "INFO: Auto-discovery disabled\n");
-    return 0;
+try_broadcast:
+    fprintf(stderr, "WARNING: mDNS/Avahi failed, trying next...\n");
 #endif
+
+    /* Try UDP Broadcast (Tier 2) */
+    printf("INFO: Attempting discovery backend: UDP Broadcast\n");
+    
+    /* UDP broadcast doesn't need initialization, just mark discovery as available */
+    ctx->discovery.running = true;
+    
+    printf("✓ Discovery backend 'UDP Broadcast' initialized\n");
+    printf("INFO: Manual peer entry also available (--peer-add)\n");
+    
+    return 0;
 }
 
 /*
- * Announce service on network
+ * Announce service on network (with fallback support - PHASE 5)
  */
 int discovery_announce(rootstream_ctx_t *ctx) {
     if (!ctx) return -1;
 
 #ifdef HAVE_AVAHI
     avahi_ctx_t *avahi = (avahi_ctx_t*)ctx->discovery.avahi_client;
-    if (!avahi || !avahi->client) {
-        fprintf(stderr, "ERROR: Discovery not initialized\n");
-        return -1;
-    }
-
-    /* Create entry group if needed */
-    if (!avahi->group) {
-        avahi->group = avahi_entry_group_new(avahi->client, 
-                                            entry_group_callback, avahi);
+    if (avahi && avahi->client) {
+        /* mDNS/Avahi is available, use it */
+        
+        /* Create entry group if needed */
         if (!avahi->group) {
-            fprintf(stderr, "ERROR: Cannot create Avahi entry group\n");
-            return -1;
+            avahi->group = avahi_entry_group_new(avahi->client, 
+                                                entry_group_callback, avahi);
+            if (!avahi->group) {
+                fprintf(stderr, "WARNING: Cannot create Avahi entry group\n");
+                goto try_broadcast;
+            }
         }
+
+        /* Prepare TXT records */
+        AvahiStringList *txt = NULL;
+        char version_txt[64], pubkey_txt[256];
+        
+        snprintf(version_txt, sizeof(version_txt), "version=%s", ROOTSTREAM_VERSION);
+        txt = avahi_string_list_add(txt, version_txt);
+        
+        snprintf(pubkey_txt, sizeof(pubkey_txt), "code=%s", 
+                 ctx->keypair.rootstream_code);
+        txt = avahi_string_list_add(txt, pubkey_txt);
+
+        /* Add service */
+        int ret = avahi_entry_group_add_service_strlst(
+            avahi->group,
+            AVAHI_IF_UNSPEC,         /* All interfaces */
+            AVAHI_PROTO_UNSPEC,      /* IPv4 and IPv6 */
+            0,                       /* flags */
+            ctx->keypair.identity,   /* Service name */
+            "_rootstream._udp",      /* Service type */
+            NULL,                    /* Domain (use default) */
+            NULL,                    /* Host (use default) */
+            ctx->port,               /* Port */
+            txt);                    /* TXT records */
+
+        avahi_string_list_free(txt);
+
+        if (ret < 0) {
+            fprintf(stderr, "WARNING: Cannot add service: %s\n",
+                   avahi_strerror(ret));
+            goto try_broadcast;
+        }
+
+        /* Commit changes */
+        ret = avahi_entry_group_commit(avahi->group);
+        if (ret < 0) {
+            fprintf(stderr, "WARNING: Cannot commit entry group: %s\n",
+                   avahi_strerror(ret));
+            goto try_broadcast;
+        }
+
+        printf("→ Announcing service on network (mDNS)\n");
+        return 0;
     }
 
-    /* Prepare TXT records */
-    AvahiStringList *txt = NULL;
-    char version_txt[64], pubkey_txt[256];
-    
-    snprintf(version_txt, sizeof(version_txt), "version=%s", ROOTSTREAM_VERSION);
-    txt = avahi_string_list_add(txt, version_txt);
-    
-    snprintf(pubkey_txt, sizeof(pubkey_txt), "code=%s", 
-             ctx->keypair.rootstream_code);
-    txt = avahi_string_list_add(txt, pubkey_txt);
-
-    /* Add service */
-    int ret = avahi_entry_group_add_service_strlst(
-        avahi->group,
-        AVAHI_IF_UNSPEC,         /* All interfaces */
-        AVAHI_PROTO_UNSPEC,      /* IPv4 and IPv6 */
-        0,                       /* flags */
-        ctx->keypair.identity,   /* Service name */
-        "_rootstream._udp",      /* Service type */
-        NULL,                    /* Domain (use default) */
-        NULL,                    /* Host (use default) */
-        ctx->port,               /* Port */
-        txt);                    /* TXT records */
-
-    avahi_string_list_free(txt);
-
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Cannot add service: %s\n",
-               avahi_strerror(ret));
-        return -1;
-    }
-
-    /* Commit changes */
-    ret = avahi_entry_group_commit(avahi->group);
-    if (ret < 0) {
-        fprintf(stderr, "ERROR: Cannot commit entry group: %s\n",
-               avahi_strerror(ret));
-        return -1;
-    }
-
-    printf("→ Announcing service on network\n");
-    return 0;
-
-#else
-    (void)ctx;
-    return 0;
+try_broadcast:
 #endif
+
+    /* Try UDP broadcast as fallback */
+    if (discovery_broadcast_announce(ctx) == 0) {
+        printf("→ Announcing service on network (UDP broadcast)\n");
+        return 0;
+    }
+    
+    fprintf(stderr, "WARNING: All discovery announce methods failed\n");
+    fprintf(stderr, "INFO: Peers can still connect manually (--peer-add)\n");
+    return 0;  /* Not fatal - manual entry always works */
 }
 
 /*
- * Browse for services on network
+ * Browse for services on network (with fallback support - PHASE 5)
  */
 int discovery_browse(rootstream_ctx_t *ctx) {
     if (!ctx) return -1;
 
 #ifdef HAVE_AVAHI
     avahi_ctx_t *avahi = (avahi_ctx_t*)ctx->discovery.avahi_client;
-    if (!avahi || !avahi->client) {
-        fprintf(stderr, "ERROR: Discovery not initialized\n");
-        return -1;
+    if (avahi && avahi->client) {
+        /* mDNS/Avahi is available, use it */
+        
+        /* Create browser */
+        avahi->browser = avahi_service_browser_new(
+            avahi->client,
+            AVAHI_IF_UNSPEC,      /* All interfaces */
+            AVAHI_PROTO_UNSPEC,   /* IPv4 and IPv6 */
+            "_rootstream._udp",   /* Service type */
+            NULL,                 /* Domain (use default) */
+            0,                    /* flags */
+            browse_callback,
+            avahi);
+
+        if (!avahi->browser) {
+            fprintf(stderr, "WARNING: Cannot create service browser: %s\n",
+                   avahi_strerror(avahi_client_errno(avahi->client)));
+            goto try_broadcast;
+        }
+
+        printf("→ Browsing for RootStream peers (mDNS)...\n");
+        return 0;
     }
 
-    /* Create browser */
-    avahi->browser = avahi_service_browser_new(
-        avahi->client,
-        AVAHI_IF_UNSPEC,      /* All interfaces */
-        AVAHI_PROTO_UNSPEC,   /* IPv4 and IPv6 */
-        "_rootstream._udp",   /* Service type */
-        NULL,                 /* Domain (use default) */
-        0,                    /* flags */
-        browse_callback,
-        avahi);
-
-    if (!avahi->browser) {
-        fprintf(stderr, "ERROR: Cannot create service browser: %s\n",
-               avahi_strerror(avahi_client_errno(avahi->client)));
-        return -1;
-    }
-
-    printf("→ Browsing for RootStream peers...\n");
-    return 0;
-
-#else
-    (void)ctx;
-    return 0;
+try_broadcast:
 #endif
+
+    /* Try UDP broadcast as fallback */
+    printf("→ Browsing for RootStream peers (UDP broadcast)...\n");
+    
+    /* Listen for broadcast announcements with a short timeout */
+    if (discovery_broadcast_listen(ctx, BROADCAST_DISCOVERY_TIMEOUT_MS) > 0) {
+        printf("  Found peer via broadcast\n");
+    }
+    
+    return 0;
 }
 
 /*
