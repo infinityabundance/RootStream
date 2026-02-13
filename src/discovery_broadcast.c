@@ -209,7 +209,7 @@ int discovery_broadcast_listen(rootstream_ctx_t *ctx, int timeout_ms) {
         /* Parse address */
         struct sockaddr_in *addr = (struct sockaddr_in*)&peer->addr;
         addr->sin_family = AF_INET;
-        addr->sin_port = htons(ntohs(pkt.listen_port));
+        addr->sin_port = pkt.listen_port;  /* Already in network byte order */
         memcpy(&addr->sin_addr, &from_addr.sin_addr, sizeof(struct in_addr));
         peer->addr_len = sizeof(struct sockaddr_in);
 

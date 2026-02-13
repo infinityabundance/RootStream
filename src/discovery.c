@@ -25,6 +25,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+/* Discovery timeout for UDP broadcast (milliseconds) */
+#define BROADCAST_DISCOVERY_TIMEOUT_MS 1000
+
 #ifdef HAVE_AVAHI
 #include <avahi-client/client.h>
 #include <avahi-client/publish.h>
@@ -448,7 +451,7 @@ try_broadcast:
     printf("→ Browsing for RootStream peers (UDP broadcast)...\n");
     
     /* Listen for broadcast announcements with a short timeout */
-    if (discovery_broadcast_listen(ctx, 1000) > 0) {
+    if (discovery_broadcast_listen(ctx, BROADCAST_DISCOVERY_TIMEOUT_MS) > 0) {
         printf("  Found peer via broadcast\n");
     }
     

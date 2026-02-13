@@ -199,10 +199,9 @@ void discovery_list_peer_history(rootstream_ctx_t *ctx) {
 
     printf("\nSaved Peers:\n");
     for (int i = 0; i < ctx->num_peer_history; i++) {
-        printf("  %d. %s (%s:%u)\n", i + 1,
+        printf("  %d. %s (%s)\n", i + 1,
               ctx->peer_history_entries[i].hostname,
-              ctx->peer_history_entries[i].hostname,
-              ctx->peer_history_entries[i].port);
+              ctx->peer_history_entries[i].address);
         if (strlen(ctx->peer_history_entries[i].rootstream_code) > 0) {
             printf("     Code: %.32s...\n", 
                    ctx->peer_history_entries[i].rootstream_code);
