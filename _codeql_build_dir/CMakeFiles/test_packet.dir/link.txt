@@ -1,1 +1,0 @@
-/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_packet.dir/link.d CMakeFiles/test_packet.dir/tests/unit/test_packet.c.o CMakeFiles/test_packet.dir/src/packet_validate.c.o -o test_packet

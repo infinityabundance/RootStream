@@ -247,18 +247,18 @@ int service_run_host(rootstream_ctx_t *ctx) {
            codec == CODEC_H265 ? "H.265/HEVC" : "H.264/AVC");
 
     /* Try each backend in sequence */
-    int backend_idx = 0;
+    int encoder_idx = 0;
     bool encoder_initialized = false;
 
-    while (encoder_backends[backend_idx].name) {
-        const encoder_backend_t *backend = &encoder_backends[backend_idx];
+    while (encoder_backends[encoder_idx].name) {
+        const encoder_backend_t *backend = &encoder_backends[encoder_idx];
         
         printf("INFO: Attempting encoder: %s\n", backend->name);
         
         /* Check if backend is available */
         if (backend->is_available_fn && !backend->is_available_fn()) {
             printf("  → Not available on this system\n");
-            backend_idx++;
+            encoder_idx++;
             continue;
         }
         
@@ -271,10 +271,10 @@ int service_run_host(rootstream_ctx_t *ctx) {
             encoder_initialized = true;
             
             /* Warn if using fallback (software or raw) */
-            if (backend_idx >= 2) {
+            if (encoder_idx >= 2) {
                 printf("⚠ WARNING: Using %s\n", 
-                       backend_idx == 2 ? "software encoder (slow)" : "raw encoder (huge bandwidth)");
-                if (backend_idx == 2) {
+                       encoder_idx == 2 ? "software encoder (slow)" : "raw encoder (huge bandwidth)");
+                if (encoder_idx == 2) {
                     printf("  Recommended: Install GPU drivers or libva/libva-drm\n");
                     printf("  Performance may be limited to lower bitrate/fps\n");
                 }
@@ -283,7 +283,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         } else {
             printf("WARNING: Encoder backend '%s' init failed, trying next...\n", 
                    backend->name);
-            backend_idx++;
+            encoder_idx++;
         }
     }
 

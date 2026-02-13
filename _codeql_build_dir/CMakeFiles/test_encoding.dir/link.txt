@@ -1,1 +1,0 @@
-/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_encoding.dir/link.d CMakeFiles/test_encoding.dir/tests/unit/test_encoding.c.o -o test_encoding
