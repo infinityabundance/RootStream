@@ -636,7 +636,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
     printf("║  RootStream Client Backend Status              ║\n");
     printf("╚════════════════════════════════════════════════╝\n");
     printf("Decoder:       %s\n", ctx->active_backend.decoder_name);
-    printf("Display:       SDL2\n");
+    printf("Display:       SDL2\n");  /* Currently SDL2 only, no fallback needed */
     printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name);
     printf("\n");
 

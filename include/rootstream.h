@@ -64,7 +64,19 @@
 /* RootStream code format: base64(pubkey) + "@" + hostname */
 #define ROOTSTREAM_CODE_MAX_LEN 128
 
-/* Simple fallback selection macro (PHASE 0) */
+/* Simple fallback selection macro (PHASE 0)
+ * 
+ * This macro simplifies backend initialization with automatic fallback.
+ * Reserved for future phases (1-6) when additional fallback backends are added.
+ * 
+ * Example usage (future):
+ *   int result;
+ *   const char *name;
+ *   TRY_INIT_BACKEND(ctx, primary_init, "Primary", fallback_init, "Fallback", result, name);
+ *   if (result) {
+ *       ctx->active_backend.some_name = name;
+ *   }
+ */
 #define TRY_INIT_BACKEND(ctx, primary_fn, primary_name, fallback_fn, fallback_name, result_ptr, name_ptr) \
     do { \
         if ((primary_fn)(ctx) == 0) { \
