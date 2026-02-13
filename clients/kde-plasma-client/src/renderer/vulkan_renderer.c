@@ -54,10 +54,6 @@ typedef uint32_t VkResult;
 #define VK_SUCCESS 0
 #endif
 
-// Default renderer dimensions
-#define DEFAULT_RENDER_WIDTH 1920
-#define DEFAULT_RENDER_HEIGHT 1080
-
 /**
  * Vulkan context structure
  */

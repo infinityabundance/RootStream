@@ -48,7 +48,7 @@ private slots:
         renderer_t *renderer = renderer_create(RENDERER_VULKAN, 0, 0);
         QVERIFY(renderer == nullptr);
         
-        renderer = renderer_create(RENDERER_VULKAN, -1, 1080);
+        renderer = renderer_create(RENDERER_VULKAN, -1, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer == nullptr);
     }
 

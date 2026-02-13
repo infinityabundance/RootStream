@@ -16,6 +16,12 @@
 #endif
 #endif
 
+// Forward declarations for when Wayland headers are not available
+#ifndef HAVE_WAYLAND_VULKAN
+struct wl_display;
+struct wl_surface;
+#endif
+
 struct vulkan_wayland_context_s {
     struct wl_display *display;
     struct wl_surface *surface;
