@@ -410,6 +410,14 @@ add_executable(test_packet tests/unit/test_packet.c src/packet_validate.c)
 target_include_directories(test_packet PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME packet_tests COMMAND test_packet)
 
+# PHASE 8: Integration and Unit Tests
+option(ENABLE_UNIT_TESTS "Build PHASE 8 unit tests" ON)
+option(ENABLE_INTEGRATION_TESTS "Build PHASE 8 integration tests" ON)
+
+if(ENABLE_UNIT_TESTS OR ENABLE_INTEGRATION_TESTS)
+    add_subdirectory(tests)
+endif()
+
 # =============================================================================
 # Summary
 # =============================================================================
@@ -426,5 +434,13 @@ if(UNIX)
     message(STATUS "  PulseAudio:    ${PULSEAUDIO_FOUND}")
     message(STATUS "  PipeWire:      ${PIPEWIRE_FOUND}")
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
+endif()
+message(STATUS "")
+message(STATUS "PHASE 8 Testing:")
+if(ENABLE_UNIT_TESTS)
+    message(STATUS "  Unit tests: ENABLED (run with: ctest -L unit)")
+endif()
+if(ENABLE_INTEGRATION_TESTS)
+    message(STATUS "  Integration tests: ENABLED (run with: ctest -L integration)")
 endif()
 message(STATUS "")

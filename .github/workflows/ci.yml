@@ -287,10 +287,12 @@ jobs:
             libavahi-client-dev \
             libqrencode-dev \
             libpng-dev \
-            libx11-dev
+            libx11-dev \
+            libpulse-dev \
+            libpipewire-0.3-dev
 
       - name: Configure CMake
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_UNIT_TESTS=ON -DENABLE_INTEGRATION_TESTS=ON
 
       - name: Build with CMake
         run: cmake --build build
@@ -299,3 +301,15 @@ jobs:
         run: |
           file build/rootstream || true
           ldd build/rootstream || true
+      
+      - name: Run PHASE 8 Unit Tests
+        working-directory: build
+        run: ctest -L unit --output-on-failure
+      
+      - name: Run PHASE 8 Integration Tests
+        working-directory: build
+        run: ctest -L integration --output-on-failure
+      
+      - name: Run All Tests Summary
+        working-directory: build
+        run: ctest --output-on-failure
