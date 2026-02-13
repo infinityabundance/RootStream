@@ -289,7 +289,10 @@ jobs:
             libpng-dev \
             libx11-dev \
             libpulse-dev \
-            libpipewire-0.3-dev
+            libpipewire-0.3-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            libavutil-dev
 
       - name: Configure CMake
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_UNIT_TESTS=ON -DENABLE_INTEGRATION_TESTS=ON
