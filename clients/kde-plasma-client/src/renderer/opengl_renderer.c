@@ -11,8 +11,48 @@
 #include <string.h>
 #include <time.h>
 #include <GL/gl.h>
+#include <GL/glext.h>
 #include <GL/glx.h>
 #include <X11/Xlib.h>
+
+// OpenGL function pointers (needed for GL 2.0+ functions)
+static PFNGLGENVERTEXARRAYSPROC glGenVertexArrays_local = NULL;
+static PFNGLBINDVERTEXARRAYPROC glBindVertexArray_local = NULL;
+static PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays_local = NULL;
+static PFNGLGENBUFFERSPROC glGenBuffers_local = NULL;
+static PFNGLBINDBUFFERPROC glBindBuffer_local = NULL;
+static PFNGLBUFFERDATAPROC glBufferData_local = NULL;
+static PFNGLDELETEBUFFERSPROC glDeleteBuffers_local = NULL;
+static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer_local = NULL;
+static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray_local = NULL;
+static PFNGLDELETESHADERPROC glDeleteShader_local = NULL;
+static PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation_local = NULL;
+static PFNGLUSEPROGRAMPROC glUseProgram_local = NULL;
+static PFNGLUNIFORM1IPROC glUniform1i_local = NULL;
+static PFNGLDELETEPROGRAMPROC glDeleteProgram_local = NULL;
+
+static int gl_renderer_functions_loaded = 0;
+
+static void load_gl_renderer_functions(void) {
+    if (gl_renderer_functions_loaded) return;
+    
+    glGenVertexArrays_local = (PFNGLGENVERTEXARRAYSPROC)glXGetProcAddress((const GLubyte*)"glGenVertexArrays");
+    glBindVertexArray_local = (PFNGLBINDVERTEXARRAYPROC)glXGetProcAddress((const GLubyte*)"glBindVertexArray");
+    glDeleteVertexArrays_local = (PFNGLDELETEVERTEXARRAYSPROC)glXGetProcAddress((const GLubyte*)"glDeleteVertexArrays");
+    glGenBuffers_local = (PFNGLGENBUFFERSPROC)glXGetProcAddress((const GLubyte*)"glGenBuffers");
+    glBindBuffer_local = (PFNGLBINDBUFFERPROC)glXGetProcAddress((const GLubyte*)"glBindBuffer");
+    glBufferData_local = (PFNGLBUFFERDATAPROC)glXGetProcAddress((const GLubyte*)"glBufferData");
+    glDeleteBuffers_local = (PFNGLDELETEBUFFERSPROC)glXGetProcAddress((const GLubyte*)"glDeleteBuffers");
+    glVertexAttribPointer_local = (PFNGLVERTEXATTRIBPOINTERPROC)glXGetProcAddress((const GLubyte*)"glVertexAttribPointer");
+    glEnableVertexAttribArray_local = (PFNGLENABLEVERTEXATTRIBARRAYPROC)glXGetProcAddress((const GLubyte*)"glEnableVertexAttribArray");
+    glDeleteShader_local = (PFNGLDELETESHADERPROC)glXGetProcAddress((const GLubyte*)"glDeleteShader");
+    glGetUniformLocation_local = (PFNGLGETUNIFORMLOCATIONPROC)glXGetProcAddress((const GLubyte*)"glGetUniformLocation");
+    glUseProgram_local = (PFNGLUSEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glUseProgram");
+    glUniform1i_local = (PFNGLUNIFORM1IPROC)glXGetProcAddress((const GLubyte*)"glUniform1i");
+    glDeleteProgram_local = (PFNGLDELETEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glDeleteProgram");
+    
+    gl_renderer_functions_loaded = 1;
+}
 
 /**
  * OpenGL context structure
@@ -167,13 +207,16 @@ opengl_context_t* opengl_init(void *native_window) {
         return NULL;
     }
     
+    // Load OpenGL function pointers
+    load_gl_renderer_functions();
+    
     // Compile shaders
     GLuint vs = glsl_compile_shader(vertex_shader_source, GL_VERTEX_SHADER);
     GLuint fs = glsl_compile_shader(fragment_shader_source, GL_FRAGMENT_SHADER);
     if (!vs || !fs) {
         fprintf(stderr, "Failed to compile shaders\n");
-        if (vs) glDeleteShader(vs);
-        if (fs) glDeleteShader(fs);
+        if (vs) glDeleteShader_local(vs);
+        if (fs) glDeleteShader_local(fs);
         glXMakeCurrent(ctx->x11_display, None, NULL);
         glXDestroyContext(ctx->x11_display, ctx->glx_context);
         XCloseDisplay(ctx->x11_display);
@@ -183,8 +226,8 @@ opengl_context_t* opengl_init(void *native_window) {
     
     // Link shader program
     ctx->shader_program = glsl_link_program(vs, fs);
-    glDeleteShader(vs);
-    glDeleteShader(fs);
+    glDeleteShader_local(vs);
+    glDeleteShader_local(fs);
     
     if (!ctx->shader_program) {
         fprintf(stderr, "Failed to link shader program\n");
@@ -196,26 +239,27 @@ opengl_context_t* opengl_init(void *native_window) {
     }
     
     // Get uniform locations
-    ctx->uniform_y_sampler = glGetUniformLocation(ctx->shader_program, "y_plane");
-    ctx->uniform_uv_sampler = glGetUniformLocation(ctx->shader_program, "uv_plane");
+    load_gl_renderer_functions();
+    ctx->uniform_y_sampler = glGetUniformLocation_local(ctx->shader_program, "y_plane");
+    ctx->uniform_uv_sampler = glGetUniformLocation_local(ctx->shader_program, "uv_plane");
     
     // Create vertex array and buffer
-    glGenVertexArrays(1, &ctx->vao);
-    glGenBuffers(1, &ctx->vbo);
+    glGenVertexArrays_local(1, &ctx->vao);
+    glGenBuffers_local(1, &ctx->vbo);
     
-    glBindVertexArray(ctx->vao);
-    glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+    glBindVertexArray_local(ctx->vao);
+    glBindBuffer_local(GL_ARRAY_BUFFER, ctx->vbo);
+    glBufferData_local(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
     
     // Position attribute
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    glVertexAttribPointer_local(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray_local(0);
     
     // TexCoord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+    glVertexAttribPointer_local(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray_local(1);
     
-    glBindVertexArray(0);
+    glBindVertexArray_local(0);
     
     // Set default vsync
     ctx->vsync_enabled = true;
@@ -287,21 +331,21 @@ int opengl_render(opengl_context_t *ctx) {
     glClear(GL_COLOR_BUFFER_BIT);
     
     // Use shader program
-    glUseProgram(ctx->shader_program);
+    glUseProgram_local(ctx->shader_program);
     
     // Bind textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ctx->y_texture);
-    glUniform1i(ctx->uniform_y_sampler, 0);
+    glUniform1i_local(ctx->uniform_y_sampler, 0);
     
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, ctx->uv_texture);
-    glUniform1i(ctx->uniform_uv_sampler, 1);
+    glUniform1i_local(ctx->uniform_uv_sampler, 1);
     
     // Draw quad
-    glBindVertexArray(ctx->vao);
+    glBindVertexArray_local(ctx->vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
+    glBindVertexArray_local(0);
     
     return 0;
 }
@@ -361,10 +405,10 @@ void opengl_cleanup(opengl_context_t *ctx) {
     
     // Delete OpenGL resources
     if (ctx->vao) {
-        glDeleteVertexArrays(1, &ctx->vao);
+        glDeleteVertexArrays_local(1, &ctx->vao);
     }
     if (ctx->vbo) {
-        glDeleteBuffers(1, &ctx->vbo);
+        glDeleteBuffers_local(1, &ctx->vbo);
     }
     if (ctx->y_texture) {
         glDeleteTextures(1, &ctx->y_texture);
@@ -373,7 +417,7 @@ void opengl_cleanup(opengl_context_t *ctx) {
         glDeleteTextures(1, &ctx->uv_texture);
     }
     if (ctx->shader_program) {
-        glDeleteProgram(ctx->shader_program);
+        glDeleteProgram_local(ctx->shader_program);
     }
     
     // Destroy GLX context

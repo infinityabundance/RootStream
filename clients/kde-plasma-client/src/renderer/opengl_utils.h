@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <GL/gl.h>
+#include <GL/glext.h>
 
 #ifdef __cplusplus
 extern "C" {

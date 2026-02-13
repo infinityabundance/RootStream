@@ -7,11 +7,86 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <GL/glx.h>
+
+// OpenGL 2.0+ function pointers
+static PFNGLCREATESHADERPROC glCreateShader = NULL;
+static PFNGLSHADERSOURCEPROC glShaderSource = NULL;
+static PFNGLCOMPILESHADERPROC glCompileShader = NULL;
+static PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
+static PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
+static PFNGLDELETESHADERPROC glDeleteShader = NULL;
+static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
+static PFNGLATTACHSHADERPROC glAttachShader = NULL;
+static PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
+static PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
+static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
+static PFNGLVALIDATEPROGRAMPROC glValidateProgram = NULL;
+static PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+static PFNGLUSEPROGRAMPROC glUseProgram = NULL;
+static PFNGLUNIFORM1IPROC glUniform1i = NULL;
+
+// OpenGL 1.5+ function pointers (VBO)
+static PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+static PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+static PFNGLBUFFERDATAPROC glBufferData = NULL;
+static PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
+
+// OpenGL 2.0+ function pointers (vertex attributes)
+static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
+static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
+
+// OpenGL 3.0+ function pointers (VAO)
+static PFNGLGENVERTEXARRAYSPROC glGenVertexArrays = NULL;
+static PFNGLBINDVERTEXARRAYPROC glBindVertexArray = NULL;
+static PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = NULL;
+
+static int gl_functions_loaded = 0;
+
+static void load_gl_functions(void) {
+    if (gl_functions_loaded) return;
+    
+    // Load OpenGL 2.0+ functions
+    glCreateShader = (PFNGLCREATESHADERPROC)glXGetProcAddress((const GLubyte*)"glCreateShader");
+    glShaderSource = (PFNGLSHADERSOURCEPROC)glXGetProcAddress((const GLubyte*)"glShaderSource");
+    glCompileShader = (PFNGLCOMPILESHADERPROC)glXGetProcAddress((const GLubyte*)"glCompileShader");
+    glGetShaderiv = (PFNGLGETSHADERIVPROC)glXGetProcAddress((const GLubyte*)"glGetShaderiv");
+    glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)glXGetProcAddress((const GLubyte*)"glGetShaderInfoLog");
+    glDeleteShader = (PFNGLDELETESHADERPROC)glXGetProcAddress((const GLubyte*)"glDeleteShader");
+    glCreateProgram = (PFNGLCREATEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glCreateProgram");
+    glAttachShader = (PFNGLATTACHSHADERPROC)glXGetProcAddress((const GLubyte*)"glAttachShader");
+    glLinkProgram = (PFNGLLINKPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glLinkProgram");
+    glGetProgramiv = (PFNGLGETPROGRAMIVPROC)glXGetProcAddress((const GLubyte*)"glGetProgramiv");
+    glDeleteProgram = (PFNGLDELETEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glDeleteProgram");
+    glValidateProgram = (PFNGLVALIDATEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glValidateProgram");
+    glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)glXGetProcAddress((const GLubyte*)"glGetUniformLocation");
+    glUseProgram = (PFNGLUSEPROGRAMPROC)glXGetProcAddress((const GLubyte*)"glUseProgram");
+    glUniform1i = (PFNGLUNIFORM1IPROC)glXGetProcAddress((const GLubyte*)"glUniform1i");
+    
+    // Load OpenGL 1.5+ functions
+    glGenBuffers = (PFNGLGENBUFFERSPROC)glXGetProcAddress((const GLubyte*)"glGenBuffers");
+    glBindBuffer = (PFNGLBINDBUFFERPROC)glXGetProcAddress((const GLubyte*)"glBindBuffer");
+    glBufferData = (PFNGLBUFFERDATAPROC)glXGetProcAddress((const GLubyte*)"glBufferData");
+    glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)glXGetProcAddress((const GLubyte*)"glDeleteBuffers");
+    
+    // Load OpenGL 2.0+ functions
+    glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)glXGetProcAddress((const GLubyte*)"glVertexAttribPointer");
+    glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)glXGetProcAddress((const GLubyte*)"glEnableVertexAttribArray");
+    
+    // Load OpenGL 3.0+ functions
+    glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)glXGetProcAddress((const GLubyte*)"glGenVertexArrays");
+    glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)glXGetProcAddress((const GLubyte*)"glBindVertexArray");
+    glDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)glXGetProcAddress((const GLubyte*)"glDeleteVertexArrays");
+    
+    gl_functions_loaded = 1;
+}
 
 GLuint glsl_compile_shader(const char *source, GLenum shader_type) {
     if (!source) {
         return 0;
     }
+    
+    load_gl_functions();
     
     GLuint shader = glCreateShader(shader_type);
     if (!shader) {
@@ -38,6 +113,8 @@ GLuint glsl_link_program(GLuint vs, GLuint fs) {
         return 0;
     }
     
+    load_gl_functions();
+    
     GLuint program = glCreateProgram();
     if (!program) {
         return 0;
@@ -63,6 +140,8 @@ int glsl_validate_program(GLuint program) {
     if (!program) {
         return -1;
     }
+    
+    load_gl_functions();
     
     glValidateProgram(program);
     
@@ -144,6 +223,8 @@ int gl_upload_texture_2d_async(GLuint texture, const uint8_t *data,
         return -1;
     }
     
+    load_gl_functions();
+    
     // Get texture format
     glBindTexture(GL_TEXTURE_2D, texture);
     GLint internal_format;
@@ -193,6 +274,8 @@ const char* gl_get_error_string(GLenum error) {
 }
 
 void gl_log_shader_error(GLuint shader) {
+    load_gl_functions();
+    
     GLint log_length;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
     
