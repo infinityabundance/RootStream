@@ -235,9 +235,13 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
     /* Load identity (hostname) */
     f = fopen(identity_path, "r");
     if (f) {
-        fgets(kp->identity, sizeof(kp->identity), f);
-        /* Remove newline */
-        kp->identity[strcspn(kp->identity, "\n")] = 0;
+        if (!fgets(kp->identity, sizeof(kp->identity), f)) {
+            fprintf(stderr, "WARNING: Failed to read identity, using hostname\n");
+            rs_gethostname(kp->identity, sizeof(kp->identity));
+        } else {
+            /* Remove newline */
+            kp->identity[strcspn(kp->identity, "\n")] = 0;
+        }
         fclose(f);
     } else {
         /* Fallback to system hostname */

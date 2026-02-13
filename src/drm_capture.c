@@ -196,9 +196,9 @@ int rootstream_select_display(rootstream_ctx_t *ctx, int display_index) {
 }
 
 /*
- * Initialize capture for a specific display
+ * Initialize DRM/KMS capture for a specific display
  */
-int rootstream_capture_init(rootstream_ctx_t *ctx) {
+int rootstream_capture_init_drm(rootstream_ctx_t *ctx) {
     if (!ctx || ctx->display.fd < 0) {
         set_error("Invalid context or display not selected");
         return -1;
@@ -250,10 +250,10 @@ int rootstream_capture_init(rootstream_ctx_t *ctx) {
 }
 
 /*
- * Capture a frame directly from GPU framebuffer
+ * Capture a frame directly from GPU framebuffer (DRM backend)
  * This is the magic - no compositor involved!
  */
-int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
+int rootstream_capture_frame_drm(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     if (!ctx || !frame) {
         set_error("Invalid arguments");
         return -1;
@@ -303,7 +303,7 @@ int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     return 0;
 }
 
-void rootstream_capture_cleanup(rootstream_ctx_t *ctx) {
+void rootstream_capture_cleanup_drm(rootstream_ctx_t *ctx) {
     if (!ctx)
         return;
 
@@ -316,4 +316,26 @@ void rootstream_capture_cleanup(rootstream_ctx_t *ctx) {
         close(ctx->display.fd);
         ctx->display.fd = -1;
     }
+}
+
+/* Legacy wrapper functions for backward compatibility */
+int rootstream_capture_init(rootstream_ctx_t *ctx) {
+    return rootstream_capture_init_drm(ctx);
+}
+
+int rootstream_capture_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
+    /* Use backend if set, otherwise fall back to DRM */
+    if (ctx && ctx->capture_backend && ctx->capture_backend->capture_fn) {
+        return ctx->capture_backend->capture_fn(ctx, frame);
+    }
+    return rootstream_capture_frame_drm(ctx, frame);
+}
+
+void rootstream_capture_cleanup(rootstream_ctx_t *ctx) {
+    /* Use backend if set, otherwise fall back to DRM */
+    if (ctx && ctx->capture_backend && ctx->capture_backend->cleanup_fn) {
+        ctx->capture_backend->cleanup_fn(ctx);
+        return;
+    }
+    rootstream_capture_cleanup_drm(ctx);
 }
