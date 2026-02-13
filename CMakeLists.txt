@@ -40,6 +40,7 @@ option(BUILD_CLIENT "Build client functionality" ON)
 option(USE_FFMPEG "Use FFmpeg for decoding instead of native APIs" OFF)
 option(HEADLESS "Build without GUI (no system tray)" OFF)
 option(BUILD_WEB_DASHBOARD "Build web dashboard (PHASE 19)" OFF)
+option(BUILD_VR_SUPPORT "Build VR/XR support (PHASE 23)" OFF)
 
 # Host features are Linux-only
 if(WIN32)
@@ -232,6 +233,25 @@ list(APPEND LINUX_SOURCES
     src/security/audit_log.c
     src/security/security_manager.c
 )
+
+# PHASE 23: VR/XR support modules
+if(BUILD_VR_SUPPORT)
+    list(APPEND LINUX_SOURCES
+        src/vr/openxr_manager.c
+        src/vr/stereoscopic_renderer.c
+        src/vr/head_tracker.c
+        src/vr/hand_tracker.c
+        src/vr/vr_input_system.c
+        src/vr/spatial_audio.c
+        src/vr/vr_ui_framework.c
+        src/vr/vr_profiler.c
+        src/vr/vr_manager.c
+        src/vr/platforms/vr_platform_base.c
+        src/vr/platforms/meta_quest.c
+        src/vr/platforms/steamvr.c
+        src/vr/platforms/apple_vision.c
+    )
+endif()
 
 if(NOT HEADLESS)
     list(APPEND LINUX_SOURCES src/tray.c src/tray_cli.c src/tray_tui.c)
@@ -528,6 +548,28 @@ if(BUILD_WEB_DASHBOARD)
     add_test(NAME web_dashboard_tests COMMAND test_web_dashboard)
 endif()
 
+# PHASE 23: VR/XR support tests
+if(BUILD_VR_SUPPORT)
+    add_executable(test_vr tests/unit/test_vr.c
+                   src/vr/openxr_manager.c
+                   src/vr/stereoscopic_renderer.c
+                   src/vr/head_tracker.c
+                   src/vr/hand_tracker.c
+                   src/vr/vr_input_system.c
+                   src/vr/spatial_audio.c
+                   src/vr/vr_ui_framework.c
+                   src/vr/vr_profiler.c
+                   src/vr/vr_manager.c
+                   src/vr/platforms/vr_platform_base.c
+                   src/vr/platforms/meta_quest.c
+                   src/vr/platforms/steamvr.c
+                   src/vr/platforms/apple_vision.c
+                   ${PLATFORM_SOURCES})
+    target_include_directories(test_vr PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/vr)
+    target_link_libraries(test_vr PRIVATE m pthread)
+    add_test(NAME vr_tests COMMAND test_vr)
+endif()
+
 # PHASE 8: Integration and Unit Tests
 option(ENABLE_UNIT_TESTS "Build PHASE 8 unit tests" ON)
 option(ENABLE_INTEGRATION_TESTS "Build PHASE 8 integration tests" ON)
@@ -554,6 +596,7 @@ if(UNIX)
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
     message(STATUS "  FFmpeg (Recording): ${FFMPEG_FOUND}")
     message(STATUS "  Web Dashboard: ${BUILD_WEB_DASHBOARD}")
+    message(STATUS "  VR/XR Support: ${BUILD_VR_SUPPORT}")
 endif()
 message(STATUS "")
 message(STATUS "PHASE 8 Testing:")
