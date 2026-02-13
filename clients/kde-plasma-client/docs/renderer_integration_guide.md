@@ -49,6 +49,21 @@ if (!renderer) {
 
 // Or use auto-detection
 renderer_t *renderer = renderer_create(RENDERER_AUTO, 1920, 1080);
+
+// Or explicitly use Vulkan backend (Phase 12)
+renderer_t *renderer = renderer_create(RENDERER_VULKAN, 1920, 1080);
+```
+
+**Backend Selection Priority (RENDERER_AUTO):**
+1. OpenGL 3.3+ (primary, Phase 11)
+2. Vulkan 1.0+ (fallback, Phase 12)
+3. Proton (future, Phase 13)
+
+**Vulkan Sub-Backend Selection:**
+When using Vulkan, the renderer automatically detects:
+1. Wayland (primary) - Modern Linux compositors
+2. X11 (fallback) - Traditional display servers
+3. Headless (final) - For CI/testing without display
 ```
 
 ### 3. Initialize with Window
@@ -351,19 +366,93 @@ if (error) {
 # Ensure OpenGL is enabled
 cmake -DENABLE_RENDERER_OPENGL=ON ..
 
+# Enable Vulkan renderer (Phase 12)
+cmake -DENABLE_RENDERER_VULKAN=ON ..
+
+# Enable both (recommended)
+cmake -DENABLE_RENDERER_OPENGL=ON -DENABLE_RENDERER_VULKAN=ON ..
+
 # Check dependencies
 find_package(OpenGL REQUIRED)
 find_package(X11 REQUIRED)
+find_package(Vulkan)  # Optional
+```
+
+### Vulkan-Specific Issues
+
+**Vulkan Not Available:**
+```
+Failed to initialize Vulkan backend
+```
+- Ensure Vulkan SDK is installed
+- Check for Vulkan-capable GPU: `vulkaninfo`
+- Fall back to OpenGL: Use `RENDERER_AUTO` or `RENDERER_OPENGL`
+
+**Backend Detection:**
+```c
+#ifdef HAVE_VULKAN_RENDERER
+#include "renderer/vulkan_renderer.h"
+
+vulkan_backend_t backend = vulkan_detect_backend();
+switch(backend) {
+    case VULKAN_BACKEND_WAYLAND:
+        printf("Using Wayland\n");
+        break;
+    case VULKAN_BACKEND_X11:
+        printf("Using X11\n");
+        break;
+    case VULKAN_BACKEND_HEADLESS:
+        printf("Using Headless\n");
+        break;
+}
+#endif
 ```
 
 ## Examples
 
-See `tests/unit/test_renderer.cpp` for complete examples of:
+See the following for complete examples:
+- `tests/unit/test_renderer.cpp` - OpenGL renderer tests
+- `tests/unit/test_vulkan_renderer.cpp` - Vulkan renderer tests
+
+Examples cover:
 - Renderer initialization
 - Frame submission
 - Performance monitoring
 - Error handling
+- Backend detection
+
+## Backend Comparison
+
+| Feature | OpenGL (Phase 11) | Vulkan (Phase 12) | Proton (Phase 13) |
+|---------|------------------|-------------------|-------------------|
+| **Status** | ✅ Complete | 🚧 In Progress | 📅 Planned |
+| **Platform** | Linux/X11 | Linux (Wayland/X11/Headless) | Windows |
+| **Performance** | Excellent | Excellent | Excellent |
+| **Compatibility** | High | Medium | Windows Only |
+| **Overhead** | Low | Very Low | Low |
+
+**When to use OpenGL:**
+- Maximum compatibility
+- X11-only systems
+- Proven stability
+
+**When to use Vulkan:**
+- Wayland compositors
+- Modern GPU features
+- Headless/CI testing
+- Lower CPU overhead
+
+**When to use Proton (future):**
+- Windows platform
+- DirectX compatibility layer
 
 ## API Reference
 
 See `renderer.h` for complete API documentation.
+
+For Vulkan-specific APIs, see:
+- `vulkan_renderer.h` - Core Vulkan renderer
+- `vulkan_wayland.h` - Wayland backend
+- `vulkan_x11.h` - X11 backend
+- `vulkan_headless.h` - Headless backend
+- `src/renderer/README_VULKAN.md` - Vulkan documentation
