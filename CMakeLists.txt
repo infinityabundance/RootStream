@@ -186,6 +186,12 @@ set(LINUX_SOURCES
     src/discovery_manual.c
     src/network_tcp.c
     src/network_reconnect.c
+    src/network/network_monitor.c
+    src/network/adaptive_bitrate.c
+    src/network/qos_manager.c
+    src/network/bandwidth_estimator.c
+    src/network/socket_tuning.c
+    src/network/network_optimizer.c
     src/diagnostics.c
     src/ai_logging.c
     src/service.c
