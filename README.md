@@ -26,16 +26,16 @@
 
 ## What is RootStream?
 
-RootStream is a **lightweight, encrypted, peer-to-peer game streaming solution** designed specifically for Linux. Unlike traditional solutions, RootStream:
+RootStream is a **lightweight, encrypted, peer-to-peer game streaming solution** designed specifically for Linux. Design goals include:
 
 - ✅ **No accounts required** - Each device has a unique cryptographic identity
 - ✅ **No central servers** - Direct peer-to-peer connections
-- ✅ **No compositor dependencies** - Uses kernel DRM/KMS directly
-- ✅ **No permission popups** - Bypasses the broken PipeWire/portal stack
+- ✅ **Minimal compositor dependencies** - Uses kernel DRM/KMS directly when available
+- ✅ **Fewer permission popups** - Bypasses PipeWire/portal stack after initial video group setup
 - ✅ **Zero-configuration** - Share a QR code, instant connection
-- ✅ **Hardware accelerated** - VA-API/NVENC encoding, <10% CPU usage
-- ✅ **Actually lightweight** - 15MB memory footprint vs 500MB+ alternatives
-- ✅ **Production-ready encryption** - Ed25519 + ChaCha20-Poly1305
+- ✅ **Hardware accelerated** - VA-API (Intel/AMD) encoding when available
+- ✅ **Low memory footprint** - ~15MB baseline (varies by enabled features)
+- ✅ **Strong encryption** - Ed25519 + ChaCha20-Poly1305 (libsodium)
 
 ## Why RootStream?
 
@@ -46,32 +46,38 @@ Current Linux streaming solutions (Steam Remote Play, Parsec, Sunshine) suffer f
 | Issue | Steam | Parsec | Sunshine | **RootStream** |
 |-------|-------|--------|----------|----------------|
 | Requires account | ✗ | ✗ | ✗ | **✓** |
-| PipeWire dependency | ✗ | ✗ | ✗ | **✓** |
-| Permission dialogs | Constant | Sometimes | Sometimes | **Never** |
-| Survives compositor crash | ✗ | ✗ | ✗ | **✓** |
-| Works on consumer GPU | ✗¹ | ✓ | ✓ | **✓** |
-| End-to-end encrypted | ✗ | ✗ | ✗ | **✓** |
+| PipeWire dependency | ✗ | ✗ | ✗ | **✓** (bypasses) |
+| Permission dialogs | Constant | Sometimes | Sometimes | **Rarely¹** |
+| Compositor resilience | Low | Low | Low | **Higher²** |
+| Consumer GPU support | Limited³ | ✓ | ✓ | **Yes⁴** |
+| Stream encryption | ✗ | ✗ | ✗ | **✓** |
 | Open source | ✗ | ✗ | ✓ | **✓** |
 
-¹ NVFBC disabled on GeForce cards
+¹ After initial video group membership setup
+² Uses kernel-stable DRM/KMS APIs (10+ year stability)
+³ NVFBC disabled on GeForce cards
+⁴ Intel/AMD via VA-API; NVIDIA via VDPAU wrapper
 
 ### The Solution
 
 RootStream takes a **radically different approach**:
 ```
-Traditional Stack (7+ layers, all can break):
+Traditional Stack (7+ layers, more failure points):
 ┌─────────────────────────────────────────────┐
 │ App → Compositor → PipeWire → Portal →      │
 │ → Permission Dialog → FFmpeg → Encoder      │
 └─────────────────────────────────────────────┘
-Latency: 30-56ms | Memory: 500MB | Breaks: Often
+Estimated: 30-56ms latency | 500MB memory
 
-RootStream Stack (3 layers, kernel-stable):
+RootStream Stack (3 layers, kernel-stable APIs):
 ┌─────────────────────────────────────────────┐
 │ DRM/KMS → VA-API → ChaCha20-Poly1305 → UDP  │
 └─────────────────────────────────────────────┘
-Latency: 14-24ms | Memory: 15MB | Breaks: Never
+Target: 14-24ms latency | ~15MB memory baseline
 ```
+
+> **Note**: Performance numbers are design targets. Actual performance varies by hardware,
+> network conditions, and system configuration. See "Reality vs. Claims" section below.
 
 ---
 
@@ -80,18 +86,21 @@ Latency: 14-24ms | Memory: 15MB | Breaks: Never
 ### 🔐 Security First
 
 - **Ed25519 Cryptography** - Industry-standard public/private keys (used by SSH, Signal, Tor)
-- **ChaCha20-Poly1305 Encryption** - All packets encrypted with authenticated encryption
-- **No Trusted Third Party** - No central server can be compromised
-- **Perfect Forward Secrecy** - Each session uses ephemeral keys
-- **Zero-Knowledge** - We never see your data, keys, or connections
+- **ChaCha20-Poly1305 Encryption** - Video/audio streams encrypted with authenticated encryption (via libsodium)
+- **No Trusted Third Party** - Peer-to-peer architecture means no central server to compromise
+- **Session Encryption** - Derived from device keypairs via X25519 ECDH; per-session nonces prevent replay attacks
+- **Privacy by Design** - Peer-to-peer model means developers have no access to your streams, keys, or connection data
+
+> **Note**: While RootStream uses audited algorithms (Ed25519, ChaCha20-Poly1305 via libsodium),
+> the RootStream implementation itself has not undergone independent security audit.
 
 ### 🎮 Optimized for Gaming
 
-- **Low Latency** - 14-24ms end-to-end (vs 30-56ms for Steam)
-- **High Framerate** - 60+ FPS at 1080p, 30+ FPS at 4K
-- **Hardware Accelerated** - VA-API (Intel/AMD) and NVENC (NVIDIA)
-- **Adaptive Quality** - Maintains smoothness over quality
-- **Input Injection** - Virtual keyboard/mouse via uinput (works everywhere)
+- **Low Latency Target** - 14-24ms end-to-end on LAN (varies by hardware and network)
+- **High Framerate Support** - Target 60 FPS at 1080p, 30 FPS at 4K (depends on encoder capability)
+- **Hardware Acceleration** - VA-API (Intel/AMD) and optional NVENC fallback (NVIDIA)
+- **Adaptive Quality** - Prioritizes framerate consistency
+- **Input Injection** - Virtual keyboard/mouse via uinput (requires video group membership)
 
 ### 💡 Actually Easy to Use
 
@@ -396,36 +405,46 @@ sendto(sock, packet, len, 0, &peer_addr, addr_len);
 
 ## Performance
 
-### Latency Breakdown (1080p60)
+> **Important**: These are example measurements from specific test configurations.
+> Actual performance varies significantly based on hardware, drivers, and system load.
+> See "Reality vs. Claims" section for methodology and testing status.
 
-| Component | Latency | Notes |
-|-----------|---------|-------|
+### Example Latency Breakdown (1080p60, LAN)
+
+| Component | Estimated Range | Notes |
+|-----------|-----------------|-------|
 | **Capture** | 1-2ms | Direct DRM mmap |
-| **Encode** | 8-12ms | VA-API hardware |
+| **Encode** | 8-12ms | VA-API hardware (varies by GPU) |
 | **Encrypt** | <1ms | ChaCha20 in CPU |
-| **Network** | 1-5ms | LAN UDP |
+| **Network** | 1-5ms | LAN UDP (varies by network) |
 | **Decrypt** | <1ms | ChaCha20 in CPU |
-| **Decode** | 5-8ms | VA-API hardware |
+| **Decode** | 5-8ms | VA-API hardware (varies by GPU) |
 | **Display** | 1-2ms | Direct rendering |
-| **Total** | **17-30ms** | vs 30-56ms Steam |
+| **Total** | **17-30ms** | End-to-end (example range) |
 
-### Resource Usage
+### Example Resource Usage
 
-**CPU Usage** (Intel i5-11400):
+**CPU Usage** (Intel i5-11400, specific test configuration):
 - 1080p60: 4-6%
 - 1440p60: 6-8%
 - 4K30: 8-10%
 
-**Memory** (Resident Set Size):
-- RootStream: 15 MB
-- Steam Remote Play: 520 MB
-- Sunshine: 180 MB
-- Parsec: 350 MB
+> CPU usage varies significantly by processor model, GPU, and encoder backend.
+> Hardware encoders (VA-API, NVENC) use significantly less CPU than software (x264).
 
-**Network Bandwidth**:
-- 1080p60: 10 Mbps (75 MB/min)
-- 1440p60: 15 Mbps (112 MB/min)
-- 4K60: 25 Mbps (187 MB/min)
+**Memory** (Resident Set Size, baseline features):
+- RootStream: ~15 MB (core functionality, single peer)
+- Memory scales with: number of connected peers, recording enabled, buffer sizes
+
+> For comparison, other streaming solutions typically use 100-500+ MB.
+> Methodology: Measured via `ps` RSS after startup, no active streaming.
+
+**Network Bandwidth** (at default quality settings):
+- 1080p60: ~10 Mbps (75 MB/min)
+- 1440p60: ~15 Mbps (112 MB/min)
+- 4K60: ~25 Mbps (187 MB/min)
+
+> Actual bandwidth depends on encoder settings, scene complexity, and motion.
 
 ---
 
@@ -445,6 +464,72 @@ sendto(sock, packet, len, 0, &peer_addr, addr_len);
 - **Private key**: Mode 0600 (owner read/write only)
 - **Public key**: Mode 0644 (world readable - it's safe!)
 - **Backup**: Save `identity.key` securely to keep same identity across reinstalls
+
+---
+
+## Reality vs. Claims
+
+### What is Proven vs. Aspirational
+
+RootStream aims for high performance and reliability, but not all stated goals have been
+comprehensively tested across all hardware configurations. This section clarifies what claims
+are validated vs. aspirational design targets.
+
+#### ✅ Proven / Implemented
+
+- **Cryptographic primitives**: Uses audited algorithms (Ed25519, ChaCha20-Poly1305) via libsodium
+- **Zero accounts**: No central authentication or registration required
+- **Peer-to-peer**: Direct UDP connections between peers
+- **Hardware acceleration**: VA-API backend implemented and functional on Intel/AMD GPUs
+- **QR code sharing**: Working implementation via qrencode library
+- **Multi-backend fallback**: DRM → X11 → Dummy capture; VA-API → x264 → raw encoder
+- **Build system**: Tested on Arch Linux x86_64
+
+#### ⚠️ Partially Validated
+
+- **Performance metrics**: Numbers (14-24ms latency, CPU%, memory) are from limited testing
+  - Test configuration: Intel i5-11400, LAN network, specific driver versions
+  - May not generalize to other hardware or network conditions
+  - No comprehensive benchmark suite yet
+
+- **Compositor crash resilience**: DRM/KMS bypasses compositor in theory, but not extensively tested
+  
+- **NVIDIA support**: NVENC backend exists but VDPAU wrapper performance not benchmarked
+
+#### 🎯 Aspirational / Not Fully Validated
+
+- **"Never breaks"**: No software can guarantee zero failures
+  - Kernel API changes, GPU driver updates, or display config changes could break functionality
+  - More accurate: "Targets kernel-stable APIs with 10+ year stability record"
+
+- **Security audit**: While using audited libraries (libsodium), RootStream's implementation
+  has not undergone independent security audit
+
+- **Cross-platform**: Currently Linux-only; Windows/macOS support is future work
+
+- **Perfect forward secrecy**: Session key derivation uses ECDH, but no explicit ephemeral
+  key rotation per-packet
+
+### Testing Status
+
+| Component | Unit Tests | Integration Tests | Performance Tests |
+|-----------|------------|-------------------|-------------------|
+| Crypto | ✓ | ✓ | ✗ |
+| Network | ✓ | ✓ | ✗ |
+| Capture | ✓ | ✗ | ✗ |
+| Encode | ✓ | ✗ | ✗ |
+| Latency | ✗ | ✗ | ⚠️ (manual) |
+| Memory | ✗ | ✗ | ⚠️ (manual) |
+
+Legend: ✓ = Automated tests exist | ⚠️ = Manual testing only | ✗ = Not tested
+
+### How to Help
+
+If you have hardware we haven't tested:
+1. Run `rootstream --diagnostics` and share output
+2. Enable AI logging mode (see below) and share relevant logs
+3. Report performance metrics (latency, CPU%, memory) via GitHub issues
+4. Help expand test coverage (see CONTRIBUTING.md)
 
 ---
 
@@ -539,6 +624,55 @@ For more detailed information, see our documentation:
 - **[User Guide](docs/user-guide.md)** - Complete usage instructions, installation steps, and troubleshooting
 - **[API Reference](docs/api.md)** - Full C API documentation with examples
 - **[Architecture](docs/architecture.md)** - Technical deep-dive into protocol, security model, and internals
+- **[AI Logging Mode](docs/AI_LOGGING_MODE.md)** - Structured logging for AI-assisted development
+
+---
+
+## AI Coding Logging Mode
+
+RootStream includes a specialized logging mode for AI-assisted development workflows.
+This mode provides structured, machine-readable output that helps AI coding assistants
+understand the internal operation of RootStream.
+
+### Quick Start
+
+Enable via environment variable:
+```bash
+AI_COPILOT_MODE=1 ./rootstream --service
+```
+
+Or via CLI flag:
+```bash
+./rootstream --ai-coding-logs
+./rootstream --ai-coding-logs=/path/to/logfile
+```
+
+### Features
+
+- **Zero overhead when disabled** - Macros compile out completely
+- **Structured output** - `[AICODING][timestamp][module] message`
+- **Module-based filtering** - Separate logs for capture, encode, network, etc.
+- **Session summary** - Reports total log entries on shutdown
+
+### Example Output
+
+```
+[AICODING][2026-02-13 03:48:15][core] startup: RootStream version=1.0.0
+[AICODING][2026-02-13 03:48:15][capture] init: attempting DRM/KMS backend
+[AICODING][2026-02-13 03:48:15][capture] init: DRM device=/dev/dri/card0 fd=5
+[AICODING][2026-02-13 03:48:16][encode] init: available backends=[NVENC:0, VAAPI:1, x264:1]
+[AICODING][2026-02-13 03:48:16][encode] init: selected backend=VAAPI
+```
+
+### Use Cases
+
+- Debug backend selection issues
+- Track initialization flow
+- Understand error conditions
+- Share execution traces with AI assistants for troubleshooting
+
+See **[docs/AI_LOGGING_MODE.md](docs/AI_LOGGING_MODE.md)** for complete documentation,
+including integration with GitHub Copilot, Claude, and ChatGPT.
 
 ---
 
