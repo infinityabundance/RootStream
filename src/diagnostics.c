@@ -102,7 +102,7 @@ void diagnostics_print_available_backends(rootstream_ctx_t *ctx) {
     printf("\n  Audio Capture:\n");
     printf("    Primary (ALSA):        ✓ Compiled in\n");
     printf("    Fallback 1 (PulseAudio): ");
-#ifdef HAVE_PULSE
+#ifdef HAVE_PULSEAUDIO
     printf("✓ Compiled in\n");
 #else
     printf("✗ Not compiled\n");
@@ -190,7 +190,7 @@ void diagnostics_print_recommendations(rootstream_ctx_t *ctx) {
     recommendations++;
 #endif
     
-#ifndef HAVE_PULSE
+#ifndef HAVE_PULSEAUDIO
     printf("  • Install PulseAudio support: apt-get install libpulse-dev\n");
     recommendations++;
 #endif
