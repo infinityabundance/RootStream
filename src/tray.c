@@ -284,6 +284,10 @@ static void on_view_peers(GtkMenuItem *item, gpointer user_data) {
                     status_icon = "○";
                     status_text = "Discovered";
                     break;
+                case PEER_FAILED:
+                    status_icon = "✗";
+                    status_text = "Failed";
+                    break;
                 default:
                     status_icon = "✗";
                     status_text = "Disconnected";

@@ -62,6 +62,11 @@
 #define PEER_TIMEOUT_MS 5000
 #define KEEPALIVE_INTERVAL_MS 1000
 
+/* Forward declarations */
+static int process_received_packet(rootstream_ctx_t *ctx, uint8_t *buffer, size_t recv_len,
+                                   struct sockaddr_storage *from, socklen_t fromlen,
+                                   transport_type_t transport);
+
 static peer_t* rootstream_find_peer_by_addr(rootstream_ctx_t *ctx,
                                            const struct sockaddr_storage *addr,
                                            socklen_t addr_len) {
@@ -261,6 +266,12 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
         return -1;
     }
 
+    /* Check connection health */
+    if (peer->state != PEER_CONNECTED && peer->state != PEER_HANDSHAKE_RECEIVED) {
+        fprintf(stderr, "WARNING: Peer not fully connected, skipping send\n");
+        return -1;
+    }
+
     if (!peer->session.authenticated) {
         fprintf(stderr, "ERROR: Cannot send - peer not authenticated\n");
         fprintf(stderr, "PEER: %s\n", peer->hostname);
@@ -308,22 +319,44 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
     hdr->payload_size = cipher_len;
     /* MAC is included in cipher_len by crypto_encrypt_packet */
 
-    /* Send packet */
-    int sent = rs_socket_sendto(ctx->sock_fd, packet,
-                                sizeof(packet_header_t) + cipher_len, 0,
-                                (struct sockaddr*)&peer->addr, peer->addr_len);
+    /* Dispatch to transport */
+    int ret = -1;
+    switch (peer->transport) {
+        case TRANSPORT_UDP:
+            ret = rs_socket_sendto(ctx->sock_fd, packet,
+                                  sizeof(packet_header_t) + cipher_len, 0,
+                                  (struct sockaddr*)&peer->addr, peer->addr_len);
+            if (ret < 0) {
+                int err = rs_socket_error();
+                fprintf(stderr, "ERROR: UDP send failed: %s\n", rs_socket_strerror(err));
+            } else {
+                ctx->bytes_sent += ret;
+                peer->last_sent = get_timestamp_ms();
+                ret = 0;  /* Success */
+            }
+            break;
+            
+        case TRANSPORT_TCP:
+            ret = rootstream_net_tcp_send(ctx, peer, packet, sizeof(packet_header_t) + cipher_len);
+            break;
+            
+        default:
+            fprintf(stderr, "ERROR: Unknown transport type %d\n", peer->transport);
+            ret = -1;
+    }
 
     free(packet);
 
-    if (sent < 0) {
-        int err = rs_socket_error();
-        fprintf(stderr, "ERROR: Send failed\n");
-        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
+    if (ret < 0) {
+        /* Transport failed, mark for reconnection */
+        fprintf(stderr, "WARNING: Send failed, marking peer for reconnection\n");
+        peer->state = PEER_DISCONNECTED;
+        if (peer->reconnect_ctx) {
+            peer_try_reconnect(ctx, peer);
+        }
         return -1;
     }
 
-    peer->last_sent = get_timestamp_ms();
-    ctx->bytes_sent += sent;
     return 0;
 }
 
@@ -347,47 +380,89 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
         return -1;
     }
 
-    /* Poll for incoming data */
-    int ret = rs_socket_poll(ctx->sock_fd, timeout_ms);
+    /* First, check for reconnecting peers (iterate backwards to handle removal safely) */
+    for (int i = ctx->num_peers - 1; i >= 0; i--) {
+        peer_t *peer = &ctx->peers[i];
+        
+        if (peer->state == PEER_DISCONNECTED && peer->reconnect_ctx) {
+            /* Try to reconnect */
+            int ret = peer_try_reconnect(ctx, peer);
+            if (ret < 0) {
+                /* Max retries exceeded, remove peer */
+                printf("INFO: Removing peer %s (max reconnection attempts)\n", peer->hostname);
+                rootstream_remove_peer(ctx, peer);
+                continue;
+            }
+        }
+    }
+
+    /* Poll UDP socket for incoming data */
+    int ret = rs_socket_poll(ctx->sock_fd, 0);  /* Non-blocking check */
     if (ret < 0) {
         int err = rs_socket_error();
         fprintf(stderr, "ERROR: Poll failed: %s\n", rs_socket_strerror(err));
         return -1;
     }
 
-    if (ret == 0) {
-        /* Timeout - no data */
-        return 0;
+    if (ret > 0) {
+        /* Receive UDP packet */
+        uint8_t buffer[MAX_PACKET_SIZE];
+        struct sockaddr_storage from;
+        socklen_t fromlen = sizeof(from);
+
+        int recv_len = rs_socket_recvfrom(ctx->sock_fd, buffer, sizeof(buffer), 0,
+                                          (struct sockaddr*)&from, &fromlen);
+
+        if (recv_len >= (int)sizeof(packet_header_t)) {
+            if (rootstream_net_validate_packet(buffer, (size_t)recv_len) == 0) {
+                /* Process UDP packet (existing logic) */
+                process_received_packet(ctx, buffer, recv_len, &from, fromlen, TRANSPORT_UDP);
+            }
+        }
     }
 
-    /* Receive packet */
-    uint8_t buffer[MAX_PACKET_SIZE];
-    struct sockaddr_storage from;
-    socklen_t fromlen = sizeof(from);
+    /* Check TCP peers for data */
+    for (int i = 0; i < ctx->num_peers; i++) {
+        peer_t *peer = &ctx->peers[i];
+        
+        if (peer->transport != TRANSPORT_TCP || peer->state != PEER_CONNECTED) {
+            continue;
+        }
 
-    int recv_len = rs_socket_recvfrom(ctx->sock_fd, buffer, sizeof(buffer), 0,
-                                      (struct sockaddr*)&from, &fromlen);
-
-    if (recv_len < 0) {
-        int err = rs_socket_error();
-        fprintf(stderr, "ERROR: Receive failed: %s\n", rs_socket_strerror(err));
-        return -1;
+        uint8_t buffer[MAX_PACKET_SIZE];
+        size_t buffer_len = 0;
+        
+        int tcp_ret = rootstream_net_tcp_recv(ctx, peer, buffer, &buffer_len);
+        
+        if (tcp_ret < 0) {
+            /* TCP receive failed, disconnect and mark for reconnect */
+            fprintf(stderr, "WARNING: TCP receive failed for peer %s\n", peer->hostname);
+            peer->state = PEER_DISCONNECTED;
+            if (peer->reconnect_ctx) {
+                peer_try_reconnect(ctx, peer);
+            }
+            continue;
+        }
+        
+        if (tcp_ret > 0 && buffer_len > 0) {
+            /* Process TCP packet */
+            process_received_packet(ctx, buffer, buffer_len, &peer->addr, peer->addr_len, TRANSPORT_TCP);
+        }
     }
 
-    if (recv_len < (int)sizeof(packet_header_t)) {
-        fprintf(stderr, "WARNING: Packet too small (%d bytes), ignoring\n", recv_len);
-        return 0;
-    }
+    return 0;
+}
 
-    if (rootstream_net_validate_packet(buffer, (size_t)recv_len) != 0) {
-        fprintf(stderr, "WARNING: Invalid packet received (%d bytes)\n", recv_len);
-        return 0;
-    }
-
+/*
+ * Process a received packet (helper for both UDP and TCP)
+ */
+static int process_received_packet(rootstream_ctx_t *ctx, uint8_t *buffer, size_t recv_len,
+                                   struct sockaddr_storage *from, socklen_t fromlen,
+                                   transport_type_t transport) {
     packet_header_t *hdr = (packet_header_t*)buffer;
 
     /* Find or create peer */
-    peer_t *peer = rootstream_find_peer_by_addr(ctx, &from, fromlen);
+    peer_t *peer = rootstream_find_peer_by_addr(ctx, from, fromlen);
     if (!peer) {
         if (hdr->type != PKT_HANDSHAKE) {
             fprintf(stderr, "WARNING: Packet from unknown peer (no handshake)\n");
@@ -400,9 +475,10 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
 
         peer = &ctx->peers[ctx->num_peers++];
         memset(peer, 0, sizeof(peer_t));
-        memcpy(&peer->addr, &from, fromlen);
+        memcpy(&peer->addr, from, fromlen);
         peer->addr_len = fromlen;
         peer->state = PEER_CONNECTING;
+        peer->transport = transport;  /* Set transport type */
         peer->video_tx_frame_id = 1;
         peer->video_rx_frame_id = 0;
         peer->video_rx_buffer = NULL;
@@ -411,8 +487,9 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
         peer->video_rx_received = 0;
     }
 
-    /* Update last seen time */
+    /* Update last seen and received time */
     peer->last_seen = get_timestamp_ms();
+    peer->last_received = get_timestamp_ms();
 
     /* Handle packet based on type */
     switch (hdr->type) {
@@ -807,17 +884,31 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
     memcpy(packet, &hdr, sizeof(hdr));
     memcpy(packet + sizeof(hdr), payload, payload_len);
 
+    /* Try UDP handshake first */
     int sent = rs_socket_sendto(ctx->sock_fd, packet, sizeof(hdr) + payload_len, 0,
                                 (struct sockaddr*)&peer->addr, peer->addr_len);
 
     if (sent < 0) {
         int err = rs_socket_error();
-        fprintf(stderr, "ERROR: Handshake send failed\n");
-        fprintf(stderr, "REASON: %s\n", rs_socket_strerror(err));
+        fprintf(stderr, "WARNING: UDP handshake send failed: %s\n", rs_socket_strerror(err));
+        
+        /* Try TCP fallback */
+        printf("INFO: Trying TCP fallback for handshake...\n");
+        if (rootstream_net_tcp_connect(ctx, peer) == 0) {
+            /* Send handshake over TCP */
+            if (rootstream_net_tcp_send(ctx, peer, packet, sizeof(hdr) + payload_len) == 0) {
+                printf("✓ TCP handshake sent\n");
+                peer->state = PEER_HANDSHAKE_SENT;
+                peer->handshake_sent_time = get_timestamp_ms();
+                return 0;
+            }
+        }
+        fprintf(stderr, "ERROR: Both UDP and TCP handshake failed\n");
         return -1;
     }
 
     peer->last_sent = get_timestamp_ms();
+    peer->transport = TRANSPORT_UDP;  /* Mark as UDP connection */
 
     /* Update peer state and timestamp for timeout tracking */
     if (peer->state != PEER_HANDSHAKE_RECEIVED && peer->state != PEER_CONNECTED) {
@@ -825,7 +916,7 @@ int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer) {
         peer->handshake_sent_time = get_timestamp_ms();
     }
 
-    printf("→ Sent handshake to peer\n");
+    printf("→ Sent UDP handshake to peer\n");
 
     return 0;
 }
@@ -960,6 +1051,13 @@ peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *code) {
     peer->video_rx_capacity = 0;
     peer->video_rx_expected = 0;
     peer->video_rx_received = 0;
+    peer->transport = TRANSPORT_UDP;  /* Default to UDP */
+    
+    /* Initialize reconnection context (PHASE 4) */
+    if (peer_reconnect_init(peer) < 0) {
+        fprintf(stderr, "WARNING: Failed to init reconnect context for peer\n");
+    }
+    
     ctx->num_peers++;
 
     char fingerprint[32];
@@ -1004,6 +1102,14 @@ void rootstream_remove_peer(rootstream_ctx_t *ctx, peer_t *peer) {
     int index = (int)(peer - ctx->peers);
     if (index < 0 || index >= ctx->num_peers) {
         return;
+    }
+
+    /* Cleanup PHASE 4 resources */
+    if (peer->transport == TRANSPORT_TCP) {
+        rootstream_net_tcp_cleanup(peer);
+    }
+    if (peer->reconnect_ctx) {
+        peer_reconnect_cleanup(peer);
     }
 
     if (peer->video_rx_buffer) {
