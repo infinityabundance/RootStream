@@ -76,7 +76,7 @@ private slots:
         frame_t frame;
         frame.width = 1920;
         frame.height = 1080;
-        frame.format = 0x3231564E; // NV12 fourcc
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 1000000;
@@ -119,7 +119,7 @@ private slots:
         frame_t frame;
         frame.width = 640;
         frame.height = 480;
-        frame.format = 0x3231564E; // NV12
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 0;
@@ -204,7 +204,7 @@ private slots:
         frame_t frame;
         frame.width = 1920;
         frame.height = 1080;
-        frame.format = 0x3231564E; // NV12
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 1000000;

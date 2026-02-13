@@ -29,7 +29,7 @@ endif()
 
 # Find Vulkan
 if(ENABLE_RENDERER_VULKAN)
-    find_package(Vulkan REQUIRED)
+    find_package(Vulkan)
     if(NOT Vulkan_FOUND)
         message(WARNING "Vulkan not found, disabling Vulkan renderer")
         set(ENABLE_RENDERER_VULKAN OFF)

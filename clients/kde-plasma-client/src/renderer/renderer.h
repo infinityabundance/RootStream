@@ -28,6 +28,11 @@ extern "C" {
 typedef struct renderer_s renderer_t;
 
 /**
+ * Common video frame formats (DRM fourcc codes)
+ */
+#define FRAME_FORMAT_NV12 0x3231564E  /**< NV12: Y plane + interleaved UV */
+
+/**
  * Video frame structure
  */
 typedef struct frame_s {

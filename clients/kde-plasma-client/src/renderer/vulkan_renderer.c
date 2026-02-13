@@ -54,6 +54,10 @@ typedef uint32_t VkResult;
 #define VK_SUCCESS 0
 #endif
 
+// Default renderer dimensions
+#define DEFAULT_RENDER_WIDTH 1920
+#define DEFAULT_RENDER_HEIGHT 1080
+
 /**
  * Vulkan context structure
  */
@@ -337,8 +341,8 @@ vulkan_context_t* vulkan_init(void *native_window) {
     // Detect backend
     ctx->backend = vulkan_detect_backend();
     ctx->vsync_enabled = true;
-    ctx->width = 1920;  // Default, will be updated
-    ctx->height = 1080;
+    ctx->width = DEFAULT_RENDER_WIDTH;
+    ctx->height = DEFAULT_RENDER_HEIGHT;
     
     // Create Vulkan instance
     if (create_vulkan_instance(ctx) != 0) {
