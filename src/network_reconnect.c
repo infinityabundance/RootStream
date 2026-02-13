@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #define INITIAL_BACKOFF_MS 100
 #define MAX_BACKOFF_MS 30000
@@ -94,7 +93,7 @@ int peer_try_reconnect(rootstream_ctx_t *ctx, peer_t *peer) {
     }
 
     /* Exponential backoff */
-    rc->backoff_ms = (int)fmin(rc->backoff_ms * 2, MAX_BACKOFF_MS);
+    rc->backoff_ms = (rc->backoff_ms * 2 > MAX_BACKOFF_MS) ? MAX_BACKOFF_MS : rc->backoff_ms * 2;
     rc->next_attempt = now + rc->backoff_ms;
     rc->is_reconnecting = true;
 

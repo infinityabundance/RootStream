@@ -380,8 +380,8 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
         return -1;
     }
 
-    /* First, check for reconnecting peers */
-    for (int i = 0; i < ctx->num_peers; i++) {
+    /* First, check for reconnecting peers (iterate backwards to handle removal safely) */
+    for (int i = ctx->num_peers - 1; i >= 0; i--) {
         peer_t *peer = &ctx->peers[i];
         
         if (peer->state == PEER_DISCONNECTED && peer->reconnect_ctx) {
@@ -391,7 +391,6 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                 /* Max retries exceeded, remove peer */
                 printf("INFO: Removing peer %s (max reconnection attempts)\n", peer->hostname);
                 rootstream_remove_peer(ctx, peer);
-                i--;  /* Adjust index */
                 continue;
             }
         }
