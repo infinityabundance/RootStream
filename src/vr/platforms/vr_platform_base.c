@@ -25,10 +25,8 @@ void vr_platform_base_destroy(VRPlatformBase *platform) {
         platform->vtable->shutdown(platform);
     }
     
-    if (platform->platformData) {
-        free(platform->platformData);
-    }
-    
+    // Note: platformData points to the platform struct itself for derived types,
+    // so we don't free it separately - we just free the whole struct
     free(platform);
 }
 
