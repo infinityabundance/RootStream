@@ -617,7 +617,10 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
                     }
 
                     if (!drop_audio) {
-                        audio_playback_write(ctx, pcm_buffer, pcm_samples);
+                        /* Use audio playback backend if available */
+                        if (ctx->audio_playback_backend && ctx->audio_playback_backend->playback_fn) {
+                            ctx->audio_playback_backend->playback_fn(ctx, pcm_buffer, pcm_samples);
+                        }
                         ctx->last_audio_ts_us = header.timestamp_us;
                     }
                 } else {
