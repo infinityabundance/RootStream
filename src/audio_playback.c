@@ -254,3 +254,17 @@ int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples, size_t num_sam
 void audio_playback_cleanup(rootstream_ctx_t *ctx) {
     audio_playback_cleanup_alsa(ctx);
 }
+
+/*
+ * Check if ALSA audio playback is available
+ */
+bool audio_playback_alsa_available(void) {
+    /* Try to open ALSA device to check availability */
+    snd_pcm_t *test_handle = NULL;
+    int err = snd_pcm_open(&test_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    if (err < 0) {
+        return false;
+    }
+    snd_pcm_close(test_handle);
+    return true;
+}

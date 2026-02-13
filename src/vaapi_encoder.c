@@ -225,7 +225,7 @@ bool rootstream_encoder_vaapi_available(void) {
     }
 
     int actual_num_profiles;
-    VAStatus status = vaQueryConfigProfiles(display, profiles_list, &actual_num_profiles);
+    status = vaQueryConfigProfiles(display, profiles_list, &actual_num_profiles);
     if (status != VA_STATUS_SUCCESS) {
         free(profiles_list);
         vaTerminate(display);
