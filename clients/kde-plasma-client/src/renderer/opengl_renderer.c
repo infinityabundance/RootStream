@@ -239,7 +239,6 @@ opengl_context_t* opengl_init(void *native_window) {
     }
     
     // Get uniform locations
-    load_gl_renderer_functions();
     ctx->uniform_y_sampler = glGetUniformLocation_local(ctx->shader_program, "y_plane");
     ctx->uniform_uv_sampler = glGetUniformLocation_local(ctx->shader_program, "uv_plane");
     

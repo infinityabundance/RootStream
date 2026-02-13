@@ -36,13 +36,18 @@ int frame_buffer_enqueue(frame_buffer_t *buffer, const frame_t *frame) {
     if (next_write == buffer->read_index) {
         // Buffer full, drop oldest frame
         buffer->dropped_count++;
+        
+        // Save old read position
+        int old_read = buffer->read_index;
+        
+        // Advance read position
         buffer->read_index = (buffer->read_index + 1) % FRAME_BUFFER_SIZE;
         
-        // Free the dropped frame
-        if (buffer->frames[buffer->read_index]) {
-            free(buffer->frames[buffer->read_index]->data);
-            free(buffer->frames[buffer->read_index]);
-            buffer->frames[buffer->read_index] = NULL;
+        // Free the dropped frame at old position
+        if (buffer->frames[old_read]) {
+            free(buffer->frames[old_read]->data);
+            free(buffer->frames[old_read]);
+            buffer->frames[old_read] = NULL;
         }
     }
     
