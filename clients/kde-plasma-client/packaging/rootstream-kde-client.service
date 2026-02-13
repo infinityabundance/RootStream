@@ -1,0 +1,13 @@
+[Unit]
+Description=RootStream KDE Client Background Service
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+ExecStart=/usr/bin/rootstream-kde-client --service
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

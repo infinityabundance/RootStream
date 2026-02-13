@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RootStream KDE Client
+GenericName=Game Streaming Client
+Comment=Secure P2P game streaming client for RootStream
+Icon=rootstream-kde-client
+Exec=rootstream-kde-client
+Terminal=false
+Categories=Network;Game;Qt;KDE;
+Keywords=streaming;gaming;remote;p2p;
+StartupNotify=true
+StartupWMClass=rootstream-kde-client

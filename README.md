@@ -676,13 +676,37 @@ including integration with GitHub Copilot, Claude, and ChatGPT.
 
 ---
 
+## Clients
+
+### KDE Plasma Native Client (Recommended)
+
+RootStream now features a **native KDE Plasma Qt/QML client** for the best Linux desktop experience:
+
+```bash
+cd clients/kde-plasma-client
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j$(nproc)
+sudo make install
+```
+
+**Features:**
+- Native Qt 6 / QML interface
+- KDE Plasma integration
+- Hardware-accelerated decoding (VA-API)
+- PulseAudio/PipeWire audio support
+- AI logging mode for debugging
+- Comprehensive settings management
+
+See **[clients/kde-plasma-client/README.md](clients/kde-plasma-client/README.md)** for complete documentation.
+
 ## Contributing
 
 We welcome contributions! Areas needing help:
 
-1. **Client implementation** - Decoder + display
+1. **KDE client enhancement** - Video rendering, audio playback, input injection
 2. **NVENC support** - Direct API (not VA-API wrapper)
-3. **Audio streaming** - ALSA + Opus
+3. **Audio streaming** - Complete Opus implementation
 4. **H.265/HEVC** - Better compression
 5. **Cross-platform** - Windows/Mac clients
 6. **Mobile apps** - Android/iOS clients

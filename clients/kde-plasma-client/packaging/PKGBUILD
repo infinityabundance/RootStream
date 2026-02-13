@@ -1,0 +1,45 @@
+# Maintainer: RootStream Project
+pkgname=rootstream-kde-client
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="RootStream KDE Plasma native client for secure P2P game streaming"
+arch=('x86_64')
+url="https://github.com/infinityabundance/RootStream"
+license=('MIT')
+depends=('qt6-base' 'qt6-declarative' 'qt6-quickcontrols2' 'libsodium' 'opus' 'libva' 'libpulse')
+optdepends=(
+    'pipewire: PipeWire audio support'
+    'kconfig: KDE configuration integration'
+    'kcoreaddons: KDE core addons'
+    'libva-intel-driver: Intel GPU hardware decoding'
+    'mesa: AMD GPU hardware decoding'
+    'libva-vdpau-driver: NVIDIA GPU hardware decoding'
+)
+makedepends=('cmake' 'make' 'gcc')
+source=("rootstream-kde-client-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/rootstream-kde-client-$pkgver"
+    mkdir -p build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DENABLE_AI_LOGGING=ON \
+          ..
+    make
+}
+
+check() {
+    cd "$srcdir/rootstream-kde-client-$pkgver/build"
+    ctest --output-on-failure
+}
+
+package() {
+    cd "$srcdir/rootstream-kde-client-$pkgver/build"
+    make DESTDIR="$pkgdir" install
+    
+    # Install license
+    install -Dm644 "$srcdir/rootstream-kde-client-$pkgver/../../LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
