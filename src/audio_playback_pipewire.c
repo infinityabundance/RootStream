@@ -52,12 +52,13 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
     pw->sample_rate = 48000;
     pw->channels = 2;
 
-    /* Initialize PipeWire */
+    /* Initialize PipeWire (will be cleaned up in cleanup function) */
     pw_init(NULL, NULL);
 
     /* Create main loop */
     pw->loop = pw_loop_new(NULL);
     if (!pw->loop) {
+        pw_deinit();
         free(pw);
         return -1;
     }
@@ -66,6 +67,7 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
     pw->context = pw_context_new(pw->loop, NULL, 0);
     if (!pw->context) {
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw);
         return -1;
     }
@@ -75,6 +77,7 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
     if (!pw->core) {
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw);
         return -1;
     }
@@ -97,13 +100,14 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
         pw_core_disconnect(pw->core);
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw);
         return -1;
     }
 
     /* Build stream parameters */
-    uint8_t buffer[1024];
-    struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+    uint8_t params_buffer[1024];
+    struct spa_pod_builder b = SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
     
     const struct spa_pod *params[1];
     struct spa_audio_info_raw info = SPA_AUDIO_INFO_RAW_INIT(
@@ -127,6 +131,7 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
         pw_core_disconnect(pw->core);
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw);
         return -1;
     }
@@ -181,6 +186,8 @@ void audio_playback_cleanup_pipewire(rootstream_ctx_t *ctx) {
     if (pw->context) pw_context_destroy(pw->context);
     if (pw->loop) pw_loop_destroy(pw->loop);
     
+    pw_deinit();
+    
     free(pw);
     ctx->audio_playback_priv = NULL;
 }
@@ -192,11 +199,15 @@ bool audio_playback_pipewire_available(void) {
     pw_init(NULL, NULL);
     
     struct pw_loop *loop = pw_loop_new(NULL);
-    if (!loop) return false;
+    if (!loop) {
+        pw_deinit();
+        return false;
+    }
     
     struct pw_context *context = pw_context_new(loop, NULL, 0);
     if (!context) {
         pw_loop_destroy(loop);
+        pw_deinit();
         return false;
     }
     
@@ -206,6 +217,7 @@ bool audio_playback_pipewire_available(void) {
     if (core) pw_core_disconnect(core);
     pw_context_destroy(context);
     pw_loop_destroy(loop);
+    pw_deinit();
     
     return available;
 }

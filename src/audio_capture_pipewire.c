@@ -96,13 +96,14 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
 
     pw->read_pos = 0;
 
-    /* Initialize PipeWire */
+    /* Initialize PipeWire (will be cleaned up in cleanup function) */
     pw_init(NULL, NULL);
 
     /* Create main loop */
     pw->loop = pw_loop_new(NULL);
     if (!pw->loop) {
         fprintf(stderr, "ERROR: Cannot create PipeWire main loop\n");
+        pw_deinit();
         free(pw->buffer);
         free(pw);
         return -1;
@@ -113,6 +114,7 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
     if (!pw->context) {
         fprintf(stderr, "ERROR: Cannot create PipeWire context\n");
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw->buffer);
         free(pw);
         return -1;
@@ -124,6 +126,7 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
         fprintf(stderr, "ERROR: Cannot connect to PipeWire core\n");
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw->buffer);
         free(pw);
         return -1;
@@ -148,14 +151,15 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
         pw_core_disconnect(pw->core);
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw->buffer);
         free(pw);
         return -1;
     }
 
     /* Build stream parameters */
-    uint8_t buffer[1024];
-    struct spa_pod_builder b = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+    uint8_t params_buffer[1024];
+    struct spa_pod_builder b = SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
     
     const struct spa_pod *params[1];
     struct spa_audio_info_raw info = SPA_AUDIO_INFO_RAW_INIT(
@@ -180,6 +184,7 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
         pw_core_disconnect(pw->core);
         pw_context_destroy(pw->context);
         pw_loop_destroy(pw->loop);
+        pw_deinit();
         free(pw->buffer);
         free(pw);
         return -1;
@@ -205,6 +210,14 @@ int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
 
     /* Check if we have enough samples */
     if (pw->read_pos < (size_t)(pw->frame_size * pw->channels)) {
+#ifdef DEBUG
+        /* Debug logging only - this is expected during initial buffering */
+        static int log_count = 0;
+        if (log_count++ < 3) {
+            fprintf(stderr, "DEBUG: PipeWire capture waiting for data (%zu/%d samples)\n",
+                    pw->read_pos, pw->frame_size * pw->channels);
+        }
+#endif
         return -1;  /* Not enough data yet */
     }
 
@@ -240,6 +253,8 @@ void audio_capture_cleanup_pipewire(rootstream_ctx_t *ctx) {
     if (pw->loop) pw_loop_destroy(pw->loop);
     if (pw->buffer) free(pw->buffer);
     
+    pw_deinit();
+    
     free(pw);
     ctx->audio_capture_priv = NULL;
 }
@@ -252,11 +267,15 @@ bool audio_capture_pipewire_available(void) {
     pw_init(NULL, NULL);
     
     struct pw_loop *loop = pw_loop_new(NULL);
-    if (!loop) return false;
+    if (!loop) {
+        pw_deinit();
+        return false;
+    }
     
     struct pw_context *context = pw_context_new(loop, NULL, 0);
     if (!context) {
         pw_loop_destroy(loop);
+        pw_deinit();
         return false;
     }
     
@@ -266,6 +285,7 @@ bool audio_capture_pipewire_available(void) {
     if (core) pw_core_disconnect(core);
     pw_context_destroy(context);
     pw_loop_destroy(loop);
+    pw_deinit();
     
     return available;
 }
