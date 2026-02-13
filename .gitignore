@@ -12,3 +12,22 @@ tools/rstr-player
 _codeql_build_dir/
 _codeql_detected_source_root
 _codeql_build_dir/
+
+# iOS
+ios/RootStream/Pods/
+ios/RootStream/*.xcworkspace
+ios/RootStream/.DS_Store
+ios/RootStream/build/
+ios/RootStream/DerivedData/
+*.xcuserstate
+*.xcuserdatad
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
