@@ -65,5 +65,20 @@ if(ENABLE_UNIT_TESTS)
     add_test(NAME FeatureDetectionUnit COMMAND test_feature_detection)
     set_tests_properties(FeatureDetectionUnit PROPERTIES LABELS "unit")
     
+    # PHASE 15: Input Manager tests
+    add_executable(test_input_manager unit/test_input_manager.c
+        unit/test_util_stubs.c
+        ${CMAKE_SOURCE_DIR}/src/input/input_manager.c
+        ${CMAKE_SOURCE_DIR}/src/input_logging.c
+        ${CMAKE_SOURCE_DIR}/src/input_xdotool.c
+    )
+    target_include_directories(test_input_manager PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_input_manager test_harness pthread m)
+    if(X11_FOUND)
+        target_link_libraries(test_input_manager ${X11_LIBRARIES})
+    endif()
+    add_test(NAME InputManagerUnit COMMAND test_input_manager)
+    set_tests_properties(InputManagerUnit PROPERTIES LABELS "unit")
+    
     message(STATUS "Unit tests enabled")
 endif()
