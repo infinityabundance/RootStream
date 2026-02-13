@@ -73,6 +73,7 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(VAAPI libva libva-drm)
     pkg_check_modules(ALSA REQUIRED alsa)
     pkg_check_modules(PULSEAUDIO libpulse-simple libpulse)
+    pkg_check_modules(PIPEWIRE libpipewire-0.3)
 
     if(NOT HEADLESS)
         pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
@@ -97,6 +98,10 @@ if(UNIX AND NOT APPLE)
 
     if(PULSEAUDIO_FOUND)
         add_compile_definitions(HAVE_PULSEAUDIO)
+    endif()
+
+    if(PIPEWIRE_FOUND)
+        add_compile_definitions(HAVE_PIPEWIRE)
     endif()
 endif()
 
@@ -151,6 +156,8 @@ set(LINUX_SOURCES
     src/audio_playback.c
     src/audio_capture_pulse.c
     src/audio_playback_pulse.c
+    src/audio_capture_pipewire.c
+    src/audio_playback_pipewire.c
     src/audio_capture_dummy.c
     src/audio_playback_dummy.c
     src/input.c
@@ -233,6 +240,11 @@ if(UNIX AND NOT APPLE)
         target_include_directories(rootstream PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
     endif()
 
+    if(PIPEWIRE_FOUND)
+        target_link_libraries(rootstream PRIVATE ${PIPEWIRE_LIBRARIES})
+        target_include_directories(rootstream PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
+    endif()
+
     if(NOT HEADLESS AND GTK3_FOUND)
         target_link_libraries(rootstream PRIVATE ${GTK3_LIBRARIES})
         target_include_directories(rootstream PRIVATE ${GTK3_INCLUDE_DIRS})
@@ -277,6 +289,7 @@ if(UNIX AND NOT APPLE)
         src/opus_codec.c
         src/audio_playback.c
         src/audio_playback_pulse.c
+        src/audio_playback_pipewire.c
         src/audio_playback_dummy.c
         src/latency.c
         ${PLATFORM_SOURCES}
@@ -299,6 +312,11 @@ if(UNIX AND NOT APPLE)
     if(PULSEAUDIO_FOUND)
         target_link_libraries(rstr-player PRIVATE ${PULSEAUDIO_LIBRARIES})
         target_include_directories(rstr-player PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
+    endif()
+
+    if(PIPEWIRE_FOUND)
+        target_link_libraries(rstr-player PRIVATE ${PIPEWIRE_LIBRARIES})
+        target_include_directories(rstr-player PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
     endif()
 
     if(Opus_FOUND)
@@ -406,6 +424,7 @@ message(STATUS "  Headless:      ${HEADLESS}")
 if(UNIX)
     message(STATUS "  VA-API:        ${VAAPI_FOUND}")
     message(STATUS "  PulseAudio:    ${PULSEAUDIO_FOUND}")
+    message(STATUS "  PipeWire:      ${PIPEWIRE_FOUND}")
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
 endif()
 message(STATUS "")
