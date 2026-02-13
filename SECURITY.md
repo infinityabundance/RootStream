@@ -1,5 +1,19 @@
 # Security Policy
 
+## Security Architecture (Phase 21)
+
+RootStream implements comprehensive end-to-end encryption and security features:
+
+### **Enhanced Security Features**
+- ✅ **Cryptographic Primitives**: AES-256-GCM, ChaCha20-Poly1305 AEAD encryption
+- ✅ **Key Exchange**: ECDH (X25519) with X3DH protocol for asynchronous messaging
+- ✅ **User Authentication**: Argon2id password hashing with TOTP/2FA support
+- ✅ **Session Management**: Secure sessions with perfect forward secrecy
+- ✅ **Attack Prevention**: Replay protection, brute force defense, rate limiting
+- ✅ **Security Audit**: Comprehensive event logging and audit trails
+
+See [PHASE21_SUMMARY.md](PHASE21_SUMMARY.md) for detailed security documentation.
+
 ## Supported versions
 
 RootStream is an early-stage project. Security issues will generally be addressed
