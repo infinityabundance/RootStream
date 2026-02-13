@@ -216,6 +216,9 @@ int crypto_prim_random_bytes(uint8_t *buffer, size_t size) {
 
 /*
  * HKDF key derivation
+ * 
+ * NOTE: This is a simplified HKDF implementation.
+ * Production use should implement full RFC 5869 HKDF-Expand with proper info handling.
  */
 int crypto_prim_hkdf(
     const uint8_t *input_key_material, size_t ikm_len,
@@ -227,12 +230,11 @@ int crypto_prim_hkdf(
         return -1;
     }
 
-    /* Suppress unused parameter warnings for simplified implementation */
-    (void)info;
-    (void)info_len;
-
-    /* libsodium provides KDF, we use crypto_kdf_derive_from_key for simplicity */
-    /* For proper HKDF, use crypto_kdf_hkdf_sha256_expand */
+    /* Limitation: Only supports output_len <= 32 bytes */
+    if (output_len > crypto_auth_hmacsha256_BYTES) {
+        fprintf(stderr, "ERROR: HKDF output length > 32 bytes not supported\n");
+        return -1;
+    }
     
     /* Extract: HMAC-SHA256(salt, IKM) */
     uint8_t prk[crypto_auth_hmacsha256_BYTES];
@@ -245,19 +247,19 @@ int crypto_prim_hkdf(
         crypto_auth_hmacsha256(prk, input_key_material, ikm_len, zero_salt);
     }
     
-    /* Expand: HMAC-SHA256(PRK, info || 0x01) */
-    /* Simplified: just copy PRK if output_len <= 32 */
-    if (output_len <= crypto_auth_hmacsha256_BYTES) {
+    /* Expand: For output_len <= 32, just use PRK directly */
+    /* TODO: Implement proper HKDF-Expand with info parameter for longer outputs */
+    if (info && info_len > 0) {
+        /* Mix in info parameter using another HMAC */
+        uint8_t temp[crypto_auth_hmacsha256_BYTES];
+        crypto_auth_hmacsha256(temp, info, info_len, prk);
+        memcpy(output_key, temp, output_len);
+        sodium_memzero(temp, sizeof(temp));
+    } else {
         memcpy(output_key, prk, output_len);
-        sodium_memzero(prk, sizeof(prk));
-        return 0;
     }
     
-    /* For longer outputs, we need proper HKDF expand (not implemented fully here) */
-    /* Use first 32 bytes only for simplicity */
-    memcpy(output_key, prk, crypto_auth_hmacsha256_BYTES);
     sodium_memzero(prk, sizeof(prk));
-    
     return 0;
 }
 

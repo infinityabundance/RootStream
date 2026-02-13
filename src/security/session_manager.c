@@ -142,8 +142,13 @@ int session_manager_invalidate(const char *session_id) {
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (g_sessions[i].is_active &&
             strcmp(g_sessions[i].session_id, session_id) == 0) {
-            crypto_prim_secure_wipe(&g_sessions[i], sizeof(session_t));
+            /* Mark as inactive first */
             g_sessions[i].is_active = false;
+            
+            /* Securely wipe sensitive session data */
+            crypto_prim_secure_wipe(g_sessions[i].session_secret, 32);
+            crypto_prim_secure_wipe(g_sessions[i].session_id, SESSION_ID_LEN);
+            
             g_session_count--;
             return 0;
         }
@@ -164,8 +169,13 @@ int session_manager_cleanup_expired(void) {
     for (int i = 0; i < MAX_SESSIONS; i++) {
         if (g_sessions[i].is_active &&
             now_us >= g_sessions[i].expiration_time_us) {
-            crypto_prim_secure_wipe(&g_sessions[i], sizeof(session_t));
+            /* Mark as inactive first */
             g_sessions[i].is_active = false;
+            
+            /* Securely wipe sensitive session data */
+            crypto_prim_secure_wipe(g_sessions[i].session_secret, 32);
+            crypto_prim_secure_wipe(g_sessions[i].session_id, SESSION_ID_LEN);
+            
             g_session_count--;
             cleaned++;
         }

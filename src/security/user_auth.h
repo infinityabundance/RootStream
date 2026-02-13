@@ -16,7 +16,7 @@ extern "C" {
 #define USER_AUTH_MAX_USERNAME 64
 #define USER_AUTH_HASH_LEN 128
 #define USER_AUTH_TOTP_SECRET_LEN 32
-#define USER_AUTH_TOTP_CODE_LEN 7
+#define USER_AUTH_TOTP_CODE_LEN 6  /* 6-digit TOTP codes per RFC 6238 */
 
 /* Session structure */
 typedef struct {

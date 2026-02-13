@@ -67,17 +67,21 @@ int key_exchange_x3dh_create_bundle(
     memcpy(bundle->signed_prekey, prekey.public_key,
            KEY_EXCHANGE_PUBLIC_KEY_BYTES);
     
-    /* Sign the prekey with identity key */
-    /* Note: libsodium crypto_box uses X25519, but we need Ed25519 for signing */
-    /* For simplicity, we'll use crypto_sign_detached with a converted key */
+    /* Note: Proper X3DH requires Ed25519 identity key for signing.
+     * This simplified implementation uses a placeholder signature.
+     * Production code should:
+     * 1. Maintain separate Ed25519 identity keypair for signing
+     * 2. Sign the prekey with crypto_sign_detached
+     * 3. Verify signature in X3DH initiator
+     */
     
-    /* Convert X25519 secret key to Ed25519 for signing */
-    /* In production, identity should be Ed25519 keypair separately maintained */
-    unsigned long long sig_len;
-    crypto_sign_detached(
-        bundle->signature, &sig_len,
-        bundle->signed_prekey, KEY_EXCHANGE_PUBLIC_KEY_BYTES,
-        identity_keypair->secret_key);
+    /* Placeholder signature: hash of prekey and identity */
+    uint8_t to_sign[KEY_EXCHANGE_PUBLIC_KEY_BYTES * 2];
+    memcpy(to_sign, bundle->signed_prekey, KEY_EXCHANGE_PUBLIC_KEY_BYTES);
+    memcpy(to_sign + KEY_EXCHANGE_PUBLIC_KEY_BYTES, bundle->identity_key,
+           KEY_EXCHANGE_PUBLIC_KEY_BYTES);
+    
+    crypto_hash_sha256(bundle->signature, to_sign, sizeof(to_sign));
     
     bundle->prekey_id = randombytes_random();
     

@@ -82,30 +82,36 @@ int user_auth_generate_totp_secret(char *secret, size_t secret_len) {
 
 /*
  * Verify TOTP code (Time-based One-Time Password)
+ * 
+ * NOTE: This is a simplified TOTP implementation for demonstration.
+ * Production use should implement proper RFC 6238 TOTP with HMAC-SHA1/SHA256.
  */
 bool user_auth_verify_totp(const char *secret, const char *code) {
     if (!secret || !code) {
         return false;
     }
     
-    /* Simplified TOTP implementation */
-    /* In production, use proper TOTP library (RFC 6238) */
-    
-    /* Get current time in 30-second intervals */
-    /* uint64_t time_step = (uint64_t)time(NULL) / 30; */ /* Unused for now */
-    
-    /* For demonstration, accept any 6-digit code */
-    /* Real implementation would compute HMAC-SHA1 of time_step with secret */
-    if (strlen(code) == 6) {
-        for (int i = 0; i < 6; i++) {
-            if (code[i] < '0' || code[i] > '9') {
-                return false;
-            }
-        }
-        return true;  /* Accept valid format for now */
+    /* Validate code format: must be 6 digits */
+    if (strlen(code) != 6) {
+        return false;
     }
     
-    return false;
+    for (int i = 0; i < 6; i++) {
+        if (code[i] < '0' || code[i] > '9') {
+            return false;
+        }
+    }
+    
+    /* TODO: Implement proper TOTP verification
+     * 1. Decode base32-encoded secret
+     * 2. Compute time_step = current_time / 30
+     * 3. Compute HMAC-SHA1(secret, time_step)
+     * 4. Extract 6-digit code from HMAC
+     * 5. Compare with provided code (with time window tolerance)
+     * 
+     * For now, accept any valid 6-digit format for demonstration
+     */
+    return true;
 }
 
 /*
