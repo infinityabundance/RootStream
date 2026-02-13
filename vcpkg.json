@@ -7,7 +7,8 @@
   "dependencies": [
     "sdl2",
     "libsodium",
-    "opus"
+    "opus",
+    "cjson"
   ],
   "features": {
     "ffmpeg": {
@@ -17,6 +18,14 @@
           "name": "ffmpeg",
           "features": ["avcodec", "avformat", "avutil"]
         }
+      ]
+    },
+    "web-dashboard": {
+      "description": "Web dashboard for remote monitoring and management",
+      "dependencies": [
+        "libmicrohttpd",
+        "libwebsockets",
+        "cjson"
       ]
     }
   }

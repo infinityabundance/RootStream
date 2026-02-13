@@ -39,6 +39,7 @@ option(BUILD_HOST "Build host functionality (Linux only)" ON)
 option(BUILD_CLIENT "Build client functionality" ON)
 option(USE_FFMPEG "Use FFmpeg for decoding instead of native APIs" OFF)
 option(HEADLESS "Build without GUI (no system tray)" OFF)
+option(BUILD_WEB_DASHBOARD "Build web dashboard (PHASE 19)" OFF)
 
 # Host features are Linux-only
 if(WIN32)
@@ -197,6 +198,17 @@ if(FFMPEG_FOUND)
     list(APPEND LINUX_SOURCES
         src/recording/disk_manager.cpp
         src/recording/recording_manager.cpp
+    )
+endif()
+
+# PHASE 19: Web Dashboard (optional)
+if(BUILD_WEB_DASHBOARD)
+    list(APPEND LINUX_SOURCES
+        src/web/api_server.c
+        src/web/websocket_server.c
+        src/web/auth_manager.c
+        src/web/rate_limiter.c
+        src/web/api_routes.c
     )
 endif()
 
@@ -464,6 +476,19 @@ if(FFMPEG_FOUND)
     add_test(NAME disk_manager_tests COMMAND test_disk_manager)
 endif()
 
+# PHASE 19: Web Dashboard tests
+if(BUILD_WEB_DASHBOARD)
+    add_executable(test_web_dashboard tests/unit/test_web_dashboard.c
+                   src/web/api_server.c
+                   src/web/websocket_server.c
+                   src/web/auth_manager.c
+                   src/web/rate_limiter.c
+                   ${PLATFORM_SOURCES})
+    target_include_directories(test_web_dashboard PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_web_dashboard PRIVATE pthread m)
+    add_test(NAME web_dashboard_tests COMMAND test_web_dashboard)
+endif()
+
 # PHASE 8: Integration and Unit Tests
 option(ENABLE_UNIT_TESTS "Build PHASE 8 unit tests" ON)
 option(ENABLE_INTEGRATION_TESTS "Build PHASE 8 integration tests" ON)
@@ -489,6 +514,7 @@ if(UNIX)
     message(STATUS "  PipeWire:      ${PIPEWIRE_FOUND}")
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
     message(STATUS "  FFmpeg (Recording): ${FFMPEG_FOUND}")
+    message(STATUS "  Web Dashboard: ${BUILD_WEB_DASHBOARD}")
 endif()
 message(STATUS "")
 message(STATUS "PHASE 8 Testing:")
