@@ -114,7 +114,7 @@ frame_t frame = {
     .size = frame_size,
     .width = 1920,
     .height = 1080,
-    .format = 0x3231564E,  // NV12 fourcc
+    .format = FRAME_FORMAT_NV12,  // Use constant instead of magic number
     .timestamp_us = timestamp,
     .is_keyframe = true
 };

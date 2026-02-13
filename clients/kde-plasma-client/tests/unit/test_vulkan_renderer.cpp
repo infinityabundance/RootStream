@@ -35,7 +35,7 @@ private slots:
      * Test Vulkan renderer creation
      */
     void testVulkanRendererCreate() {
-        renderer_t *renderer = renderer_create(RENDERER_VULKAN, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_VULKAN, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         renderer_cleanup(renderer);
     }
@@ -57,7 +57,7 @@ private slots:
      */
     void testHeadlessBackendInit() {
         // Headless backend should always be available
-        renderer_t *renderer = renderer_create(RENDERER_VULKAN, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_VULKAN, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         
         // Init without window (headless mode)
@@ -99,13 +99,13 @@ private slots:
      * Test frame submission (without full init)
      */
     void testFrameSubmit() {
-        renderer_t *renderer = renderer_create(RENDERER_VULKAN, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_VULKAN, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         
         // Create test frame
         frame_t frame;
-        frame.width = 1920;
-        frame.height = 1080;
+        frame.width = DEFAULT_RENDER_WIDTH;
+        frame.height = DEFAULT_RENDER_HEIGHT;
         frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);

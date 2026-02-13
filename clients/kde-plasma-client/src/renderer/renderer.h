@@ -33,6 +33,12 @@ typedef struct renderer_s renderer_t;
 #define FRAME_FORMAT_NV12 0x3231564E  /**< NV12: Y plane + interleaved UV */
 
 /**
+ * Default renderer dimensions
+ */
+#define DEFAULT_RENDER_WIDTH 1920
+#define DEFAULT_RENDER_HEIGHT 1080
+
+/**
  * Video frame structure
  */
 typedef struct frame_s {
