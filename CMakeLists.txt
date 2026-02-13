@@ -174,6 +174,7 @@ set(LINUX_SOURCES
     src/network_tcp.c
     src/network_reconnect.c
     src/diagnostics.c
+    src/ai_logging.c
     src/service.c
     src/recording.c
     src/qrcode.c

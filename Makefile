@@ -188,6 +188,7 @@ SRCS := src/main.c \
         src/latency.c \
         src/recording.c \
         src/diagnostics.c \
+        src/ai_logging.c \
         src/platform/platform_linux.c \
         src/packet_validate.c
 
