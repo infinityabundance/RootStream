@@ -47,6 +47,8 @@ endif()
 # Find other dependencies
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OPUS REQUIRED opus)
+pkg_check_modules(SAMPLERATE REQUIRED samplerate)
+find_package(ALSA REQUIRED)
 pkg_check_modules(VAAPI libva libva-drm)
 pkg_check_modules(PULSEAUDIO libpulse-simple libpulse)
 pkg_check_modules(PIPEWIRE libpipewire-0.3)
@@ -61,6 +63,7 @@ endif()
 
 # Include RootStream library
 include_directories(${CMAKE_SOURCE_DIR}/../../include)
+include_directories(${CMAKE_SOURCE_DIR}/../../src)
 
 # Sources
 set(SOURCES
@@ -74,6 +77,16 @@ set(SOURCES
     src/logmanager.cpp
     src/connectiondialog.cpp
     src/mainwindow.cpp
+    # Audio components
+    src/audio/audio_player.cpp
+    src/audio/opus_decoder.cpp
+    src/audio/audio_ring_buffer.cpp
+    src/audio/audio_resampler.cpp
+    src/audio/audio_sync.cpp
+    src/audio/audio_backend_selector.cpp
+    src/audio/playback_pulseaudio.cpp
+    src/audio/playback_pipewire.cpp
+    src/audio/playback_alsa.cpp
 )
 
 # Renderer sources (C)
@@ -142,6 +155,8 @@ target_link_libraries(rootstream-kde-client PRIVATE
     Qt6::Widgets
     Qt6::OpenGL
     ${OPUS_LIBRARIES}
+    ${SAMPLERATE_LIBRARIES}
+    ${ALSA_LIBRARIES}
 )
 
 # Link OpenGL if renderer is enabled
@@ -190,6 +205,13 @@ if(KF6_FOUND)
         KF6::CoreAddons
     )
 endif()
+
+# Add include directories for audio libraries
+target_include_directories(rootstream-kde-client PRIVATE
+    ${OPUS_INCLUDE_DIRS}
+    ${SAMPLERATE_INCLUDE_DIRS}
+    ${ALSA_INCLUDE_DIRS}
+)
 
 # Link PulseAudio if available
 if(PULSEAUDIO_FOUND)
