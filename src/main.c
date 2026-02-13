@@ -65,6 +65,11 @@ static void print_usage(const char *progname) {
     printf("  --peer-code CODE    Connect using RootStream code from history\n");
     printf("  --peer-list         List saved peer history\n");
     printf("\n");
+    printf("Backend Selection (PHASE 6):\n");
+    printf("  --gui MODE          Select GUI backend (gtk/tui/cli)\n");
+    printf("  --input MODE        Select input backend (uinput/xdotool/logging)\n");
+    printf("  --diagnostics       Show system diagnostics and exit\n");
+    printf("\n");
     printf("Examples:\n");
     printf("  %s                                    # Start tray app\n", progname);
     printf("  %s --qr                               # Show your code\n", progname);
@@ -296,6 +301,9 @@ int main(int argc, char **argv) {
         {"peer-add",    required_argument, 0, 0},
         {"peer-list",   no_argument,       0, 0},
         {"peer-code",   required_argument, 0, 0},
+        {"gui",         required_argument, 0, 0},
+        {"input",       required_argument, 0, 0},
+        {"diagnostics", no_argument,       0, 0},
         {0, 0, 0, 0}
     };
 
@@ -304,8 +312,11 @@ int main(int argc, char **argv) {
     bool service_mode = false;
     bool no_discovery = false;
     bool show_peer_list = false;
+    bool show_diagnostics = false;
     const char *peer_add = NULL;
     const char *peer_code = NULL;
+    const char *gui_override = NULL;
+    const char *input_override = NULL;
     uint16_t port = 9876;
     int display_idx = -1;
     int bitrate = 10000;
@@ -329,6 +340,12 @@ int main(int argc, char **argv) {
                     show_peer_list = true;
                 } else if (strcmp(long_options[option_index].name, "peer-code") == 0) {
                     peer_code = optarg;
+                } else if (strcmp(long_options[option_index].name, "gui") == 0) {
+                    gui_override = optarg;
+                } else if (strcmp(long_options[option_index].name, "input") == 0) {
+                    input_override = optarg;
+                } else if (strcmp(long_options[option_index].name, "diagnostics") == 0) {
+                    show_diagnostics = true;
                 }
                 break;
             case 'h':
@@ -398,6 +415,8 @@ int main(int argc, char **argv) {
 
     /* Set backend verbose mode if requested */
     ctx.backend_prefs.verbose = backend_verbose;
+    ctx.backend_prefs.gui_override = gui_override;
+    ctx.backend_prefs.input_override = input_override;
 
     if (latency_init(&ctx.latency, 240, latency_interval_ms, latency_log) < 0) {
         fprintf(stderr, "WARNING: Latency logging disabled due to init failure\n");
@@ -409,6 +428,13 @@ int main(int argc, char **argv) {
 
     if (display_idx < 0) {
         display_idx = ctx.settings.display_index;
+    }
+
+    /* Handle --diagnostics flag */
+    if (show_diagnostics) {
+        diagnostics_print_report(&ctx);
+        rootstream_cleanup(&ctx);
+        return 0;
     }
 
     /* Handle --list-displays flag */

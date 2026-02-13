@@ -99,6 +99,16 @@ else
     $(info X11 not found - X11 capture backend will be disabled)
 endif
 
+# ncurses (optional, for Terminal UI fallback)
+NCURSES_FOUND := $(shell pkg-config --exists ncurses && echo yes)
+ifeq ($(NCURSES_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags ncurses)
+    LIBS += $(shell pkg-config --libs ncurses)
+    CFLAGS += -DHAVE_NCURSES
+else
+    $(info ncurses not found - Terminal UI will be disabled)
+endif
+
 # NVENC (optional, for NVIDIA GPU encoding)
 # Check both CUDA and NVENC SDK headers
 CUDA_FOUND := $(shell pkg-config --exists cuda && echo yes)
@@ -162,16 +172,21 @@ SRCS := src/main.c \
         src/network_tcp.c \
         src/network_reconnect.c \
         src/input.c \
+        src/input_xdotool.c \
+        src/input_logging.c \
         src/crypto.c \
         src/discovery.c \
         src/discovery_broadcast.c \
         src/discovery_manual.c \
         src/tray.c \
+        src/tray_tui.c \
+        src/tray_cli.c \
         src/service.c \
         src/qrcode.c \
         src/config.c \
         src/latency.c \
         src/recording.c \
+        src/diagnostics.c \
         src/platform/platform_linux.c \
         src/packet_validate.c
 
