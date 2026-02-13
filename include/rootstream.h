@@ -697,6 +697,19 @@ int audio_playback_write_pulse(rootstream_ctx_t *ctx, int16_t *samples,
                                size_t num_samples);
 void audio_playback_cleanup_pulse(rootstream_ctx_t *ctx);
 
+/* Audio backends - PipeWire */
+bool audio_capture_pipewire_available(void);
+int audio_capture_init_pipewire(rootstream_ctx_t *ctx);
+int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
+                                 size_t *num_samples);
+void audio_capture_cleanup_pipewire(rootstream_ctx_t *ctx);
+
+bool audio_playback_pipewire_available(void);
+int audio_playback_init_pipewire(rootstream_ctx_t *ctx);
+int audio_playback_write_pipewire(rootstream_ctx_t *ctx, const int16_t *samples,
+                                  size_t num_samples);
+void audio_playback_cleanup_pipewire(rootstream_ctx_t *ctx);
+
 /* Audio backends - Dummy (silent/discard) */
 int audio_capture_init_dummy(rootstream_ctx_t *ctx);
 int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples,

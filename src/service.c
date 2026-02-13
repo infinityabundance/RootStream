@@ -366,6 +366,13 @@ int service_run_host(rootstream_ctx_t *ctx) {
                 .is_available_fn = audio_capture_pulse_available,
             },
             {
+                .name = "PipeWire",
+                .init_fn = audio_capture_init_pipewire,
+                .capture_fn = audio_capture_frame_pipewire,
+                .cleanup_fn = audio_capture_cleanup_pipewire,
+                .is_available_fn = audio_capture_pipewire_available,
+            },
+            {
                 .name = "Dummy (Silent)",
                 .init_fn = audio_capture_init_dummy,
                 .capture_fn = audio_capture_frame_dummy,
@@ -626,6 +633,13 @@ int service_run_client(rootstream_ctx_t *ctx) {
                 .playback_fn = audio_playback_write_pulse,
                 .cleanup_fn = audio_playback_cleanup_pulse,
                 .is_available_fn = audio_playback_pulse_available,
+            },
+            {
+                .name = "PipeWire",
+                .init_fn = audio_playback_init_pipewire,
+                .playback_fn = audio_playback_write_pipewire,
+                .cleanup_fn = audio_playback_cleanup_pipewire,
+                .is_available_fn = audio_playback_pipewire_available,
             },
             {
                 .name = "Dummy (Silent)",
