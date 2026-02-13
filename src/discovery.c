@@ -748,11 +748,11 @@ void discovery_print_stats(rootstream_ctx_t *ctx) {
     if (!ctx) return;
     
     printf("\n=== Discovery Statistics ===\n");
-    printf("  Total discoveries:     %llu\n", ctx->discovery.total_discoveries);
-    printf("  Total losses:          %llu\n", ctx->discovery.total_losses);
-    printf("  mDNS discoveries:      %llu\n", ctx->discovery.mdns_discoveries);
-    printf("  Broadcast discoveries: %llu\n", ctx->discovery.broadcast_discoveries);
-    printf("  Manual discoveries:    %llu\n", ctx->discovery.manual_discoveries);
+    printf("  Total discoveries:     %lu\n", (unsigned long)ctx->discovery.total_discoveries);
+    printf("  Total losses:          %lu\n", (unsigned long)ctx->discovery.total_losses);
+    printf("  mDNS discoveries:      %lu\n", (unsigned long)ctx->discovery.mdns_discoveries);
+    printf("  Broadcast discoveries: %lu\n", (unsigned long)ctx->discovery.broadcast_discoveries);
+    printf("  Manual discoveries:    %lu\n", (unsigned long)ctx->discovery.manual_discoveries);
     printf("  Cached peers:          %d\n", ctx->discovery.num_cached_peers);
     
     if (ctx->discovery.num_cached_peers > 0) {
