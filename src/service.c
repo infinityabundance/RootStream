@@ -184,6 +184,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         if (backends[backend_idx].init_fn(ctx) == 0) {
             printf("✓ Capture backend '%s' initialized successfully\n", backends[backend_idx].name);
             ctx->capture_backend = &backends[backend_idx];
+            ctx->active_backend.capture_name = backends[backend_idx].name;
             break;
         } else {
             printf("WARNING: Capture backend '%s' failed, trying next...\n", backends[backend_idx].name);
@@ -268,6 +269,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
         if (init_result == 0) {
             printf("✓ Encoder backend '%s' initialized successfully\n", backend->name);
             ctx->encoder_backend = backend;
+            ctx->active_backend.encoder_name = backend->name;
             encoder_initialized = true;
             
             /* Warn if using fallback (software or raw) */
@@ -345,6 +347,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
             if (capture_backends[capture_idx].init_fn(ctx) == 0) {
                 printf("✓ Audio capture backend '%s' initialized\n", capture_backends[capture_idx].name);
                 ctx->audio_capture_backend = &capture_backends[capture_idx];
+                ctx->active_backend.audio_cap_name = capture_backends[capture_idx].name;
                 break;
             } else {
                 printf("WARNING: Audio capture backend '%s' failed, trying next...\n", 
@@ -355,6 +358,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
         if (!ctx->audio_capture_backend) {
             printf("WARNING: All audio capture backends failed, streaming video only\n");
+            ctx->active_backend.audio_cap_name = "disabled";
         } else {
             /* Initialize Opus encoder */
             printf("INFO: Initializing Opus encoder...\n");
@@ -364,11 +368,13 @@ int service_run_host(rootstream_ctx_t *ctx) {
                     ctx->audio_capture_backend->cleanup_fn(ctx);
                 }
                 ctx->audio_capture_backend = NULL;
+                ctx->active_backend.audio_cap_name = "disabled";
             }
         }
     } else {
         printf("INFO: Audio disabled in settings\n");
         ctx->audio_capture_backend = NULL;
+        ctx->active_backend.audio_cap_name = "disabled";
     }
 
     /* Announce service */
@@ -392,6 +398,17 @@ int service_run_host(rootstream_ctx_t *ctx) {
                 enc_buf_size);
         return -1;
     }
+
+    /* Report active backends (PHASE 0) */
+    printf("\n");
+    printf("╔════════════════════════════════════════════════╗\n");
+    printf("║  RootStream Backend Status                     ║\n");
+    printf("╚════════════════════════════════════════════════╝\n");
+    printf("Capture:       %s\n", ctx->active_backend.capture_name);
+    printf("Encoder:       %s\n", ctx->active_backend.encoder_name);
+    printf("Audio Cap:     %s\n", ctx->active_backend.audio_cap_name ? ctx->active_backend.audio_cap_name : "disabled");
+    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name ? ctx->active_backend.audio_play_name : "disabled");
+    printf("\n");
 
     /* Main loop */
     while (service_running && ctx->running) {
@@ -577,6 +594,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
             if (playback_backends[playback_idx].init_fn(ctx) == 0) {
                 printf("✓ Audio playback backend '%s' initialized\n", playback_backends[playback_idx].name);
                 ctx->audio_playback_backend = &playback_backends[playback_idx];
+                ctx->active_backend.audio_play_name = playback_backends[playback_idx].name;
                 break;
             } else {
                 printf("WARNING: Audio playback backend '%s' failed, trying next...\n", 
@@ -587,6 +605,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
 
         if (!ctx->audio_playback_backend) {
             printf("WARNING: All audio playback backends failed, watching video only\n");
+            ctx->active_backend.audio_play_name = "disabled";
         } else {
             /* Initialize Opus decoder */
             printf("INFO: Initializing Opus decoder...\n");
@@ -596,11 +615,13 @@ int service_run_client(rootstream_ctx_t *ctx) {
                     ctx->audio_playback_backend->cleanup_fn(ctx);
                 }
                 ctx->audio_playback_backend = NULL;
+                ctx->active_backend.audio_play_name = "disabled";
             }
         }
     } else {
         printf("INFO: Audio disabled in settings\n");
         ctx->audio_playback_backend = NULL;
+        ctx->active_backend.audio_play_name = "disabled";
     }
 
     printf("✓ Client initialized - ready to receive video and audio\n");
@@ -608,6 +629,16 @@ int service_run_client(rootstream_ctx_t *ctx) {
         printf("INFO: Client latency logging enabled (interval=%lums, samples=%zu)\n",
                ctx->latency.report_interval_ms, ctx->latency.capacity);
     }
+
+    /* Report active backends (PHASE 0) */
+    printf("\n");
+    printf("╔════════════════════════════════════════════════╗\n");
+    printf("║  RootStream Client Backend Status              ║\n");
+    printf("╚════════════════════════════════════════════════╝\n");
+    printf("Decoder:       %s\n", ctx->active_backend.decoder_name ? ctx->active_backend.decoder_name : "uninitialized");
+    printf("Display:       %s\n", "SDL2");  /* Hardcoded for now */
+    printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name ? ctx->active_backend.audio_play_name : "disabled");
+    printf("\n");
 
     /* Allocate decode buffer */
     frame_buffer_t decoded_frame = {0};

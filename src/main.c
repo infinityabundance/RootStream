@@ -285,6 +285,7 @@ int main(int argc, char **argv) {
         {"no-discovery",no_argument,       0, 'n'},
         {"latency-log", no_argument,       0, 'l'},
         {"latency-interval", required_argument, 0, 'i'},
+        {"backend-verbose", no_argument,   0, 0},
         {0, 0, 0, 0}
     };
 
@@ -298,10 +299,19 @@ int main(int argc, char **argv) {
     const char *record_file = NULL;
     bool latency_log = false;
     uint64_t latency_interval_ms = 1000;
+    bool backend_verbose = false;
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:nli:", long_options, NULL)) != -1) {
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:nli:", long_options, &option_index)) != -1) {
         switch (opt) {
+            case 0:
+                /* Long option without short equivalent */
+                if (strcmp(long_options[option_index].name, "backend-verbose") == 0) {
+                    backend_verbose = true;
+                    printf("INFO: Backend selection verbose mode enabled\n");
+                }
+                break;
             case 'h':
                 print_usage(argv[0]);
                 return 0;
@@ -366,6 +376,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "ERROR: Initialization failed\n");
         return 1;
     }
+
+    /* Set backend verbose mode if requested */
+    ctx.backend_prefs.verbose = backend_verbose;
 
     if (latency_init(&ctx.latency, 240, latency_interval_ms, latency_log) < 0) {
         fprintf(stderr, "WARNING: Latency logging disabled due to init failure\n");

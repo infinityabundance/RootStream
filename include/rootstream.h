@@ -64,6 +64,22 @@
 /* RootStream code format: base64(pubkey) + "@" + hostname */
 #define ROOTSTREAM_CODE_MAX_LEN 128
 
+/* Simple fallback selection macro (PHASE 0) */
+#define TRY_INIT_BACKEND(ctx, primary_fn, primary_name, fallback_fn, fallback_name, result_ptr, name_ptr) \
+    do { \
+        if ((primary_fn)(ctx) == 0) { \
+            (name_ptr) = (primary_name); \
+            (result_ptr) = 1; /* Mark as initialized */ \
+        } else if ((fallback_fn) && (fallback_fn)(ctx) == 0) { \
+            printf("INFO: Primary failed, using fallback: %s\n", (fallback_name)); \
+            (name_ptr) = (fallback_name); \
+            (result_ptr) = 1; \
+        } else { \
+            printf("ERROR: Both primary and fallback failed\n"); \
+            (result_ptr) = 0; \
+        } \
+    } while(0)
+
 /* ============================================================================
  * CAPTURE - Multi-backend framebuffer capture
  * ============================================================================ */
@@ -458,6 +474,22 @@ typedef struct rootstream_ctx {
     bool is_host;              /* Host mode (streamer) */
     uint64_t last_video_ts_us; /* Last received video timestamp */
     uint64_t last_audio_ts_us; /* Last received audio timestamp */
+
+    /* Backend tracking (added in PHASE 0) */
+    struct {
+        const char *capture_name;      /* Name of active capture backend */
+        const char *encoder_name;      /* Name of active encoder backend */
+        const char *audio_cap_name;    /* Name of active audio capture backend */
+        const char *audio_play_name;   /* Name of active audio playback backend */
+        const char *decoder_name;      /* Name of active decoder backend */
+    } active_backend;
+
+    /* User preferences for backend override */
+    struct {
+        const char *capture_override;  /* User-specified capture backend */
+        const char *encoder_override;  /* User-specified encoder backend */
+        bool verbose;                  /* Print fallback attempts */
+    } backend_prefs;
 } rootstream_ctx_t;
 
 /* Encoder backend abstraction for multi-tier fallback */
