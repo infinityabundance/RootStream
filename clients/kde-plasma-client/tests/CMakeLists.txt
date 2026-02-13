@@ -20,6 +20,13 @@ if(ENABLE_RENDERER_OPENGL)
     )
 endif()
 
+# Vulkan renderer unit tests
+if(ENABLE_RENDERER_VULKAN)
+    list(APPEND TEST_SOURCES
+        unit/test_vulkan_renderer.cpp
+    )
+endif()
+
 # Create test executable for each test file
 foreach(TEST_SOURCE ${TEST_SOURCES})
     get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
@@ -52,6 +59,33 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
         target_include_directories(${TEST_NAME} PRIVATE
             ${X11_INCLUDE_DIR}
         )
+        target_compile_definitions(${TEST_NAME} PRIVATE HAVE_OPENGL_RENDERER)
+    endif()
+    
+    # Link Vulkan renderer for Vulkan tests
+    if(ENABLE_RENDERER_VULKAN AND ${TEST_SOURCE} MATCHES "vulkan")
+        target_sources(${TEST_NAME} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/renderer/renderer.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/vulkan_renderer.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/vulkan_wayland.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/vulkan_x11.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/vulkan_headless.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/color_space.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/frame_buffer.c
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE
+            Vulkan::Vulkan
+            ${X11_LIBRARIES}
+        )
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${X11_INCLUDE_DIR}
+            ${Vulkan_INCLUDE_DIRS}
+        )
+        if(WAYLAND_FOUND)
+            target_link_libraries(${TEST_NAME} PRIVATE ${WAYLAND_LIBRARIES})
+            target_include_directories(${TEST_NAME} PRIVATE ${WAYLAND_INCLUDE_DIRS})
+        endif()
+        target_compile_definitions(${TEST_NAME} PRIVATE HAVE_VULKAN_RENDERER)
     endif()
     
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
