@@ -136,7 +136,8 @@ typedef struct {
 typedef enum {
     ENCODER_VAAPI,        /* VA-API (Intel/AMD) */
     ENCODER_NVENC,        /* NVENC (NVIDIA) */
-    ENCODER_SOFTWARE      /* CPU encoding fallback - TODO */
+    ENCODER_FFMPEG,       /* FFmpeg/libx264 software encoder */
+    ENCODER_RAW           /* Raw frame pass-through (debug) */
 } encoder_type_t;
 
 typedef enum {
@@ -159,6 +160,9 @@ typedef struct {
     size_t max_output_size;    /* Max encoded output size (bytes) */
 } encoder_ctx_t;
 
+/* Forward declaration for encoder_backend_t */
+typedef struct encoder_backend_t encoder_backend_t;
+
 typedef struct {
     codec_type_t codec;        /* Video codec */
     void *backend_ctx;         /* Backend-specific context (opaque) */
@@ -173,6 +177,7 @@ typedef struct {
     int channels;              /* Number of channels */
     bool initialized;          /* Audio initialized? */
 } audio_playback_ctx_t;
+
 
 /* ============================================================================
  * CRYPTOGRAPHY - Ed25519 keypairs and encryption
@@ -385,6 +390,7 @@ typedef struct rootstream_ctx {
     display_info_t display;
     frame_buffer_t current_frame;
     encoder_ctx_t encoder;
+    const encoder_backend_t *encoder_backend;  /* Currently active encoder backend */
 
     /* Decoding (client) */
     decoder_ctx_t decoder;
@@ -426,6 +432,16 @@ typedef struct rootstream_ctx {
     uint64_t last_video_ts_us; /* Last received video timestamp */
     uint64_t last_audio_ts_us; /* Last received audio timestamp */
 } rootstream_ctx_t;
+
+/* Encoder backend abstraction for multi-tier fallback */
+struct encoder_backend_t {
+    const char *name;
+    int (*init_fn)(rootstream_ctx_t *ctx, codec_type_t codec);
+    int (*encode_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size);
+    int (*encode_ex_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size, bool *is_keyframe);
+    void (*cleanup_fn)(rootstream_ctx_t *ctx);
+    bool (*is_available_fn)(void);
+};
 
 /* ============================================================================
  * API FUNCTIONS
@@ -486,12 +502,31 @@ int rootstream_encode_frame_ex(rootstream_ctx_t *ctx, frame_buffer_t *in,
                               uint8_t *out, size_t *out_size, bool *is_keyframe);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
-/* NVENC encoder (Phase 5) */
+/* VA-API encoder */
+bool rootstream_encoder_vaapi_available(void);
+
+/* NVENC encoder */
 int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec);
 int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
                                   uint8_t *out, size_t *out_size);
 void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
 bool rootstream_encoder_nvenc_available(void);
+
+/* FFmpeg/libx264 software encoder */
+int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec);
+int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                                   uint8_t *out, size_t *out_size);
+int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                                      uint8_t *out, size_t *out_size, bool *is_keyframe);
+void rootstream_encoder_cleanup_ffmpeg(rootstream_ctx_t *ctx);
+bool rootstream_encoder_ffmpeg_available(void);
+
+/* Raw pass-through encoder (debug) */
+int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec);
+int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in,
+                                uint8_t *out, size_t *out_size);
+void rootstream_encoder_cleanup_raw(rootstream_ctx_t *ctx);
+
 
 /* --- Decoding (Phase 1) --- */
 int rootstream_decoder_init(rootstream_ctx_t *ctx);

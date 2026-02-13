@@ -130,6 +130,11 @@ int service_daemonize(void) {
 #endif
 }
 
+/* Wrapper function for VA-API init (converts 2-param to 3-param signature) */
+static int vaapi_init_wrapper(rootstream_ctx_t *ctx, codec_type_t codec) {
+    return rootstream_encoder_init(ctx, ENCODER_VAAPI, codec);
+}
+
 /*
  * Run as host service
  * 
@@ -191,30 +196,105 @@ int service_run_host(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    /* Auto-detect encoder: Try NVENC first (if available), fall back to VA-API */
-    extern bool rootstream_encoder_nvenc_available(void);
+    /* Multi-tier encoder selection with automatic fallback
+     * Priority order: NVENC → VA-API → FFmpeg → Raw
+     * Each encoder is tried in sequence until one succeeds
+     */
+    
+    /* Define encoder backends in priority order */
+    const encoder_backend_t encoder_backends[] = {
+        {
+            .name = "NVENC (NVIDIA GPU)",
+            .init_fn = rootstream_encoder_init_nvenc,
+            .encode_fn = rootstream_encode_frame_nvenc,
+            .encode_ex_fn = NULL,
+            .cleanup_fn = rootstream_encoder_cleanup_nvenc,
+            .is_available_fn = rootstream_encoder_nvenc_available,
+        },
+        {
+            .name = "VA-API (Intel/AMD GPU)",
+            .init_fn = vaapi_init_wrapper,
+            .encode_fn = rootstream_encode_frame,
+            .encode_ex_fn = rootstream_encode_frame_ex,
+            .cleanup_fn = rootstream_encoder_cleanup,
+            .is_available_fn = rootstream_encoder_vaapi_available,
+        },
+        {
+            .name = "FFmpeg/x264 (Software)",
+            .init_fn = rootstream_encoder_init_ffmpeg,
+            .encode_fn = rootstream_encode_frame_ffmpeg,
+            .encode_ex_fn = rootstream_encode_frame_ex_ffmpeg,
+            .cleanup_fn = rootstream_encoder_cleanup_ffmpeg,
+            .is_available_fn = rootstream_encoder_ffmpeg_available,
+        },
+        {
+            .name = "Raw Pass-through (Debug)",
+            .init_fn = rootstream_encoder_init_raw,
+            .encode_fn = rootstream_encode_frame_raw,
+            .encode_ex_fn = NULL,
+            .cleanup_fn = rootstream_encoder_cleanup_raw,
+            .is_available_fn = NULL,  /* Always available */
+        },
+        {NULL}  /* Sentinel */
+    };
 
-    /* Use codec from settings (default H.264 for Phase 6 compatibility) */
+    /* Determine codec from settings */
     codec_type_t codec = (strcmp(ctx->settings.video_codec, "h265") == 0 ||
                          strcmp(ctx->settings.video_codec, "hevc") == 0) ?
                          CODEC_H265 : CODEC_H264;
 
-    if (rootstream_encoder_nvenc_available()) {
-        printf("INFO: NVENC detected, trying NVIDIA encoder...\n");
-        if (rootstream_encoder_init(ctx, ENCODER_NVENC, codec) == 0) {
-            printf("✓ Using NVENC encoder\n");
-        } else {
-            printf("WARNING: NVENC init failed, falling back to VA-API\n");
-            if (rootstream_encoder_init(ctx, ENCODER_VAAPI, codec) < 0) {
-                fprintf(stderr, "ERROR: Both NVENC and VA-API failed\n");
-                return -1;
+    printf("INFO: Initializing video encoder (codec: %s)\n",
+           codec == CODEC_H265 ? "H.265/HEVC" : "H.264/AVC");
+
+    /* Try each backend in sequence */
+    int backend_idx = 0;
+    bool encoder_initialized = false;
+
+    while (encoder_backends[backend_idx].name) {
+        const encoder_backend_t *backend = &encoder_backends[backend_idx];
+        
+        printf("INFO: Attempting encoder: %s\n", backend->name);
+        
+        /* Check if backend is available */
+        if (backend->is_available_fn && !backend->is_available_fn()) {
+            printf("  → Not available on this system\n");
+            backend_idx++;
+            continue;
+        }
+        
+        /* Try to initialize */
+        int init_result = backend->init_fn(ctx, codec);
+
+        if (init_result == 0) {
+            printf("✓ Encoder backend '%s' initialized successfully\n", backend->name);
+            ctx->encoder_backend = backend;
+            encoder_initialized = true;
+            
+            /* Warn if using fallback (software or raw) */
+            if (backend_idx >= 2) {
+                printf("⚠ WARNING: Using %s\n", 
+                       backend_idx == 2 ? "software encoder (slow)" : "raw encoder (huge bandwidth)");
+                if (backend_idx == 2) {
+                    printf("  Recommended: Install GPU drivers or libva/libva-drm\n");
+                    printf("  Performance may be limited to lower bitrate/fps\n");
+                }
             }
+            break;
+        } else {
+            printf("WARNING: Encoder backend '%s' init failed, trying next...\n", 
+                   backend->name);
+            backend_idx++;
         }
-    } else {
-        if (rootstream_encoder_init(ctx, ENCODER_VAAPI, codec) < 0) {
-            fprintf(stderr, "ERROR: Encoder init failed\n");
-            return -1;
+    }
+
+    if (!encoder_initialized || !ctx->encoder_backend) {
+        fprintf(stderr, "ERROR: All encoder backends failed!\n");
+        fprintf(stderr, "Tried: ");
+        for (int i = 0; encoder_backends[i].name; i++) {
+            fprintf(stderr, "%s%s", i > 0 ? ", " : "", encoder_backends[i].name);
         }
+        fprintf(stderr, "\n");
+        return -1;
     }
 
     if (rootstream_input_init(ctx) < 0) {
