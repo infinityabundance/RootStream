@@ -44,3 +44,22 @@ android/**/captures/
 android/**/*.apk
 android/**/*.aab
 android/**/release/
+
+# Terraform
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.backup
+infrastructure/terraform/tfplan
+infrastructure/terraform/.terraform.lock.hcl
+infrastructure/terraform/terraform.tfvars
+
+# Docker
+infrastructure/docker/.env
+
+# Kubernetes
+infrastructure/helm/**/charts/
+infrastructure/helm/**/*.tgz
+
+# Logs and temporary files
+infrastructure/**/*.log
+infrastructure/**/tmp/
