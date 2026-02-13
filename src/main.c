@@ -494,10 +494,6 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-        rootstream_cleanup(&ctx);
-        return 0;
-    }
-
     /* Parse command */
     const char *command = (optind < argc) ? argv[optind] : NULL;
 

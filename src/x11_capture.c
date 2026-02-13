@@ -170,7 +170,7 @@ void rootstream_capture_cleanup_x11(rootstream_ctx_t *ctx) {
 
 /* Stub implementation when X11 is not available */
 
-static char last_error[256] = "X11 support not compiled in";
+static char last_error[256] __attribute__((unused)) = "X11 support not compiled in";
 
 int rootstream_capture_init_x11(rootstream_ctx_t *ctx) {
     (void)ctx;

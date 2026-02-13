@@ -379,6 +379,8 @@ int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms) {
         fprintf(stderr, "ERROR: Invalid context\n");
         return -1;
     }
+    
+    (void)timeout_ms;  /* Reserved for future use */
 
     /* First, check for reconnecting peers (iterate backwards to handle removal safely) */
     for (int i = ctx->num_peers - 1; i >= 0; i--) {
