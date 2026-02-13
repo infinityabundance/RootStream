@@ -13,6 +13,13 @@ set(TEST_SOURCES
     test_settingsmanager.cpp
 )
 
+# Renderer unit tests
+if(ENABLE_RENDERER_OPENGL)
+    list(APPEND TEST_SOURCES
+        unit/test_renderer.cpp
+    )
+endif()
+
 # Create test executable for each test file
 foreach(TEST_SOURCE ${TEST_SOURCES})
     get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
@@ -26,7 +33,26 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     
     target_include_directories(${TEST_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/renderer
     )
+    
+    # Link renderer library for renderer tests
+    if(ENABLE_RENDERER_OPENGL AND ${TEST_SOURCE} MATCHES "renderer")
+        target_sources(${TEST_NAME} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/renderer/renderer.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/opengl_renderer.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/opengl_utils.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/color_space.c
+            ${CMAKE_SOURCE_DIR}/src/renderer/frame_buffer.c
+        )
+        target_link_libraries(${TEST_NAME} PRIVATE
+            OpenGL::GL
+            ${X11_LIBRARIES}
+        )
+        target_include_directories(${TEST_NAME} PRIVATE
+            ${X11_INCLUDE_DIR}
+        )
+    endif()
     
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endforeach()
