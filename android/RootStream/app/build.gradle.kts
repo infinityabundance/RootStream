@@ -107,7 +107,8 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     // Protocol Buffers (Optional for packet serialization)
-    implementation("com.google.protobuf:protobuf-kotlin:3.24.4")
+    // Updated to 3.25.5 to fix CVE DoS vulnerability (was 3.24.4)
+    implementation("com.google.protobuf:protobuf-kotlin:3.25.5")
 
     // Security & Encryption
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
