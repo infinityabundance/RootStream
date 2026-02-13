@@ -84,11 +84,8 @@ void test_cache_update_peer() {
     discovery_cache_add_peer(&ctx, &peer);
     uint32_t original_contact_count = ctx.discovery.peer_cache[0].contact_count;
     
-    /* Wait a bit */
-    usleep(10000); /* 10ms */
-    
-    /* Add same peer again (should update) */
-    peer.last_seen_time_us = get_timestamp_us();
+    /* Set an explicitly newer timestamp instead of relying on sleep */
+    peer.last_seen_time_us = get_timestamp_us() + 1000000ULL; /* 1 second in the future */
     int ret = discovery_cache_add_peer(&ctx, &peer);
     assert(ret == 0);
     assert(ctx.discovery.num_cached_peers == 1); /* Still only one peer */

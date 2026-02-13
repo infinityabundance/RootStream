@@ -714,19 +714,31 @@ void discovery_cache_expire_old_entries(rootstream_ctx_t *ctx) {
     uint64_t now_us = get_timestamp_us();
     ctx->discovery.last_cache_cleanup_us = now_us;
     
-    /* Iterate backwards to safely remove entries */
-    for (int i = ctx->discovery.num_cached_peers - 1; i >= 0; i--) {
+    /* Collect indices to remove (iterate backwards for safe removal) */
+    int i = ctx->discovery.num_cached_peers - 1;
+    while (i >= 0) {
         peer_cache_entry_t *entry = &ctx->discovery.peer_cache[i];
         uint64_t age_us = now_us - entry->last_seen_time_us;
         uint64_t ttl_us = (uint64_t)entry->ttl_seconds * 1000000ULL;
         
         if (age_us > ttl_us) {
-            printf("INFO: Expiring cached peer: %s (age: %llu sec)\n",
-                   entry->hostname, age_us / 1000000ULL);
-            discovery_cache_remove_peer(ctx, entry->hostname);
+            /* Remove expired entry */
+            printf("INFO: Expiring cached peer: %s (age: %lu sec)\n",
+                   entry->hostname, (unsigned long)(age_us / 1000000ULL));
+            
+            /* Shift remaining entries */
+            for (int j = i; j < ctx->discovery.num_cached_peers - 1; j++) {
+                ctx->discovery.peer_cache[j] = ctx->discovery.peer_cache[j + 1];
+            }
+            ctx->discovery.num_cached_peers--;
+            ctx->discovery.total_losses++;
+            /* Note: Don't decrement i here as we've shifted entries */
         } else if (age_us > ttl_us / 2) {
             /* Mark as potentially offline if not seen in half TTL */
             entry->is_online = false;
+            i--; /* Move to next entry */
+        } else {
+            i--; /* Move to next entry */
         }
     }
 }
