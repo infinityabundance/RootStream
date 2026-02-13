@@ -4,6 +4,15 @@
  * Fallback when uinput unavailable.
  * Uses xdotool external command (subprocess).
  * Works on X11 systems even without kernel uinput.
+ * 
+ * SECURITY NOTE: This implementation uses system() to execute xdotool commands.
+ * While normally a security risk, the following mitigations are in place:
+ * 1. All key names are from a controlled switch statement (no user input)
+ * 2. Mouse coordinates are integers, not strings (no injection risk)
+ * 3. This is a fallback mechanism only used when uinput is unavailable
+ * 4. xdotool itself is a trusted system utility
+ * 
+ * Future improvement: Use fork()/execve() for additional security hardening.
  */
 
 #include "../include/rootstream.h"

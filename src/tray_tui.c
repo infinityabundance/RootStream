@@ -20,9 +20,14 @@ typedef struct {
     bool running;
 } tui_ctx_t;
 
+static volatile bool needs_redraw = false;
+
 static void handle_resize(int sig) {
     (void)sig;
-    /* Redraw on resize */
+    /* Mark that we need to redraw on next update */
+    needs_redraw = true;
+    endwin();
+    refresh();
 }
 
 int tray_init_tui(rootstream_ctx_t *ctx, int argc, char **argv) {
