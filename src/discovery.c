@@ -76,7 +76,7 @@ static void entry_group_callback(AvahiEntryGroup *g, AvahiEntryGroupState state,
 }
 
 /*
- * Service resolver callback
+ * Service resolver callback (enhanced PHASE 17)
  * Called when a discovered service has been resolved
  */
 static void resolve_callback(AvahiServiceResolver *r,
@@ -109,7 +109,17 @@ static void resolve_callback(AvahiServiceResolver *r,
         printf("✓ Resolved RootStream host: %s at %s:%u\n",
                name, addr_str, port);
 
-        /* Extract RootStream code from TXT records */
+        /* Extract enhanced TXT records (PHASE 17) */
+        peer_cache_entry_t cache_entry = {0};
+        strncpy(cache_entry.hostname, name, sizeof(cache_entry.hostname) - 1);
+        strncpy(cache_entry.ip_address, addr_str, sizeof(cache_entry.ip_address) - 1);
+        cache_entry.port = port;
+        cache_entry.discovered_time_us = get_timestamp_us();
+        cache_entry.last_seen_time_us = cache_entry.discovered_time_us;
+        cache_entry.ttl_seconds = 3600;  /* Default 1 hour TTL */
+        cache_entry.is_online = true;
+        
+        /* Extract RootStream code */
         AvahiStringList *code_txt = avahi_string_list_find(txt, "code");
         if (code_txt) {
             char *key = NULL;
@@ -117,41 +127,102 @@ static void resolve_callback(AvahiServiceResolver *r,
             size_t value_len = 0;
 
             if (avahi_string_list_get_pair(code_txt, &key, &value, &value_len) >= 0) {
-                /* Add discovered peer to context */
-                if (ctx->num_peers < MAX_PEERS) {
-                    peer_t *peer = &ctx->peers[ctx->num_peers];
-
-                    /* Parse address */
-                    struct sockaddr_in *addr = (struct sockaddr_in*)&peer->addr;
-                    addr->sin_family = AF_INET;
-                    addr->sin_port = htons(port);
-                    if (avahi_address_parse(addr_str, AVAHI_PROTO_INET,
-                                           (AvahiAddress*)&addr->sin_addr) != NULL) {
-                        /* Store peer info */
-                        strncpy(peer->hostname, name, sizeof(peer->hostname) - 1);
-                        peer->hostname[sizeof(peer->hostname) - 1] = '\0';
-
-                        strncpy(peer->rootstream_code, value,
-                               sizeof(peer->rootstream_code) - 1);
-                        peer->rootstream_code[sizeof(peer->rootstream_code) - 1] = '\0';
-
-                        peer->state = PEER_DISCOVERED;
-                        peer->last_seen = get_timestamp_ms();
-
-                        ctx->num_peers++;
-
-                        printf("  → Added peer: %s (code: %.8s...)\n",
-                               peer->hostname, peer->rootstream_code);
-                    }
-                } else {
-                    fprintf(stderr, "WARNING: Max peers reached, cannot add %s\n", name);
-                }
-
+                strncpy(cache_entry.rootstream_code, value,
+                       sizeof(cache_entry.rootstream_code) - 1);
+                cache_entry.rootstream_code[sizeof(cache_entry.rootstream_code) - 1] = '\0';
+                avahi_free(key);
+                avahi_free(value);
+            }
+        }
+        
+        /* Extract capability */
+        AvahiStringList *capability_txt = avahi_string_list_find(txt, "capability");
+        if (capability_txt) {
+            char *key = NULL;
+            char *value = NULL;
+            size_t value_len = 0;
+            if (avahi_string_list_get_pair(capability_txt, &key, &value, &value_len) >= 0) {
+                strncpy(cache_entry.capability, value,
+                       sizeof(cache_entry.capability) - 1);
                 avahi_free(key);
                 avahi_free(value);
             }
         } else {
-            fprintf(stderr, "WARNING: No RootStream code in TXT records for %s\n", name);
+            strncpy(cache_entry.capability, "unknown", sizeof(cache_entry.capability) - 1);
+        }
+        
+        /* Extract version */
+        AvahiStringList *version_txt = avahi_string_list_find(txt, "version");
+        if (version_txt) {
+            char *key = NULL;
+            char *value = NULL;
+            size_t value_len = 0;
+            if (avahi_string_list_get_pair(version_txt, &key, &value, &value_len) >= 0) {
+                strncpy(cache_entry.version, value,
+                       sizeof(cache_entry.version) - 1);
+                avahi_free(key);
+                avahi_free(value);
+            }
+        }
+        
+        /* Extract max_peers */
+        AvahiStringList *max_peers_txt = avahi_string_list_find(txt, "max_peers");
+        if (max_peers_txt) {
+            char *key = NULL;
+            char *value = NULL;
+            size_t value_len = 0;
+            if (avahi_string_list_get_pair(max_peers_txt, &key, &value, &value_len) >= 0) {
+                cache_entry.max_peers = (uint32_t)atoi(value);
+                avahi_free(key);
+                avahi_free(value);
+            }
+        }
+        
+        /* Extract bandwidth */
+        AvahiStringList *bandwidth_txt = avahi_string_list_find(txt, "bandwidth");
+        if (bandwidth_txt) {
+            char *key = NULL;
+            char *value = NULL;
+            size_t value_len = 0;
+            if (avahi_string_list_get_pair(bandwidth_txt, &key, &value, &value_len) >= 0) {
+                strncpy(cache_entry.bandwidth, value,
+                       sizeof(cache_entry.bandwidth) - 1);
+                avahi_free(key);
+                avahi_free(value);
+            }
+        }
+        
+        /* Add to cache */
+        discovery_cache_add_peer(ctx, &cache_entry);
+        
+        /* Add discovered peer to context (backwards compatibility) */
+        if (strlen(cache_entry.rootstream_code) > 0 && ctx->num_peers < MAX_PEERS) {
+            peer_t *peer = &ctx->peers[ctx->num_peers];
+
+            /* Parse address */
+            struct sockaddr_in *addr = (struct sockaddr_in*)&peer->addr;
+            addr->sin_family = AF_INET;
+            addr->sin_port = htons(port);
+            if (avahi_address_parse(addr_str, AVAHI_PROTO_INET,
+                                   (AvahiAddress*)&addr->sin_addr) != NULL) {
+                /* Store peer info */
+                strncpy(peer->hostname, name, sizeof(peer->hostname) - 1);
+                peer->hostname[sizeof(peer->hostname) - 1] = '\0';
+
+                strncpy(peer->rootstream_code, cache_entry.rootstream_code,
+                       sizeof(peer->rootstream_code) - 1);
+                peer->rootstream_code[sizeof(peer->rootstream_code) - 1] = '\0';
+
+                peer->state = PEER_DISCOVERED;
+                peer->last_seen = get_timestamp_ms();
+
+                ctx->num_peers++;
+
+                printf("  → Added peer: %s (code: %.8s..., %s)\n",
+                       peer->hostname, peer->rootstream_code, cache_entry.capability);
+                       
+                ctx->discovery.mdns_discoveries++;
+            }
         }
     } else {
         fprintf(stderr, "WARNING: Failed to resolve service %s: %s\n",
@@ -163,7 +234,7 @@ static void resolve_callback(AvahiServiceResolver *r,
 }
 
 /*
- * Service browser callback
+ * Service browser callback (enhanced PHASE 17)
  * Called when services are found or lost
  */
 static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
@@ -198,7 +269,10 @@ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
         case AVAHI_BROWSER_REMOVE:
             printf("INFO: RootStream service removed: %s\n", name);
 
-            /* Find and remove peer */
+            /* Remove from cache */
+            discovery_cache_remove_peer(ctx, name);
+
+            /* Find and remove peer (backwards compatibility) */
             for (int i = 0; i < ctx->num_peers; i++) {
                 if (strcmp(ctx->peers[i].hostname, name) == 0) {
                     /* Disconnect if connected */
@@ -334,7 +408,7 @@ try_broadcast:
 }
 
 /*
- * Announce service on network (with fallback support - PHASE 5)
+ * Announce service on network (with fallback support - PHASE 5, enhanced PHASE 17)
  */
 int discovery_announce(rootstream_ctx_t *ctx) {
     if (!ctx) return -1;
@@ -354,9 +428,10 @@ int discovery_announce(rootstream_ctx_t *ctx) {
             }
         }
 
-        /* Prepare TXT records */
+        /* Prepare enhanced TXT records (PHASE 17) */
         AvahiStringList *txt = NULL;
-        char version_txt[64], pubkey_txt[256];
+        char version_txt[64], pubkey_txt[256], capability_txt[64];
+        char max_peers_txt[64], bandwidth_txt[64];
         
         snprintf(version_txt, sizeof(version_txt), "version=%s", ROOTSTREAM_VERSION);
         txt = avahi_string_list_add(txt, version_txt);
@@ -364,6 +439,20 @@ int discovery_announce(rootstream_ctx_t *ctx) {
         snprintf(pubkey_txt, sizeof(pubkey_txt), "code=%s", 
                  ctx->keypair.rootstream_code);
         txt = avahi_string_list_add(txt, pubkey_txt);
+        
+        /* Add capability: host if we can encode, client if we can decode */
+        const char *capability = ctx->is_host ? "host" : "client";
+        snprintf(capability_txt, sizeof(capability_txt), "capability=%s", capability);
+        txt = avahi_string_list_add(txt, capability_txt);
+        
+        /* Add max peers capacity */
+        snprintf(max_peers_txt, sizeof(max_peers_txt), "max_peers=%d", MAX_PEERS);
+        txt = avahi_string_list_add(txt, max_peers_txt);
+        
+        /* Add bandwidth estimate (simplified) */
+        uint32_t bitrate_mbps = ctx->settings.video_bitrate / 1000000;
+        snprintf(bandwidth_txt, sizeof(bandwidth_txt), "bandwidth=%uMbps", bitrate_mbps);
+        txt = avahi_string_list_add(txt, bandwidth_txt);
 
         /* Add service */
         int ret = avahi_entry_group_add_service_strlst(
@@ -394,7 +483,7 @@ int discovery_announce(rootstream_ctx_t *ctx) {
             goto try_broadcast;
         }
 
-        printf("→ Announcing service on network (mDNS)\n");
+        printf("→ Announcing service on network (mDNS) [%s]\n", capability);
         return 0;
     }
 
@@ -488,5 +577,195 @@ void discovery_cleanup(rootstream_ctx_t *ctx) {
     ctx->discovery.avahi_client = NULL;
 #endif
 
+    /* Cleanup cache */
+    discovery_cache_cleanup(ctx);
+    
     ctx->discovery.running = false;
+}
+
+/* ============================================================================
+ * PHASE 17: Enhanced Discovery Cache Management
+ * ============================================================================ */
+
+/*
+ * Add peer to discovery cache
+ */
+int discovery_cache_add_peer(rootstream_ctx_t *ctx, const peer_cache_entry_t *entry) {
+    if (!ctx || !entry) return -1;
+    
+    /* Check if peer already exists */
+    for (int i = 0; i < ctx->discovery.num_cached_peers; i++) {
+        if (strcmp(ctx->discovery.peer_cache[i].hostname, entry->hostname) == 0) {
+            /* Update existing entry */
+            ctx->discovery.peer_cache[i] = *entry;
+            ctx->discovery.peer_cache[i].contact_count++;
+            return 0;
+        }
+    }
+    
+    /* Add new entry if space available */
+    if (ctx->discovery.num_cached_peers >= MAX_CACHED_PEERS) {
+        fprintf(stderr, "WARNING: Peer cache full, cannot add %s\n", entry->hostname);
+        return -1;
+    }
+    
+    ctx->discovery.peer_cache[ctx->discovery.num_cached_peers] = *entry;
+    ctx->discovery.num_cached_peers++;
+    ctx->discovery.total_discoveries++;
+    
+    printf("✓ Cached peer: %s (%s:%u)\n", entry->hostname, entry->ip_address, entry->port);
+    return 0;
+}
+
+/*
+ * Update peer's last seen time
+ */
+int discovery_cache_update_peer(rootstream_ctx_t *ctx, const char *hostname,
+                               uint64_t last_seen_time_us) {
+    if (!ctx || !hostname) return -1;
+    
+    for (int i = 0; i < ctx->discovery.num_cached_peers; i++) {
+        if (strcmp(ctx->discovery.peer_cache[i].hostname, hostname) == 0) {
+            ctx->discovery.peer_cache[i].last_seen_time_us = last_seen_time_us;
+            ctx->discovery.peer_cache[i].is_online = true;
+            return 0;
+        }
+    }
+    
+    return -1;  /* Peer not found */
+}
+
+/*
+ * Remove peer from cache
+ */
+int discovery_cache_remove_peer(rootstream_ctx_t *ctx, const char *hostname) {
+    if (!ctx || !hostname) return -1;
+    
+    for (int i = 0; i < ctx->discovery.num_cached_peers; i++) {
+        if (strcmp(ctx->discovery.peer_cache[i].hostname, hostname) == 0) {
+            /* Shift remaining entries */
+            for (int j = i; j < ctx->discovery.num_cached_peers - 1; j++) {
+                ctx->discovery.peer_cache[j] = ctx->discovery.peer_cache[j + 1];
+            }
+            ctx->discovery.num_cached_peers--;
+            ctx->discovery.total_losses++;
+            return 0;
+        }
+    }
+    
+    return -1;  /* Peer not found */
+}
+
+/*
+ * Get peer from cache
+ */
+peer_cache_entry_t* discovery_cache_get_peer(rootstream_ctx_t *ctx, const char *hostname) {
+    if (!ctx || !hostname) return NULL;
+    
+    for (int i = 0; i < ctx->discovery.num_cached_peers; i++) {
+        if (strcmp(ctx->discovery.peer_cache[i].hostname, hostname) == 0) {
+            return &ctx->discovery.peer_cache[i];
+        }
+    }
+    
+    return NULL;
+}
+
+/*
+ * Get all cached peers
+ */
+int discovery_cache_get_all(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
+                           int max_entries) {
+    if (!ctx || !entries || max_entries <= 0) return -1;
+    
+    int count = ctx->discovery.num_cached_peers;
+    if (count > max_entries) count = max_entries;
+    
+    for (int i = 0; i < count; i++) {
+        entries[i] = ctx->discovery.peer_cache[i];
+    }
+    
+    return count;
+}
+
+/*
+ * Get only online cached peers
+ */
+int discovery_cache_get_online(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
+                               int max_entries) {
+    if (!ctx || !entries || max_entries <= 0) return -1;
+    
+    int count = 0;
+    for (int i = 0; i < ctx->discovery.num_cached_peers && count < max_entries; i++) {
+        if (ctx->discovery.peer_cache[i].is_online) {
+            entries[count++] = ctx->discovery.peer_cache[i];
+        }
+    }
+    
+    return count;
+}
+
+/*
+ * Expire old cache entries based on TTL
+ */
+void discovery_cache_expire_old_entries(rootstream_ctx_t *ctx) {
+    if (!ctx) return;
+    
+    uint64_t now_us = get_timestamp_us();
+    ctx->discovery.last_cache_cleanup_us = now_us;
+    
+    /* Iterate backwards to safely remove entries */
+    for (int i = ctx->discovery.num_cached_peers - 1; i >= 0; i--) {
+        peer_cache_entry_t *entry = &ctx->discovery.peer_cache[i];
+        uint64_t age_us = now_us - entry->last_seen_time_us;
+        uint64_t ttl_us = (uint64_t)entry->ttl_seconds * 1000000ULL;
+        
+        if (age_us > ttl_us) {
+            printf("INFO: Expiring cached peer: %s (age: %llu sec)\n",
+                   entry->hostname, age_us / 1000000ULL);
+            discovery_cache_remove_peer(ctx, entry->hostname);
+        } else if (age_us > ttl_us / 2) {
+            /* Mark as potentially offline if not seen in half TTL */
+            entry->is_online = false;
+        }
+    }
+}
+
+/*
+ * Cleanup cache
+ */
+void discovery_cache_cleanup(rootstream_ctx_t *ctx) {
+    if (!ctx) return;
+    
+    ctx->discovery.num_cached_peers = 0;
+    memset(ctx->discovery.peer_cache, 0, sizeof(ctx->discovery.peer_cache));
+}
+
+/*
+ * Print discovery statistics
+ */
+void discovery_print_stats(rootstream_ctx_t *ctx) {
+    if (!ctx) return;
+    
+    printf("\n=== Discovery Statistics ===\n");
+    printf("  Total discoveries:     %llu\n", ctx->discovery.total_discoveries);
+    printf("  Total losses:          %llu\n", ctx->discovery.total_losses);
+    printf("  mDNS discoveries:      %llu\n", ctx->discovery.mdns_discoveries);
+    printf("  Broadcast discoveries: %llu\n", ctx->discovery.broadcast_discoveries);
+    printf("  Manual discoveries:    %llu\n", ctx->discovery.manual_discoveries);
+    printf("  Cached peers:          %d\n", ctx->discovery.num_cached_peers);
+    
+    if (ctx->discovery.num_cached_peers > 0) {
+        printf("\n=== Cached Peers ===\n");
+        for (int i = 0; i < ctx->discovery.num_cached_peers; i++) {
+            peer_cache_entry_t *entry = &ctx->discovery.peer_cache[i];
+            printf("  %d. %s (%s:%u) - %s %s\n", i + 1,
+                   entry->hostname,
+                   entry->ip_address,
+                   entry->port,
+                   entry->capability,
+                   entry->is_online ? "[online]" : "[offline]");
+        }
+    }
+    printf("\n");
 }

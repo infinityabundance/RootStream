@@ -27,6 +27,9 @@ typedef struct {
     char hostname[256];       /* Sender hostname */
     uint16_t listen_port;     /* Port peer is listening on */
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN]; /* User's RootStream code */
+    char capability[32];      /* "host", "client", or "both" (PHASE 17) */
+    uint32_t max_peers;       /* Max peer capacity (PHASE 17) */
+    char bandwidth[32];       /* Bandwidth estimate (PHASE 17) */
 } discovery_broadcast_packet_t;
 
 /*
@@ -69,7 +72,7 @@ static int get_local_ip(char *ip_buf, size_t ip_len, char *bcast_buf, size_t bca
 }
 
 /*
- * Broadcast discovery query
+ * Broadcast discovery query (enhanced PHASE 17)
  */
 int discovery_broadcast_announce(rootstream_ctx_t *ctx) {
     if (!ctx) return -1;
@@ -98,7 +101,7 @@ int discovery_broadcast_announce(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    /* Create announcement packet */
+    /* Create enhanced announcement packet (PHASE 17) */
     discovery_broadcast_packet_t pkt;
     memset(&pkt, 0, sizeof(pkt));
     memcpy(pkt.magic, DISCOVERY_MAGIC, strlen(DISCOVERY_MAGIC));
@@ -107,6 +110,13 @@ int discovery_broadcast_announce(rootstream_ctx_t *ctx) {
     pkt.listen_port = ctx->port;
     strncpy(pkt.rootstream_code, ctx->keypair.rootstream_code, 
             sizeof(pkt.rootstream_code) - 1);
+    
+    /* Add enhanced fields */
+    const char *capability = ctx->is_host ? "host" : "client";
+    strncpy(pkt.capability, capability, sizeof(pkt.capability) - 1);
+    pkt.max_peers = MAX_PEERS;
+    uint32_t bitrate_mbps = ctx->settings.video_bitrate / 1000000;
+    snprintf(pkt.bandwidth, sizeof(pkt.bandwidth), "%uMbps", bitrate_mbps);
 
     struct sockaddr_in bcast_addr = {
         .sin_family = AF_INET,
@@ -124,7 +134,7 @@ int discovery_broadcast_announce(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    printf("✓ Broadcast discovery announced (%s:%u)\n", local_ip, ctx->port);
+    printf("✓ Broadcast discovery announced (%s:%u) [%s]\n", local_ip, ctx->port, capability);
     return 0;
 }
 
@@ -190,8 +200,27 @@ int discovery_broadcast_listen(rootstream_ctx_t *ctx, int timeout_ms) {
     char peer_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &from_addr.sin_addr, peer_ip, sizeof(peer_ip));
 
-    printf("✓ Discovered peer: %s (%s:%u, code: %.16s...)\n",
-           pkt.hostname, peer_ip, ntohs(pkt.listen_port), pkt.rootstream_code);
+    printf("✓ Discovered peer: %s (%s:%u, code: %.16s..., %s)\n",
+           pkt.hostname, peer_ip, ntohs(pkt.listen_port), pkt.rootstream_code,
+           strlen(pkt.capability) > 0 ? pkt.capability : "unknown");
+
+    /* Add to cache (PHASE 17) */
+    peer_cache_entry_t cache_entry = {0};
+    strncpy(cache_entry.hostname, pkt.hostname, sizeof(cache_entry.hostname) - 1);
+    strncpy(cache_entry.ip_address, peer_ip, sizeof(cache_entry.ip_address) - 1);
+    cache_entry.port = ntohs(pkt.listen_port);
+    strncpy(cache_entry.rootstream_code, pkt.rootstream_code,
+            sizeof(cache_entry.rootstream_code) - 1);
+    strncpy(cache_entry.capability, pkt.capability, sizeof(cache_entry.capability) - 1);
+    cache_entry.max_peers = pkt.max_peers;
+    strncpy(cache_entry.bandwidth, pkt.bandwidth, sizeof(cache_entry.bandwidth) - 1);
+    cache_entry.discovered_time_us = get_timestamp_us();
+    cache_entry.last_seen_time_us = cache_entry.discovered_time_us;
+    cache_entry.ttl_seconds = 3600;
+    cache_entry.is_online = true;
+    
+    discovery_cache_add_peer(ctx, &cache_entry);
+    ctx->discovery.broadcast_discoveries++;
 
     /* Add to peer list if not already present */
     bool already_exists = false;

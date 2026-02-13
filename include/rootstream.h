@@ -399,7 +399,7 @@ typedef struct {
 } peer_t;
 
 /* ============================================================================
- * DISCOVERY - mDNS/Avahi service discovery
+ * DISCOVERY - mDNS/Avahi service discovery (PHASE 17 Enhanced)
  * ============================================================================ */
 
 /* Peer history entry for quick reconnection (PHASE 5) */
@@ -410,11 +410,43 @@ typedef struct {
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];
 } peer_history_entry_t;
 
+/* Enhanced peer cache entry with TTL and statistics (PHASE 17) */
+typedef struct {
+    char hostname[256];
+    char ip_address[64];       /* String IP address */
+    uint16_t port;
+    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];
+    char capability[32];       /* "host", "client", or "both" */
+    char version[16];          /* Protocol version */
+    uint32_t max_peers;        /* Advertised max peer capacity */
+    char bandwidth[32];        /* Advertised bandwidth */
+    uint64_t discovered_time_us;    /* When first discovered */
+    uint64_t last_seen_time_us;     /* Last advertisement/update */
+    uint32_t ttl_seconds;      /* Time-to-live */
+    bool is_online;            /* Currently online */
+    uint32_t contact_count;    /* Times successfully contacted */
+    uint32_t failure_count;    /* Connection failures */
+} peer_cache_entry_t;
+
+#define MAX_CACHED_PEERS 64
+
 typedef struct {
     void *avahi_client;        /* Avahi client (opaque) */
     void *avahi_group;         /* Avahi entry group (opaque) */
     void *avahi_browser;       /* Avahi service browser (opaque) */
     bool running;              /* Discovery active? */
+    
+    /* Enhanced discovery features (PHASE 17) */
+    peer_cache_entry_t peer_cache[MAX_CACHED_PEERS];
+    int num_cached_peers;
+    uint64_t last_cache_cleanup_us;  /* Last cache expiry check */
+    
+    /* Discovery statistics */
+    uint64_t total_discoveries;
+    uint64_t total_losses;
+    uint64_t mdns_discoveries;
+    uint64_t broadcast_discoveries;
+    uint64_t manual_discoveries;
 } discovery_ctx_t;
 
 /* ============================================================================
@@ -842,6 +874,20 @@ void discovery_list_peer_history(rootstream_ctx_t *ctx);
 int discovery_parse_address(const char *address, char *hostname, uint16_t *port);
 int discovery_parse_rootstream_code(rootstream_ctx_t *ctx, const char *code, 
                                     char *hostname, uint16_t *port);
+
+/* Discovery - Enhanced Cache (PHASE 17) */
+int discovery_cache_add_peer(rootstream_ctx_t *ctx, const peer_cache_entry_t *entry);
+int discovery_cache_update_peer(rootstream_ctx_t *ctx, const char *hostname,
+                               uint64_t last_seen_time_us);
+int discovery_cache_remove_peer(rootstream_ctx_t *ctx, const char *hostname);
+peer_cache_entry_t* discovery_cache_get_peer(rootstream_ctx_t *ctx, const char *hostname);
+int discovery_cache_get_all(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
+                           int max_entries);
+int discovery_cache_get_online(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
+                               int max_entries);
+void discovery_cache_expire_old_entries(rootstream_ctx_t *ctx);
+void discovery_cache_cleanup(rootstream_ctx_t *ctx);
+void discovery_print_stats(rootstream_ctx_t *ctx);
 
 
 /* --- Input (existing, polished) --- */
