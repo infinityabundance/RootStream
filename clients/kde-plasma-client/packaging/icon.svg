@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" version="1.1" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90e2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357abd;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="url(#gradient)" />
+  
+  <!-- Play symbol (simplified) -->
+  <path d="M 90,70 L 90,186 L 190,128 Z" fill="white" opacity="0.9" />
+  
+  <!-- Network lines (simplified) -->
+  <circle cx="50" cy="50" r="8" fill="white" opacity="0.7" />
+  <circle cx="206" cy="50" r="8" fill="white" opacity="0.7" />
+  <circle cx="50" cy="206" r="8" fill="white" opacity="0.7" />
+  <circle cx="206" cy="206" r="8" fill="white" opacity="0.7" />
+  <line x1="50" y1="50" x2="128" y2="128" stroke="white" stroke-width="2" opacity="0.5" />
+  <line x1="206" y1="50" x2="128" y2="128" stroke="white" stroke-width="2" opacity="0.5" />
+  <line x1="50" y1="206" x2="128" y2="128" stroke="white" stroke-width="2" opacity="0.5" />
+  <line x1="206" y1="206" x2="128" y2="128" stroke="white" stroke-width="2" opacity="0.5" />
+</svg>
