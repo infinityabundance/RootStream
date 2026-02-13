@@ -6,6 +6,7 @@
 #define ROOTSTREAM_ATTACK_PREVENTION_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus

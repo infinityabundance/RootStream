@@ -92,7 +92,7 @@ bool user_auth_verify_totp(const char *secret, const char *code) {
     /* In production, use proper TOTP library (RFC 6238) */
     
     /* Get current time in 30-second intervals */
-    uint64_t time_step = (uint64_t)time(NULL) / 30;
+    /* uint64_t time_step = (uint64_t)time(NULL) / 30; */ /* Unused for now */
     
     /* For demonstration, accept any 6-digit code */
     /* Real implementation would compute HMAC-SHA1 of time_step with secret */
@@ -136,7 +136,7 @@ int user_auth_create_session(const char *username, user_auth_session_t *session)
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     session->expiration_time_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    session->expiration_time_us += 3600 * 1000000;  /* +1 hour */
+    session->expiration_time_us += 3600ULL * 1000000ULL;  /* +1 hour */
     
     session->mfa_verified = false;
     

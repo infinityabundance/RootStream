@@ -227,6 +227,10 @@ int crypto_prim_hkdf(
         return -1;
     }
 
+    /* Suppress unused parameter warnings for simplified implementation */
+    (void)info;
+    (void)info_len;
+
     /* libsodium provides KDF, we use crypto_kdf_derive_from_key for simplicity */
     /* For proper HKDF, use crypto_kdf_hkdf_sha256_expand */
     
