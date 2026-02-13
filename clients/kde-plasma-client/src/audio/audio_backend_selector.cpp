@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #ifdef HAVE_PULSEAUDIO
-#include <pulse/pulseaudio.h>
+#include <pulse/simple.h>
 #endif
 
 AudioBackendSelector::AudioBackend AudioBackendSelector::detect_available_backend() {
@@ -31,13 +31,18 @@ AudioBackendSelector::AudioBackend AudioBackendSelector::detect_available_backen
 bool AudioBackendSelector::check_pulseaudio_available() {
 #ifdef HAVE_PULSEAUDIO
     // Try to create a simple PulseAudio connection
+    pa_sample_spec ss;
+    ss.format = PA_SAMPLE_FLOAT32LE;
+    ss.rate = 48000;
+    ss.channels = 2;
+    
     pa_simple *test = pa_simple_new(
         nullptr,            // server
         "RootStream-Test",  // app name
         PA_STREAM_PLAYBACK, // direction
         nullptr,            // device
         "test",             // stream name
-        &(pa_sample_spec){PA_SAMPLE_FLOAT32LE, 48000, 2}, // sample spec
+        &ss,                // sample spec
         nullptr,            // channel map
         nullptr,            // buffer attributes
         nullptr             // error code

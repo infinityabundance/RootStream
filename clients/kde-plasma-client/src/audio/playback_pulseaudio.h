@@ -10,7 +10,7 @@
 
 class PulseAudioPlayback {
 private:
-    pa_simple *pa_simple;
+    pa_simple *pa_handle;
     int sample_rate;
     int channels;
     bool playing;

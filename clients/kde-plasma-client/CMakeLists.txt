@@ -63,6 +63,7 @@ endif()
 
 # Include RootStream library
 include_directories(${CMAKE_SOURCE_DIR}/../../include)
+include_directories(${CMAKE_SOURCE_DIR}/../../src)
 
 # Sources
 set(SOURCES
