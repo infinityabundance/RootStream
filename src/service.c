@@ -549,6 +549,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
         rootstream_decoder_cleanup(ctx);
         return -1;
     }
+    ctx->active_backend.display_name = "SDL2";
 
     /* Initialize audio playback with fallback */
     if (ctx->settings.audio_enabled) {
@@ -636,7 +637,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
     printf("║  RootStream Client Backend Status              ║\n");
     printf("╚════════════════════════════════════════════════╝\n");
     printf("Decoder:       %s\n", ctx->active_backend.decoder_name);
-    printf("Display:       SDL2\n");  /* Currently SDL2 only, no fallback needed */
+    printf("Display:       %s\n", ctx->active_backend.display_name);
     printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name);
     printf("\n");
 

@@ -66,6 +66,7 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     ctx->active_backend.audio_cap_name = "uninitialized";
     ctx->active_backend.audio_play_name = "uninitialized";
     ctx->active_backend.decoder_name = "uninitialized";
+    ctx->active_backend.display_name = "uninitialized";
 
     ctx->backend_prefs.capture_override = NULL;
     ctx->backend_prefs.encoder_override = NULL;

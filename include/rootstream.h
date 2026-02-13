@@ -72,7 +72,7 @@
  * Example usage (future):
  *   int result;
  *   const char *name;
- *   TRY_INIT_BACKEND(ctx, primary_init, "Primary", fallback_init, "Fallback", result, name);
+ *   TRY_INIT_BACKEND(ctx, primary_init, "Primary", fallback_init, "Fallback", &result, &name);
  *   if (result) {
  *       ctx->active_backend.some_name = name;
  *   }
@@ -80,15 +80,15 @@
 #define TRY_INIT_BACKEND(ctx, primary_fn, primary_name, fallback_fn, fallback_name, result_ptr, name_ptr) \
     do { \
         if ((primary_fn)(ctx) == 0) { \
-            (name_ptr) = (primary_name); \
-            (result_ptr) = 1; /* Mark as initialized */ \
-        } else if ((fallback_fn) && (fallback_fn)(ctx) == 0) { \
+            *(name_ptr) = (primary_name); \
+            *(result_ptr) = 1; /* Mark as initialized */ \
+        } else if ((fallback_fn) != NULL && (fallback_fn)(ctx) == 0) { \
             printf("INFO: Primary failed, using fallback: %s\n", (fallback_name)); \
-            (name_ptr) = (fallback_name); \
-            (result_ptr) = 1; \
+            *(name_ptr) = (fallback_name); \
+            *(result_ptr) = 1; \
         } else { \
             printf("ERROR: Both primary and fallback failed\n"); \
-            (result_ptr) = 0; \
+            *(result_ptr) = 0; \
         } \
     } while(0)
 
@@ -494,6 +494,7 @@ typedef struct rootstream_ctx {
         const char *audio_cap_name;    /* Name of active audio capture backend */
         const char *audio_play_name;   /* Name of active audio playback backend */
         const char *decoder_name;      /* Name of active decoder backend */
+        const char *display_name;      /* Name of active display backend */
     } active_backend;
 
     /* User preferences for backend override */
