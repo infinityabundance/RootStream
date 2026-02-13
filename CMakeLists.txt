@@ -2,11 +2,15 @@
 # Supports Linux (host + client) and Windows (client only)
 
 cmake_minimum_required(VERSION 3.16)
-project(rootstream VERSION 1.0.0 LANGUAGES C)
+project(rootstream VERSION 1.0.0 LANGUAGES C CXX)
 
 # C11 standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# C++17 standard (for recording system)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -84,6 +88,9 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(PNG libpng)
     pkg_check_modules(X11 x11)
     pkg_check_modules(NCURSES ncurses)
+    
+    # PHASE 18: Recording support with FFmpeg
+    pkg_check_modules(FFMPEG libavformat libavcodec libavutil)
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -107,6 +114,10 @@ if(UNIX AND NOT APPLE)
     
     if(NCURSES_FOUND)
         add_compile_definitions(HAVE_NCURSES)
+    endif()
+    
+    if(FFMPEG_FOUND)
+        add_compile_definitions(HAVE_FFMPEG_MUXING)
     endif()
 endif()
 
@@ -180,6 +191,14 @@ set(LINUX_SOURCES
     src/recording.c
     src/qrcode.c
 )
+
+# PHASE 18: Recording system (optional, requires FFmpeg)
+if(FFMPEG_FOUND)
+    list(APPEND LINUX_SOURCES
+        src/recording/disk_manager.cpp
+        src/recording/recording_manager.cpp
+    )
+endif()
 
 if(NOT HEADLESS)
     list(APPEND LINUX_SOURCES src/tray.c src/tray_cli.c src/tray_tui.c)
@@ -431,6 +450,20 @@ add_executable(test_packet tests/unit/test_packet.c src/packet_validate.c)
 target_include_directories(test_packet PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME packet_tests COMMAND test_packet)
 
+# PHASE 18: Recording tests
+add_executable(test_recording_types tests/unit/test_recording_types.c)
+target_include_directories(test_recording_types PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+add_test(NAME recording_types_tests COMMAND test_recording_types)
+
+if(FFMPEG_FOUND)
+    add_executable(test_disk_manager tests/unit/test_disk_manager.cpp 
+                   src/recording/disk_manager.cpp)
+    target_include_directories(test_disk_manager PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include 
+        ${CMAKE_SOURCE_DIR}/src/recording)
+    add_test(NAME disk_manager_tests COMMAND test_disk_manager)
+endif()
+
 # PHASE 8: Integration and Unit Tests
 option(ENABLE_UNIT_TESTS "Build PHASE 8 unit tests" ON)
 option(ENABLE_INTEGRATION_TESTS "Build PHASE 8 integration tests" ON)
@@ -455,6 +488,7 @@ if(UNIX)
     message(STATUS "  PulseAudio:    ${PULSEAUDIO_FOUND}")
     message(STATUS "  PipeWire:      ${PIPEWIRE_FOUND}")
     message(STATUS "  Avahi:         ${AVAHI_FOUND}")
+    message(STATUS "  FFmpeg (Recording): ${FFMPEG_FOUND}")
 endif()
 message(STATUS "")
 message(STATUS "PHASE 8 Testing:")

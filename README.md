@@ -102,6 +102,17 @@ Target: 14-24ms latency | ~15MB memory baseline
 - **Adaptive Quality** - Prioritizes framerate consistency
 - **Input Injection** - Virtual keyboard/mouse via uinput (requires video group membership)
 
+### 🎥 Stream Recording (Phase 18)
+
+- **Multi-Codec Support** - H.264 (fast, universal), VP9 (better compression), AV1 (best compression)
+- **Quality Presets** - Fast, Balanced, High Quality, and Archival modes
+- **Container Formats** - MP4 (universal compatibility), Matroska/MKV (advanced features)
+- **Audio Options** - Opus passthrough (no re-encoding) or AAC encoding
+- **Smart Storage** - Automatic disk space monitoring and cleanup of old recordings
+- **Instant Replay** - Save the last N seconds of gameplay (buffer feature)
+
+> **Note**: Recording feature requires FFmpeg libraries. See `src/recording/README.md` for details.
+
 ### 💡 Actually Easy to Use
 
 1. **Install RootStream**
@@ -282,7 +293,19 @@ rootstream --service
 
 # Enable latency percentile logging (host service loop)
 rootstream host --latency-log --latency-interval 1000
+
+# Recording commands (Phase 18)
+rootstream --record output.mp4              # Start recording
+rootstream --record output.mp4 --preset balanced  # With preset
+rootstream --replay-save last30s.mp4       # Save last 30 seconds
 ```
+
+**Recording Options**
+- `--record FILE` - Start recording to specified file
+- `--preset {fast|balanced|high|archival}` - Select quality preset (default: balanced)
+- `--replay-save FILE` - Save instant replay buffer to file
+- Recording requires FFmpeg libraries (libavformat, libavcodec, libavutil)
+- See `src/recording/README.md` for detailed documentation
 
 **Latency Logging**
 - `--latency-log` prints p50/p95/p99 for capture/encode/send/total stages.
