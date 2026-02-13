@@ -16,6 +16,7 @@ endif()
 # Options
 option(ENABLE_AI_LOGGING "Enable AI logging support" ON)
 option(ENABLE_RENDERER_OPENGL "Enable OpenGL renderer backend" ON)
+option(ENABLE_RENDERER_VULKAN "Enable Vulkan renderer backend" ON)
 
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets OpenGL)
@@ -24,6 +25,15 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Widgets OpenGL)
 if(ENABLE_RENDERER_OPENGL)
     find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
+endif()
+
+# Find Vulkan
+if(ENABLE_RENDERER_VULKAN)
+    find_package(Vulkan)
+    if(NOT Vulkan_FOUND)
+        message(WARNING "Vulkan not found, disabling Vulkan renderer")
+        set(ENABLE_RENDERER_VULKAN OFF)
+    endif()
 endif()
 
 # Find KDE Frameworks  
@@ -39,6 +49,14 @@ pkg_check_modules(OPUS REQUIRED opus)
 pkg_check_modules(VAAPI libva libva-drm)
 pkg_check_modules(PULSEAUDIO libpulse-simple libpulse)
 pkg_check_modules(PIPEWIRE libpipewire-0.3)
+
+# Wayland (for Vulkan renderer)
+if(ENABLE_RENDERER_VULKAN)
+    pkg_check_modules(WAYLAND wayland-client)
+    if(NOT WAYLAND_FOUND)
+        message(STATUS "Wayland not found, Vulkan Wayland backend will be limited")
+    endif()
+endif()
 
 # Include RootStream library
 include_directories(${CMAKE_SOURCE_DIR}/../../include)
@@ -63,6 +81,19 @@ if(ENABLE_RENDERER_OPENGL)
         src/renderer/renderer.c
         src/renderer/opengl_renderer.c
         src/renderer/opengl_utils.c
+        src/renderer/color_space.c
+        src/renderer/frame_buffer.c
+    )
+endif()
+
+# Vulkan renderer sources
+if(ENABLE_RENDERER_VULKAN)
+    list(APPEND SOURCES
+        src/renderer/renderer.c
+        src/renderer/vulkan_renderer.c
+        src/renderer/vulkan_wayland.c
+        src/renderer/vulkan_x11.c
+        src/renderer/vulkan_headless.c
         src/renderer/color_space.c
         src/renderer/frame_buffer.c
     )
@@ -110,6 +141,23 @@ if(ENABLE_RENDERER_OPENGL)
         ${X11_INCLUDE_DIR}
     )
     target_compile_definitions(rootstream-kde-client PRIVATE HAVE_OPENGL_RENDERER)
+endif()
+
+# Link Vulkan if renderer is enabled
+if(ENABLE_RENDERER_VULKAN)
+    target_link_libraries(rootstream-kde-client PRIVATE
+        Vulkan::Vulkan
+        ${X11_LIBRARIES}
+    )
+    target_include_directories(rootstream-kde-client PRIVATE
+        ${X11_INCLUDE_DIR}
+        ${Vulkan_INCLUDE_DIRS}
+    )
+    if(WAYLAND_FOUND)
+        target_link_libraries(rootstream-kde-client PRIVATE ${WAYLAND_LIBRARIES})
+        target_include_directories(rootstream-kde-client PRIVATE ${WAYLAND_INCLUDE_DIRS})
+    endif()
+    target_compile_definitions(rootstream-kde-client PRIVATE HAVE_VULKAN_RENDERER)
 endif()
 
 # Link KDE Frameworks if available
@@ -176,4 +224,9 @@ message(STATUS "  PulseAudio:     ${PULSEAUDIO_FOUND}")
 message(STATUS "  PipeWire:       ${PIPEWIRE_FOUND}")
 message(STATUS "  AI Logging:     ${ENABLE_AI_LOGGING}")
 message(STATUS "  OpenGL Renderer: ${ENABLE_RENDERER_OPENGL}")
+message(STATUS "  Vulkan Renderer: ${ENABLE_RENDERER_VULKAN}")
+if(ENABLE_RENDERER_VULKAN)
+    message(STATUS "    - Wayland:    ${WAYLAND_FOUND}")
+    message(STATUS "    - X11:        ${X11_FOUND}")
+endif()
 message(STATUS "")

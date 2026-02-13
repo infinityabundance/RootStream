@@ -5,6 +5,9 @@
 
 #include "renderer.h"
 #include "opengl_renderer.h"
+#ifdef HAVE_VULKAN_RENDERER
+#include "vulkan_renderer.h"
+#endif
 #include "frame_buffer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,9 +65,11 @@ renderer_t* renderer_create(renderer_backend_t backend, int width, int height) {
     
     // Auto-detect backend if requested
     if (backend == RENDERER_AUTO) {
-        // For now, always use OpenGL
-        // In the future, we can detect Vulkan/Proton support here
+        // Prefer OpenGL, fall back to Vulkan if OpenGL not available
         renderer->backend = RENDERER_OPENGL;
+#ifdef HAVE_VULKAN_RENDERER
+        // Future: Add detection logic here if OpenGL fails
+#endif
     }
     
     return renderer;
@@ -87,9 +92,19 @@ int renderer_init(renderer_t *renderer, void *native_window) {
             break;
             
         case RENDERER_VULKAN:
+#ifdef HAVE_VULKAN_RENDERER
+            renderer->impl = vulkan_init(native_window);
+            if (!renderer->impl) {
+                snprintf(renderer->last_error, sizeof(renderer->last_error),
+                        "Failed to initialize Vulkan backend");
+                return -1;
+            }
+#else
             snprintf(renderer->last_error, sizeof(renderer->last_error),
-                    "Vulkan backend not yet implemented (Phase 12)");
+                    "Vulkan backend not compiled in");
             return -1;
+#endif
+            break;
             
         case RENDERER_PROTON:
             snprintf(renderer->last_error, sizeof(renderer->last_error),
@@ -138,6 +153,12 @@ int renderer_present(renderer_t *renderer) {
             opengl_render((opengl_context_t*)renderer->impl);
             opengl_present((opengl_context_t*)renderer->impl);
         }
+#ifdef HAVE_VULKAN_RENDERER
+        else if (renderer->backend == RENDERER_VULKAN && renderer->impl) {
+            vulkan_render((vulkan_context_t*)renderer->impl);
+            vulkan_present((vulkan_context_t*)renderer->impl);
+        }
+#endif
         return 0;
     }
     
@@ -161,6 +182,26 @@ int renderer_present(renderer_t *renderer) {
                 }
             }
             break;
+            
+#ifdef HAVE_VULKAN_RENDERER
+        case RENDERER_VULKAN:
+            if (renderer->impl) {
+                if (vulkan_upload_frame((vulkan_context_t*)renderer->impl, frame) != 0) {
+                    snprintf(renderer->last_error, sizeof(renderer->last_error),
+                            "Failed to upload frame to GPU");
+                    result = -1;
+                } else if (vulkan_render((vulkan_context_t*)renderer->impl) != 0) {
+                    snprintf(renderer->last_error, sizeof(renderer->last_error),
+                            "Failed to render frame");
+                    result = -1;
+                } else if (vulkan_present((vulkan_context_t*)renderer->impl) != 0) {
+                    snprintf(renderer->last_error, sizeof(renderer->last_error),
+                            "Failed to present frame");
+                    result = -1;
+                }
+            }
+            break;
+#endif
             
         default:
             snprintf(renderer->last_error, sizeof(renderer->last_error),
@@ -202,6 +243,14 @@ int renderer_set_vsync(renderer_t *renderer, bool enabled) {
             }
             break;
             
+#ifdef HAVE_VULKAN_RENDERER
+        case RENDERER_VULKAN:
+            if (renderer->impl) {
+                return vulkan_set_vsync((vulkan_context_t*)renderer->impl, enabled);
+            }
+            break;
+#endif
+            
         default:
             break;
     }
@@ -235,6 +284,14 @@ int renderer_resize(renderer_t *renderer, int width, int height) {
                 return opengl_resize((opengl_context_t*)renderer->impl, width, height);
             }
             break;
+            
+#ifdef HAVE_VULKAN_RENDERER
+        case RENDERER_VULKAN:
+            if (renderer->impl) {
+                return vulkan_resize((vulkan_context_t*)renderer->impl, width, height);
+            }
+            break;
+#endif
             
         default:
             break;
@@ -277,6 +334,14 @@ void renderer_cleanup(renderer_t *renderer) {
                 opengl_cleanup((opengl_context_t*)renderer->impl);
             }
             break;
+            
+#ifdef HAVE_VULKAN_RENDERER
+        case RENDERER_VULKAN:
+            if (renderer->impl) {
+                vulkan_cleanup((vulkan_context_t*)renderer->impl);
+            }
+            break;
+#endif
             
         default:
             break;

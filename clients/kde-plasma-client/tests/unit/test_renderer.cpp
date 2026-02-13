@@ -24,7 +24,7 @@ private slots:
      * Test renderer creation
      */
     void testRendererCreate() {
-        renderer_t *renderer = renderer_create(RENDERER_OPENGL, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_OPENGL, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         renderer_cleanup(renderer);
     }
@@ -45,7 +45,7 @@ private slots:
      * Test backend auto-detection
      */
     void testRendererAutoBackend() {
-        renderer_t *renderer = renderer_create(RENDERER_AUTO, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_AUTO, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         renderer_cleanup(renderer);
     }
@@ -74,9 +74,9 @@ private slots:
         
         // Create test frame
         frame_t frame;
-        frame.width = 1920;
-        frame.height = 1080;
-        frame.format = 0x3231564E; // NV12 fourcc
+        frame.width = DEFAULT_RENDER_WIDTH;
+        frame.height = DEFAULT_RENDER_HEIGHT;
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 1000000;
@@ -119,7 +119,7 @@ private slots:
         frame_t frame;
         frame.width = 640;
         frame.height = 480;
-        frame.format = 0x3231564E; // NV12
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 0;
@@ -180,7 +180,7 @@ private slots:
      * Test renderer metrics initialization
      */
     void testRendererMetrics() {
-        renderer_t *renderer = renderer_create(RENDERER_OPENGL, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_OPENGL, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         
         struct renderer_metrics metrics = renderer_get_metrics(renderer);
@@ -197,14 +197,14 @@ private slots:
      * Test frame submission
      */
     void testFrameSubmission() {
-        renderer_t *renderer = renderer_create(RENDERER_OPENGL, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_OPENGL, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         
         // Create test frame
         frame_t frame;
-        frame.width = 1920;
-        frame.height = 1080;
-        frame.format = 0x3231564E; // NV12
+        frame.width = DEFAULT_RENDER_WIDTH;
+        frame.height = DEFAULT_RENDER_HEIGHT;
+        frame.format = FRAME_FORMAT_NV12;
         frame.size = frame.width * frame.height * 3 / 2;
         frame.data = (uint8_t*)malloc(frame.size);
         frame.timestamp_us = 1000000;
@@ -227,7 +227,7 @@ private slots:
      * Test error handling
      */
     void testErrorHandling() {
-        renderer_t *renderer = renderer_create(RENDERER_OPENGL, 1920, 1080);
+        renderer_t *renderer = renderer_create(RENDERER_OPENGL, DEFAULT_RENDER_WIDTH, DEFAULT_RENDER_HEIGHT);
         QVERIFY(renderer != nullptr);
         
         // Initially no error
