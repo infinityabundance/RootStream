@@ -229,10 +229,38 @@ CMakeFiles/rstr-player.dir/src/audio_playback.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rstr-player.dir/src/audio_playback.c.s"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback.c -o CMakeFiles/rstr-player.dir/src/audio_playback.c.s
 
+CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o: CMakeFiles/rstr-player.dir/flags.make
+CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o: /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c
+CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o: CMakeFiles/rstr-player.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o -MF CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o.d -o CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o -c /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c
+
+CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c > CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.i
+
+CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c -o CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.s
+
+CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o: CMakeFiles/rstr-player.dir/flags.make
+CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o: /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c
+CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o: CMakeFiles/rstr-player.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o -MF CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o.d -o CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o -c /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c
+
+CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c > CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.i
+
+CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c -o CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.s
+
 CMakeFiles/rstr-player.dir/src/latency.c.o: CMakeFiles/rstr-player.dir/flags.make
 CMakeFiles/rstr-player.dir/src/latency.c.o: /home/runner/work/RootStream/RootStream/src/latency.c
 CMakeFiles/rstr-player.dir/src/latency.c.o: CMakeFiles/rstr-player.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/rstr-player.dir/src/latency.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building C object CMakeFiles/rstr-player.dir/src/latency.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rstr-player.dir/src/latency.c.o -MF CMakeFiles/rstr-player.dir/src/latency.c.o.d -o CMakeFiles/rstr-player.dir/src/latency.c.o -c /home/runner/work/RootStream/RootStream/src/latency.c
 
 CMakeFiles/rstr-player.dir/src/latency.c.i: cmake_force
@@ -246,7 +274,7 @@ CMakeFiles/rstr-player.dir/src/latency.c.s: cmake_force
 CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o: CMakeFiles/rstr-player.dir/flags.make
 CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o: /home/runner/work/RootStream/RootStream/src/platform/platform_linux.c
 CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o: CMakeFiles/rstr-player.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building C object CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o -MF CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o.d -o CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o -c /home/runner/work/RootStream/RootStream/src/platform/platform_linux.c
 
 CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.i: cmake_force
@@ -270,6 +298,8 @@ rstr__player_OBJECTS = \
 "CMakeFiles/rstr-player.dir/src/input.c.o" \
 "CMakeFiles/rstr-player.dir/src/opus_codec.c.o" \
 "CMakeFiles/rstr-player.dir/src/audio_playback.c.o" \
+"CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o" \
+"CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o" \
 "CMakeFiles/rstr-player.dir/src/latency.c.o" \
 "CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o"
 
@@ -287,13 +317,15 @@ rstr-player: CMakeFiles/rstr-player.dir/src/config.c.o
 rstr-player: CMakeFiles/rstr-player.dir/src/input.c.o
 rstr-player: CMakeFiles/rstr-player.dir/src/opus_codec.c.o
 rstr-player: CMakeFiles/rstr-player.dir/src/audio_playback.c.o
+rstr-player: CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o
+rstr-player: CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o
 rstr-player: CMakeFiles/rstr-player.dir/src/latency.c.o
 rstr-player: CMakeFiles/rstr-player.dir/src/platform/platform_linux.c.o
 rstr-player: CMakeFiles/rstr-player.dir/build.make
 rstr-player: CMakeFiles/rstr-player.dir/compiler_depend.ts
 rstr-player: /usr/lib/x86_64-linux-gnu/libSDL2.so
 rstr-player: CMakeFiles/rstr-player.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking C executable rstr-player"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Linking C executable rstr-player"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/rstr-player.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

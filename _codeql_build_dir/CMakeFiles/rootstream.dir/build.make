@@ -271,10 +271,38 @@ CMakeFiles/rootstream.dir/src/nvenc_encoder.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/nvenc_encoder.c.s"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/nvenc_encoder.c -o CMakeFiles/rootstream.dir/src/nvenc_encoder.c.s
 
+CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o: /home/runner/work/RootStream/RootStream/src/ffmpeg_encoder.c
+CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building C object CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o -MF CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o.d -o CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o -c /home/runner/work/RootStream/RootStream/src/ffmpeg_encoder.c
+
+CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/ffmpeg_encoder.c > CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.i
+
+CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/ffmpeg_encoder.c -o CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.s
+
+CMakeFiles/rootstream.dir/src/raw_encoder.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/raw_encoder.c.o: /home/runner/work/RootStream/RootStream/src/raw_encoder.c
+CMakeFiles/rootstream.dir/src/raw_encoder.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building C object CMakeFiles/rootstream.dir/src/raw_encoder.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/raw_encoder.c.o -MF CMakeFiles/rootstream.dir/src/raw_encoder.c.o.d -o CMakeFiles/rootstream.dir/src/raw_encoder.c.o -c /home/runner/work/RootStream/RootStream/src/raw_encoder.c
+
+CMakeFiles/rootstream.dir/src/raw_encoder.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/raw_encoder.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/raw_encoder.c > CMakeFiles/rootstream.dir/src/raw_encoder.c.i
+
+CMakeFiles/rootstream.dir/src/raw_encoder.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/raw_encoder.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/raw_encoder.c -o CMakeFiles/rootstream.dir/src/raw_encoder.c.s
+
 CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o: /home/runner/work/RootStream/RootStream/src/vaapi_decoder.c
 CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building C object CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building C object CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o -MF CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o.d -o CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o -c /home/runner/work/RootStream/RootStream/src/vaapi_decoder.c
 
 CMakeFiles/rootstream.dir/src/vaapi_decoder.c.i: cmake_force
@@ -288,7 +316,7 @@ CMakeFiles/rootstream.dir/src/vaapi_decoder.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/audio_capture.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/audio_capture.c.o: /home/runner/work/RootStream/RootStream/src/audio_capture.c
 CMakeFiles/rootstream.dir/src/audio_capture.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building C object CMakeFiles/rootstream.dir/src/audio_capture.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building C object CMakeFiles/rootstream.dir/src/audio_capture.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_capture.c.o -MF CMakeFiles/rootstream.dir/src/audio_capture.c.o.d -o CMakeFiles/rootstream.dir/src/audio_capture.c.o -c /home/runner/work/RootStream/RootStream/src/audio_capture.c
 
 CMakeFiles/rootstream.dir/src/audio_capture.c.i: cmake_force
@@ -302,7 +330,7 @@ CMakeFiles/rootstream.dir/src/audio_capture.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/audio_playback.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/audio_playback.c.o: /home/runner/work/RootStream/RootStream/src/audio_playback.c
 CMakeFiles/rootstream.dir/src/audio_playback.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building C object CMakeFiles/rootstream.dir/src/audio_playback.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/rootstream.dir/src/audio_playback.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_playback.c.o -MF CMakeFiles/rootstream.dir/src/audio_playback.c.o.d -o CMakeFiles/rootstream.dir/src/audio_playback.c.o -c /home/runner/work/RootStream/RootStream/src/audio_playback.c
 
 CMakeFiles/rootstream.dir/src/audio_playback.c.i: cmake_force
@@ -313,10 +341,66 @@ CMakeFiles/rootstream.dir/src/audio_playback.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/audio_playback.c.s"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback.c -o CMakeFiles/rootstream.dir/src/audio_playback.c.s
 
+CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o: /home/runner/work/RootStream/RootStream/src/audio_capture_pulse.c
+CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o -MF CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o.d -o CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o -c /home/runner/work/RootStream/RootStream/src/audio_capture_pulse.c
+
+CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_capture_pulse.c > CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.i
+
+CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_capture_pulse.c -o CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.s
+
+CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o: /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c
+CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o -MF CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o.d -o CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o -c /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c
+
+CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c > CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.i
+
+CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c -o CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.s
+
+CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o: /home/runner/work/RootStream/RootStream/src/audio_capture_dummy.c
+CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building C object CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o -MF CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o.d -o CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o -c /home/runner/work/RootStream/RootStream/src/audio_capture_dummy.c
+
+CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_capture_dummy.c > CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.i
+
+CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_capture_dummy.c -o CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.s
+
+CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o: CMakeFiles/rootstream.dir/flags.make
+CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o: /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c
+CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building C object CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o -MF CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o.d -o CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o -c /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c
+
+CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.i"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c > CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.i
+
+CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.s"
+	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c -o CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.s
+
 CMakeFiles/rootstream.dir/src/input.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/input.c.o: /home/runner/work/RootStream/RootStream/src/input.c
 CMakeFiles/rootstream.dir/src/input.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building C object CMakeFiles/rootstream.dir/src/input.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building C object CMakeFiles/rootstream.dir/src/input.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/input.c.o -MF CMakeFiles/rootstream.dir/src/input.c.o.d -o CMakeFiles/rootstream.dir/src/input.c.o -c /home/runner/work/RootStream/RootStream/src/input.c
 
 CMakeFiles/rootstream.dir/src/input.c.i: cmake_force
@@ -330,7 +414,7 @@ CMakeFiles/rootstream.dir/src/input.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/discovery.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/discovery.c.o: /home/runner/work/RootStream/RootStream/src/discovery.c
 CMakeFiles/rootstream.dir/src/discovery.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/rootstream.dir/src/discovery.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building C object CMakeFiles/rootstream.dir/src/discovery.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/discovery.c.o -MF CMakeFiles/rootstream.dir/src/discovery.c.o.d -o CMakeFiles/rootstream.dir/src/discovery.c.o -c /home/runner/work/RootStream/RootStream/src/discovery.c
 
 CMakeFiles/rootstream.dir/src/discovery.c.i: cmake_force
@@ -344,7 +428,7 @@ CMakeFiles/rootstream.dir/src/discovery.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/service.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/service.c.o: /home/runner/work/RootStream/RootStream/src/service.c
 CMakeFiles/rootstream.dir/src/service.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/rootstream.dir/src/service.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building C object CMakeFiles/rootstream.dir/src/service.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/service.c.o -MF CMakeFiles/rootstream.dir/src/service.c.o.d -o CMakeFiles/rootstream.dir/src/service.c.o -c /home/runner/work/RootStream/RootStream/src/service.c
 
 CMakeFiles/rootstream.dir/src/service.c.i: cmake_force
@@ -358,7 +442,7 @@ CMakeFiles/rootstream.dir/src/service.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/recording.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/recording.c.o: /home/runner/work/RootStream/RootStream/src/recording.c
 CMakeFiles/rootstream.dir/src/recording.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/rootstream.dir/src/recording.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building C object CMakeFiles/rootstream.dir/src/recording.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/recording.c.o -MF CMakeFiles/rootstream.dir/src/recording.c.o.d -o CMakeFiles/rootstream.dir/src/recording.c.o -c /home/runner/work/RootStream/RootStream/src/recording.c
 
 CMakeFiles/rootstream.dir/src/recording.c.i: cmake_force
@@ -372,7 +456,7 @@ CMakeFiles/rootstream.dir/src/recording.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/qrcode.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/qrcode.c.o: /home/runner/work/RootStream/RootStream/src/qrcode.c
 CMakeFiles/rootstream.dir/src/qrcode.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building C object CMakeFiles/rootstream.dir/src/qrcode.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building C object CMakeFiles/rootstream.dir/src/qrcode.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/qrcode.c.o -MF CMakeFiles/rootstream.dir/src/qrcode.c.o.d -o CMakeFiles/rootstream.dir/src/qrcode.c.o -c /home/runner/work/RootStream/RootStream/src/qrcode.c
 
 CMakeFiles/rootstream.dir/src/qrcode.c.i: cmake_force
@@ -386,7 +470,7 @@ CMakeFiles/rootstream.dir/src/qrcode.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/tray.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/tray.c.o: /home/runner/work/RootStream/RootStream/src/tray.c
 CMakeFiles/rootstream.dir/src/tray.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building C object CMakeFiles/rootstream.dir/src/tray.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building C object CMakeFiles/rootstream.dir/src/tray.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/tray.c.o -MF CMakeFiles/rootstream.dir/src/tray.c.o.d -o CMakeFiles/rootstream.dir/src/tray.c.o -c /home/runner/work/RootStream/RootStream/src/tray.c
 
 CMakeFiles/rootstream.dir/src/tray.c.i: cmake_force
@@ -400,7 +484,7 @@ CMakeFiles/rootstream.dir/src/tray.c.s: cmake_force
 CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o: CMakeFiles/rootstream.dir/flags.make
 CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o: /home/runner/work/RootStream/RootStream/src/platform/platform_linux.c
 CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o: CMakeFiles/rootstream.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building C object CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building C object CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o"
 	/home/runner/work/RootStream/.codeql-scratch/dbs/cpp/working/autobuild/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o -MF CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o.d -o CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o -c /home/runner/work/RootStream/RootStream/src/platform/platform_linux.c
 
 CMakeFiles/rootstream.dir/src/platform/platform_linux.c.i: cmake_force
@@ -427,9 +511,15 @@ rootstream_OBJECTS = \
 "CMakeFiles/rootstream.dir/src/dummy_capture.c.o" \
 "CMakeFiles/rootstream.dir/src/vaapi_encoder.c.o" \
 "CMakeFiles/rootstream.dir/src/nvenc_encoder.c.o" \
+"CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o" \
+"CMakeFiles/rootstream.dir/src/raw_encoder.c.o" \
 "CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o" \
 "CMakeFiles/rootstream.dir/src/audio_capture.c.o" \
 "CMakeFiles/rootstream.dir/src/audio_playback.c.o" \
+"CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o" \
+"CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o" \
+"CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o" \
+"CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o" \
 "CMakeFiles/rootstream.dir/src/input.c.o" \
 "CMakeFiles/rootstream.dir/src/discovery.c.o" \
 "CMakeFiles/rootstream.dir/src/service.c.o" \
@@ -455,9 +545,15 @@ rootstream: CMakeFiles/rootstream.dir/src/x11_capture.c.o
 rootstream: CMakeFiles/rootstream.dir/src/dummy_capture.c.o
 rootstream: CMakeFiles/rootstream.dir/src/vaapi_encoder.c.o
 rootstream: CMakeFiles/rootstream.dir/src/nvenc_encoder.c.o
+rootstream: CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o
+rootstream: CMakeFiles/rootstream.dir/src/raw_encoder.c.o
 rootstream: CMakeFiles/rootstream.dir/src/vaapi_decoder.c.o
 rootstream: CMakeFiles/rootstream.dir/src/audio_capture.c.o
 rootstream: CMakeFiles/rootstream.dir/src/audio_playback.c.o
+rootstream: CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o
+rootstream: CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o
+rootstream: CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o
+rootstream: CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o
 rootstream: CMakeFiles/rootstream.dir/src/input.c.o
 rootstream: CMakeFiles/rootstream.dir/src/discovery.c.o
 rootstream: CMakeFiles/rootstream.dir/src/service.c.o
@@ -469,7 +565,7 @@ rootstream: CMakeFiles/rootstream.dir/build.make
 rootstream: CMakeFiles/rootstream.dir/compiler_depend.ts
 rootstream: /usr/lib/x86_64-linux-gnu/libSDL2.so
 rootstream: CMakeFiles/rootstream.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Linking C executable rootstream"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/RootStream/RootStream/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Linking C executable rootstream"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/rootstream.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

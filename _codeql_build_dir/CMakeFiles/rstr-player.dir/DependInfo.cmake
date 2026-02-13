@@ -9,6 +9,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/runner/work/RootStream/RootStream/src/audio_playback.c" "CMakeFiles/rstr-player.dir/src/audio_playback.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/audio_playback.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c" "CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c" "CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/config.c" "CMakeFiles/rstr-player.dir/src/config.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/config.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/crypto.c" "CMakeFiles/rstr-player.dir/src/crypto.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/crypto.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/display_sdl2.c" "CMakeFiles/rstr-player.dir/src/display_sdl2.c.o" "gcc" "CMakeFiles/rstr-player.dir/src/display_sdl2.c.o.d"

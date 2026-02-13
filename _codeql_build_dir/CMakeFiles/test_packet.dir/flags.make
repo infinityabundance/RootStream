@@ -6,5 +6,5 @@ C_DEFINES = -DHAVE_AVAHI -DHAVE_VAAPI -DHAVE_X11
 
 C_INCLUDES = -I/home/runner/work/RootStream/RootStream/include
 
-C_FLAGS = -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation
+C_FLAGS = -O3 -DNDEBUG -std=gnu11 -Wall -Wextra -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -Wno-unused-result -Wno-unused-label
 

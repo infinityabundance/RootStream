@@ -263,6 +263,54 @@ src/audio_capture.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture.c.s
 .PHONY : src/audio_capture.c.s
 
+src/audio_capture_dummy.o: src/audio_capture_dummy.c.o
+.PHONY : src/audio_capture_dummy.o
+
+# target to build an object file
+src/audio_capture_dummy.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o
+.PHONY : src/audio_capture_dummy.c.o
+
+src/audio_capture_dummy.i: src/audio_capture_dummy.c.i
+.PHONY : src/audio_capture_dummy.i
+
+# target to preprocess a source file
+src/audio_capture_dummy.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.i
+.PHONY : src/audio_capture_dummy.c.i
+
+src/audio_capture_dummy.s: src/audio_capture_dummy.c.s
+.PHONY : src/audio_capture_dummy.s
+
+# target to generate assembly for a file
+src/audio_capture_dummy.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.s
+.PHONY : src/audio_capture_dummy.c.s
+
+src/audio_capture_pulse.o: src/audio_capture_pulse.c.o
+.PHONY : src/audio_capture_pulse.o
+
+# target to build an object file
+src/audio_capture_pulse.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o
+.PHONY : src/audio_capture_pulse.c.o
+
+src/audio_capture_pulse.i: src/audio_capture_pulse.c.i
+.PHONY : src/audio_capture_pulse.i
+
+# target to preprocess a source file
+src/audio_capture_pulse.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.i
+.PHONY : src/audio_capture_pulse.c.i
+
+src/audio_capture_pulse.s: src/audio_capture_pulse.c.s
+.PHONY : src/audio_capture_pulse.s
+
+# target to generate assembly for a file
+src/audio_capture_pulse.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.s
+.PHONY : src/audio_capture_pulse.c.s
+
 src/audio_playback.o: src/audio_playback.c.o
 .PHONY : src/audio_playback.o
 
@@ -289,6 +337,60 @@ src/audio_playback.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback.c.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback.c.s
 .PHONY : src/audio_playback.c.s
+
+src/audio_playback_dummy.o: src/audio_playback_dummy.c.o
+.PHONY : src/audio_playback_dummy.o
+
+# target to build an object file
+src/audio_playback_dummy.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.o
+.PHONY : src/audio_playback_dummy.c.o
+
+src/audio_playback_dummy.i: src/audio_playback_dummy.c.i
+.PHONY : src/audio_playback_dummy.i
+
+# target to preprocess a source file
+src/audio_playback_dummy.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.i
+.PHONY : src/audio_playback_dummy.c.i
+
+src/audio_playback_dummy.s: src/audio_playback_dummy.c.s
+.PHONY : src/audio_playback_dummy.s
+
+# target to generate assembly for a file
+src/audio_playback_dummy.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_dummy.c.s
+.PHONY : src/audio_playback_dummy.c.s
+
+src/audio_playback_pulse.o: src/audio_playback_pulse.c.o
+.PHONY : src/audio_playback_pulse.o
+
+# target to build an object file
+src/audio_playback_pulse.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.o
+.PHONY : src/audio_playback_pulse.c.o
+
+src/audio_playback_pulse.i: src/audio_playback_pulse.c.i
+.PHONY : src/audio_playback_pulse.i
+
+# target to preprocess a source file
+src/audio_playback_pulse.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.i
+.PHONY : src/audio_playback_pulse.c.i
+
+src/audio_playback_pulse.s: src/audio_playback_pulse.c.s
+.PHONY : src/audio_playback_pulse.s
+
+# target to generate assembly for a file
+src/audio_playback_pulse.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rstr-player.dir/build.make CMakeFiles/rstr-player.dir/src/audio_playback_pulse.c.s
+.PHONY : src/audio_playback_pulse.c.s
 
 src/config.o: src/config.c.o
 .PHONY : src/config.o
@@ -469,6 +571,30 @@ src/dummy_capture.s: src/dummy_capture.c.s
 src/dummy_capture.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/dummy_capture.c.s
 .PHONY : src/dummy_capture.c.s
+
+src/ffmpeg_encoder.o: src/ffmpeg_encoder.c.o
+.PHONY : src/ffmpeg_encoder.o
+
+# target to build an object file
+src/ffmpeg_encoder.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o
+.PHONY : src/ffmpeg_encoder.c.o
+
+src/ffmpeg_encoder.i: src/ffmpeg_encoder.c.i
+.PHONY : src/ffmpeg_encoder.i
+
+# target to preprocess a source file
+src/ffmpeg_encoder.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.i
+.PHONY : src/ffmpeg_encoder.c.i
+
+src/ffmpeg_encoder.s: src/ffmpeg_encoder.c.s
+.PHONY : src/ffmpeg_encoder.s
+
+# target to generate assembly for a file
+src/ffmpeg_encoder.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.s
+.PHONY : src/ffmpeg_encoder.c.s
 
 src/input.o: src/input.c.o
 .PHONY : src/input.o
@@ -709,6 +835,30 @@ src/qrcode.s: src/qrcode.c.s
 src/qrcode.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/qrcode.c.s
 .PHONY : src/qrcode.c.s
+
+src/raw_encoder.o: src/raw_encoder.c.o
+.PHONY : src/raw_encoder.o
+
+# target to build an object file
+src/raw_encoder.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/raw_encoder.c.o
+.PHONY : src/raw_encoder.c.o
+
+src/raw_encoder.i: src/raw_encoder.c.i
+.PHONY : src/raw_encoder.i
+
+# target to preprocess a source file
+src/raw_encoder.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/raw_encoder.c.i
+.PHONY : src/raw_encoder.c.i
+
+src/raw_encoder.s: src/raw_encoder.c.s
+.PHONY : src/raw_encoder.s
+
+# target to generate assembly for a file
+src/raw_encoder.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rootstream.dir/build.make CMakeFiles/rootstream.dir/src/raw_encoder.c.s
+.PHONY : src/raw_encoder.c.s
 
 src/recording.o: src/recording.c.o
 .PHONY : src/recording.o
@@ -977,9 +1127,21 @@ help:
 	@echo "... src/audio_capture.o"
 	@echo "... src/audio_capture.i"
 	@echo "... src/audio_capture.s"
+	@echo "... src/audio_capture_dummy.o"
+	@echo "... src/audio_capture_dummy.i"
+	@echo "... src/audio_capture_dummy.s"
+	@echo "... src/audio_capture_pulse.o"
+	@echo "... src/audio_capture_pulse.i"
+	@echo "... src/audio_capture_pulse.s"
 	@echo "... src/audio_playback.o"
 	@echo "... src/audio_playback.i"
 	@echo "... src/audio_playback.s"
+	@echo "... src/audio_playback_dummy.o"
+	@echo "... src/audio_playback_dummy.i"
+	@echo "... src/audio_playback_dummy.s"
+	@echo "... src/audio_playback_pulse.o"
+	@echo "... src/audio_playback_pulse.i"
+	@echo "... src/audio_playback_pulse.s"
 	@echo "... src/config.o"
 	@echo "... src/config.i"
 	@echo "... src/config.s"
@@ -1001,6 +1163,9 @@ help:
 	@echo "... src/dummy_capture.o"
 	@echo "... src/dummy_capture.i"
 	@echo "... src/dummy_capture.s"
+	@echo "... src/ffmpeg_encoder.o"
+	@echo "... src/ffmpeg_encoder.i"
+	@echo "... src/ffmpeg_encoder.s"
 	@echo "... src/input.o"
 	@echo "... src/input.i"
 	@echo "... src/input.s"
@@ -1028,6 +1193,9 @@ help:
 	@echo "... src/qrcode.o"
 	@echo "... src/qrcode.i"
 	@echo "... src/qrcode.s"
+	@echo "... src/raw_encoder.o"
+	@echo "... src/raw_encoder.i"
+	@echo "... src/raw_encoder.s"
 	@echo "... src/recording.o"
 	@echo "... src/recording.i"
 	@echo "... src/recording.s"

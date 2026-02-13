@@ -9,7 +9,11 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/runner/work/RootStream/RootStream/src/audio_capture.c" "CMakeFiles/rootstream.dir/src/audio_capture.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_capture.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_capture_dummy.c" "CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_capture_dummy.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_capture_pulse.c" "CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_capture_pulse.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/audio_playback.c" "CMakeFiles/rootstream.dir/src/audio_playback.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_playback.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_playback_dummy.c" "CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_playback_dummy.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/audio_playback_pulse.c" "CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o" "gcc" "CMakeFiles/rootstream.dir/src/audio_playback_pulse.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/config.c" "CMakeFiles/rootstream.dir/src/config.c.o" "gcc" "CMakeFiles/rootstream.dir/src/config.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/core.c" "CMakeFiles/rootstream.dir/src/core.c.o" "gcc" "CMakeFiles/rootstream.dir/src/core.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/crypto.c" "CMakeFiles/rootstream.dir/src/crypto.c.o" "gcc" "CMakeFiles/rootstream.dir/src/crypto.c.o.d"
@@ -17,6 +21,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/runner/work/RootStream/RootStream/src/display_sdl2.c" "CMakeFiles/rootstream.dir/src/display_sdl2.c.o" "gcc" "CMakeFiles/rootstream.dir/src/display_sdl2.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/drm_capture.c" "CMakeFiles/rootstream.dir/src/drm_capture.c.o" "gcc" "CMakeFiles/rootstream.dir/src/drm_capture.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/dummy_capture.c" "CMakeFiles/rootstream.dir/src/dummy_capture.c.o" "gcc" "CMakeFiles/rootstream.dir/src/dummy_capture.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/ffmpeg_encoder.c" "CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o" "gcc" "CMakeFiles/rootstream.dir/src/ffmpeg_encoder.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/input.c" "CMakeFiles/rootstream.dir/src/input.c.o" "gcc" "CMakeFiles/rootstream.dir/src/input.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/latency.c" "CMakeFiles/rootstream.dir/src/latency.c.o" "gcc" "CMakeFiles/rootstream.dir/src/latency.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/main.c" "CMakeFiles/rootstream.dir/src/main.c.o" "gcc" "CMakeFiles/rootstream.dir/src/main.c.o.d"
@@ -26,6 +31,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/runner/work/RootStream/RootStream/src/packet_validate.c" "CMakeFiles/rootstream.dir/src/packet_validate.c.o" "gcc" "CMakeFiles/rootstream.dir/src/packet_validate.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/platform/platform_linux.c" "CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o" "gcc" "CMakeFiles/rootstream.dir/src/platform/platform_linux.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/qrcode.c" "CMakeFiles/rootstream.dir/src/qrcode.c.o" "gcc" "CMakeFiles/rootstream.dir/src/qrcode.c.o.d"
+  "/home/runner/work/RootStream/RootStream/src/raw_encoder.c" "CMakeFiles/rootstream.dir/src/raw_encoder.c.o" "gcc" "CMakeFiles/rootstream.dir/src/raw_encoder.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/recording.c" "CMakeFiles/rootstream.dir/src/recording.c.o" "gcc" "CMakeFiles/rootstream.dir/src/recording.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/service.c" "CMakeFiles/rootstream.dir/src/service.c.o" "gcc" "CMakeFiles/rootstream.dir/src/service.c.o.d"
   "/home/runner/work/RootStream/RootStream/src/tray.c" "CMakeFiles/rootstream.dir/src/tray.c.o" "gcc" "CMakeFiles/rootstream.dir/src/tray.c.o.d"
