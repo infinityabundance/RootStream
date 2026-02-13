@@ -144,9 +144,10 @@ void PerformanceAggregator::updateMetrics() {
     }
     
     // Collect network metrics
+    // TODO: Implement historical min/max/avg RTT tracking with rolling window
     snapshot.network.rtt_ms = m_currentRTT;
     snapshot.network.packet_loss_percent = m_currentPacketLoss;
-    snapshot.network.avg_rtt_ms = m_currentRTT; // Simplified for now
+    snapshot.network.avg_rtt_ms = m_currentRTT;
     snapshot.network.min_rtt_ms = m_currentRTT;
     snapshot.network.max_rtt_ms = m_currentRTT;
     

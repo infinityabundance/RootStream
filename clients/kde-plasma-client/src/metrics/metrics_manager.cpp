@@ -189,8 +189,8 @@ metrics_snapshot_t MetricsManager::getLatestSnapshot() {
         return m_aggregator->getLatestSnapshot();
     }
     
-    metrics_snapshot_t empty;
-    memset(&empty, 0, sizeof(empty));
+    // Return zero-initialized snapshot
+    metrics_snapshot_t empty{};
     return empty;
 }
 

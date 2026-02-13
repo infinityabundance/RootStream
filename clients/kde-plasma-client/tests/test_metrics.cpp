@@ -65,10 +65,10 @@ void TestMetrics::testFrameRateCounter() {
     frame_rate_counter_t* counter = frame_rate_counter_init();
     QVERIFY(counter != nullptr);
     
-    // Simulate 60 frames
+    // Simulate 60 frames (allow some timing variance)
     for (int i = 0; i < 60; i++) {
         frame_rate_counter_record_frame(counter);
-        QTest::qWait(16); // ~60 FPS
+        QTest::qWait(16); // Target ~60 FPS (16.67ms per frame)
     }
     
     uint32_t fps = frame_rate_counter_get_fps(counter);

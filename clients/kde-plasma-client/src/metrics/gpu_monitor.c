@@ -1,11 +1,13 @@
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include "gpu_monitor.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
 #include <unistd.h>
-
-#define _POSIX_C_SOURCE 200809L
 
 typedef enum {
     GPU_VENDOR_UNKNOWN,

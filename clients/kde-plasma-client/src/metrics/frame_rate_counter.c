@@ -1,11 +1,11 @@
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include "frame_rate_counter.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#endif
 
 struct frame_rate_counter {
     uint64_t frame_timestamps[METRICS_HISTORY_SIZE];
