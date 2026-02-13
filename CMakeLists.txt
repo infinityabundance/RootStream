@@ -222,6 +222,17 @@ if(BUILD_WEB_DASHBOARD)
     )
 endif()
 
+# PHASE 21: Security modules
+list(APPEND LINUX_SOURCES
+    src/security/crypto_primitives.c
+    src/security/key_exchange.c
+    src/security/user_auth.c
+    src/security/session_manager.c
+    src/security/attack_prevention.c
+    src/security/audit_log.c
+    src/security/security_manager.c
+)
+
 if(NOT HEADLESS)
     list(APPEND LINUX_SOURCES src/tray.c src/tray_cli.c src/tray_tui.c)
 else()
@@ -471,6 +482,24 @@ add_test(NAME encoding_tests COMMAND test_encoding)
 add_executable(test_packet tests/unit/test_packet.c src/packet_validate.c)
 target_include_directories(test_packet PRIVATE ${CMAKE_SOURCE_DIR}/include)
 add_test(NAME packet_tests COMMAND test_packet)
+
+# PHASE 21: Security tests
+add_executable(test_security tests/unit/test_security.c
+               src/security/crypto_primitives.c
+               src/security/key_exchange.c
+               src/security/user_auth.c
+               src/security/session_manager.c
+               src/security/attack_prevention.c
+               src/security/audit_log.c
+               src/security/security_manager.c
+               ${PLATFORM_SOURCES})
+target_include_directories(test_security PRIVATE ${CMAKE_SOURCE_DIR}/include)
+if(unofficial-sodium_FOUND)
+    target_link_libraries(test_security PRIVATE unofficial-sodium::sodium)
+else()
+    target_link_libraries(test_security PRIVATE ${SODIUM_LIBRARIES})
+endif()
+add_test(NAME security_tests COMMAND test_security)
 
 # PHASE 18: Recording tests
 add_executable(test_recording_types tests/unit/test_recording_types.c)
