@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 // Helper to safely get environment variable
+static const char* safe_getenv(const char *name) __attribute__((unused));
 static const char* safe_getenv(const char *name) {
     const char *value = getenv(name);
     return value ? value : "";

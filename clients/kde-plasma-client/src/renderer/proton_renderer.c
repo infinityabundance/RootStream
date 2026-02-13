@@ -203,7 +203,11 @@ uint32_t proton_get_shader_cache_size(proton_context_t *ctx) {
         const char *home = getenv("HOME");
         if (home) {
             char cache_path[PATH_MAX];
-            snprintf(cache_path, sizeof(cache_path), "%s/.cache/dxvk-cache", home);
+            int written = snprintf(cache_path, sizeof(cache_path), "%s/.cache/dxvk-cache", home);
+            
+            if (written < 0 || written >= (int)sizeof(cache_path)) {
+                return 0;  // Path too long
+            }
             
             // Count total size of files in cache directory
             DIR *dir = opendir(cache_path);
@@ -213,9 +217,21 @@ uint32_t proton_get_shader_cache_size(proton_context_t *ctx) {
                 
                 while ((entry = readdir(dir)) != NULL) {
                     if (entry->d_type == DT_REG) {
+                        size_t cache_len = strlen(cache_path);
+                        size_t name_len = strlen(entry->d_name);
+                        
+                        // Check if path would fit (with / and null terminator)
+                        if (cache_len + name_len + 2 > PATH_MAX) {
+                            continue;  // Skip files with too long names
+                        }
+                        
                         char file_path[PATH_MAX];
+                        // We already checked the length above, safe to ignore truncation warning
+                        #pragma GCC diagnostic push
+                        #pragma GCC diagnostic ignored "-Wformat-truncation"
                         snprintf(file_path, sizeof(file_path), "%s/%s", 
                                 cache_path, entry->d_name);
+                        #pragma GCC diagnostic pop
                         
                         struct stat st;
                         if (stat(file_path, &st) == 0) {
