@@ -542,7 +542,12 @@ int service_run_client(rootstream_ctx_t *ctx) {
         fprintf(stderr, "ERROR: Decoder initialization failed\n");
         return -1;
     }
-    /* Set decoder backend name based on platform */
+    /* Set decoder backend name based on platform
+     * NOTE: This is a simple platform check. For Phase 0, we assume:
+     *   - Windows uses Media Foundation decoder
+     *   - Linux/Unix uses VA-API decoder
+     * Future phases could add runtime detection if needed.
+     */
     #ifdef _WIN32
         ctx->active_backend.decoder_name = "Media Foundation";
     #else
