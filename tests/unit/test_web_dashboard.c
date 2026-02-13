@@ -110,6 +110,12 @@ static int test_websocket_server_broadcast(void) {
         return 0;
     }
 
+    // Start server first
+    if (websocket_server_start(server) != 0) {
+        websocket_server_cleanup(server);
+        return 0;
+    }
+
     metrics_snapshot_t metrics = {
         .fps = 60,
         .rtt_ms = 15,
@@ -127,6 +133,7 @@ static int test_websocket_server_broadcast(void) {
     // Should not fail even without connected clients
     int result = websocket_server_broadcast_metrics(server, &metrics);
 
+    websocket_server_stop(server);
     websocket_server_cleanup(server);
     return result == 0;
 }
