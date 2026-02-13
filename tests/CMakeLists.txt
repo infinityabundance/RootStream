@@ -80,5 +80,17 @@ if(ENABLE_UNIT_TESTS)
     add_test(NAME InputManagerUnit COMMAND test_input_manager)
     set_tests_properties(InputManagerUnit PROPERTIES LABELS "unit")
     
+    # PHASE 17: Discovery Cache tests
+    add_executable(test_discovery_cache unit/test_discovery_cache.c
+        ${CMAKE_SOURCE_DIR}/src/discovery.c
+    )
+    target_include_directories(test_discovery_cache PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(test_discovery_cache test_harness pthread m)
+    if(AVAHI_FOUND)
+        target_link_libraries(test_discovery_cache ${AVAHI_LIBRARIES})
+    endif()
+    add_test(NAME DiscoveryCacheUnit COMMAND test_discovery_cache)
+    set_tests_properties(DiscoveryCacheUnit PROPERTIES LABELS "unit")
+    
     message(STATUS "Unit tests enabled")
 endif()

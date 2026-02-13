@@ -75,7 +75,7 @@ int discovery_parse_address(const char *address, char *hostname, uint16_t *port)
 }
 
 /*
- * Connect to manually specified peer
+ * Connect to manually specified peer (enhanced PHASE 17)
  */
 int discovery_manual_add_peer(rootstream_ctx_t *ctx, const char *address_or_code) {
     if (!ctx || !address_or_code) return -1;
@@ -139,6 +139,7 @@ int discovery_manual_add_peer(rootstream_ctx_t *ctx, const char *address_or_code
     peer->last_seen = get_timestamp_ms();
     
     ctx->num_peers++;
+    ctx->discovery.manual_discoveries++;  /* Track manual discovery (PHASE 17) */
 
     printf("✓ Manually added peer: %s (%s:%u)\n", hostname, hostname, port);
     
