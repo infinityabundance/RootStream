@@ -51,7 +51,6 @@ int tray_init_tui(rootstream_ctx_t *ctx, int argc, char **argv) {
 
 void tray_update_status_tui(rootstream_ctx_t *ctx, tray_status_t status) {
     if (!ctx || !ctx->tray_priv) return;
-    tui_ctx_t *tui = (tui_ctx_t *)ctx->tray_priv;
 
     clear();
     

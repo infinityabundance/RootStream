@@ -136,15 +136,53 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
         }
     }
 
-    /* Initialize tray UI */
-    if (tray_init(ctx, argc, argv) < 0) {
-        fprintf(stderr, "ERROR: Tray initialization failed\n");
-        fprintf(stderr, "FIX: Ensure system tray is available\n");
-        return -1;
+    /* Initialize tray UI with fallback (PHASE 6) */
+    printf("INFO: Initializing GUI backend...\n");
+    
+    int gui_backend = 0;  /* 0=GTK, 1=TUI, 2=CLI */
+    
+    /* Try GTK first (primary) */
+    if (tray_init(ctx, argc, argv) == 0) {
+        printf("✓ GUI backend 'GTK Tray' initialized\n");
+        ctx->active_backend.gui_name = "GTK Tray";
+        gui_backend = 0;
+    } else {
+        /* Try Terminal UI fallback */
+        printf("INFO: GTK unavailable, trying Terminal UI...\n");
+        if (tray_init_tui(ctx, argc, argv) == 0) {
+            ctx->active_backend.gui_name = "Terminal UI";
+            gui_backend = 1;
+        } else {
+            /* Fall back to CLI-only mode */
+            printf("INFO: Terminal UI unavailable, using CLI-only mode...\n");
+            if (tray_init_cli(ctx, argc, argv) == 0) {
+                ctx->active_backend.gui_name = "CLI-only";
+                gui_backend = 2;
+            } else {
+                fprintf(stderr, "ERROR: All GUI backends failed\n");
+                return -1;
+            }
+        }
     }
 
-    /* Run GTK main loop (blocks until quit) */
-    tray_run(ctx);
+    /* Run the selected GUI backend (blocks until quit) */
+    if (gui_backend == 0) {
+        tray_run(ctx);
+    } else if (gui_backend == 1) {
+        /* For TUI, we need a simple event loop */
+        while (ctx->running) {
+            tray_update_status_tui(ctx, ctx->tray.status);
+            tray_run_tui(ctx);
+            usleep(100000);  /* 100ms */
+        }
+    } else {
+        /* For CLI, just keep running until interrupted */
+        printf("INFO: Running in CLI-only mode (Ctrl+C to exit)\n");
+        while (ctx->running) {
+            tray_run_cli(ctx);
+            usleep(1000000);  /* 1 second */
+        }
+    }
 
     return 0;
 }

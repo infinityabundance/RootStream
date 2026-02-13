@@ -51,6 +51,7 @@ else
     ifeq ($(GTK_FOUND),yes)
         CFLAGS += $(shell pkg-config --cflags $(GTK_PKG))
         LIBS += $(shell pkg-config --libs $(GTK_PKG))
+        CFLAGS += -DHAVE_GTK
     else
         $(error GTK3 development files not found. Install gtk3 and pkg-config (e.g., libgtk-3-dev or gtk3-devel) or run `make deps` for checks. Alternatively set HEADLESS=1 for a non-GUI build.)
     endif

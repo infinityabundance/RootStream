@@ -107,6 +107,7 @@ int input_inject_key_xdotool(uint32_t keycode, bool press) {
  */
 int input_inject_mouse_xdotool(int x, int y, uint32_t buttons) {
     char cmd[256];
+    int ret;
     
     /* Move mouse */
     snprintf(cmd, sizeof(cmd), "xdotool mousemove %d %d 2>/dev/null", x, y);
@@ -114,13 +115,16 @@ int input_inject_mouse_xdotool(int x, int y, uint32_t buttons) {
 
     /* Handle button clicks */
     if (buttons & BTN_LEFT) {
-        system("xdotool click 1 2>/dev/null");
+        ret = system("xdotool click 1 2>/dev/null");
+        (void)ret;  /* Ignore result */
     }
     if (buttons & BTN_MIDDLE) {
-        system("xdotool click 2 2>/dev/null");
+        ret = system("xdotool click 2 2>/dev/null");
+        (void)ret;  /* Ignore result */
     }
     if (buttons & BTN_RIGHT) {
-        system("xdotool click 3 2>/dev/null");
+        ret = system("xdotool click 3 2>/dev/null");
+        (void)ret;  /* Ignore result */
     }
 
     return 0;
