@@ -8,7 +8,10 @@
     "sdl2",
     "libsodium",
     "opus",
-    "cjson"
+    "cjson",
+    "libpqxx",
+    "hiredis",
+    "nlohmann-json"
   ],
   "features": {
     "ffmpeg": {
