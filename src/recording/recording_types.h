@@ -12,6 +12,8 @@ extern "C" {
 #define MAX_RECORDING_QUEUE_SIZE 512
 #define MAX_RECORDINGS 100
 #define DEFAULT_REPLAY_BUFFER_SIZE_MB 500
+#define MAX_CHAPTER_MARKERS 100
+#define MAX_AUDIO_TRACKS 4
 
 enum VideoCodec {
     VIDEO_CODEC_H264,      // Primary (fast, universal)
@@ -77,6 +79,35 @@ typedef struct {
     size_t sample_count;
     uint64_t timestamp_us;
 } audio_chunk_t;
+
+typedef struct {
+    uint64_t timestamp_us;
+    char title[256];
+    char description[512];
+} chapter_marker_t;
+
+typedef struct {
+    uint32_t track_id;
+    char name[128];        // e.g., "Game Audio", "Microphone"
+    uint8_t channels;
+    uint32_t sample_rate;
+    bool enabled;
+    float volume;          // 0.0 - 1.0
+} audio_track_info_t;
+
+typedef struct {
+    chapter_marker_t markers[MAX_CHAPTER_MARKERS];
+    uint32_t marker_count;
+    
+    audio_track_info_t tracks[MAX_AUDIO_TRACKS];
+    uint32_t track_count;
+    
+    char game_name[256];
+    char game_version[64];
+    char player_name[128];
+    char tags[512];        // Comma-separated tags
+    uint64_t session_id;
+} recording_metadata_t;
 
 #ifdef __cplusplus
 }
