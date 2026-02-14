@@ -255,7 +255,10 @@ int replay_buffer_save(replay_buffer_t *buffer,
     }
     
     // Create audio stream if audio chunks exist
+    // TODO: Audio encoding not yet fully implemented
+    // Audio stream creation is disabled until proper Opus encoding is added
     AVStream *audio_stream = nullptr;
+    /*
     if (!buffer->audio_chunks.empty()) {
         const replay_audio_chunk_t &first_chunk = buffer->audio_chunks.front();
         
@@ -272,6 +275,7 @@ int replay_buffer_save(replay_buffer_t *buffer,
         audio_stream->codecpar->sample_rate = first_chunk.sample_rate;
         audio_stream->time_base = (AVRational){1, 1000000}; // Microseconds
     }
+    */
     
     // Open output file
     if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
@@ -316,12 +320,20 @@ int replay_buffer_save(replay_buffer_t *buffer,
         if (write_video) {
             const auto &frame = buffer->video_frames[video_idx];
             if (frame.timestamp_us >= cutoff_timestamp_us) {
+                // Allocate memory for packet data
+                uint8_t *data_copy = (uint8_t *)av_memdup(frame.data, frame.size);
+                if (!data_copy) {
+                    fprintf(stderr, "Replay Buffer: Failed to allocate packet data\n");
+                    video_idx++;
+                    continue;
+                }
+                
                 AVPacket *pkt = av_packet_alloc();
                 if (pkt) {
                     // Use av_packet_from_data to properly manage packet data ownership
-                    // av_packet_from_data makes a copy of the data
-                    int ret = av_packet_from_data(pkt, av_memdup(frame.data, frame.size), frame.size);
+                    int ret = av_packet_from_data(pkt, data_copy, frame.size);
                     if (ret < 0) {
+                        av_free(data_copy); // Free the allocated memory
                         av_packet_free(&pkt);
                         video_idx++;
                         continue;
@@ -342,21 +354,14 @@ int replay_buffer_save(replay_buffer_t *buffer,
             }
             video_idx++;
         } else if (audio_stream) {
-            const auto &chunk = buffer->audio_chunks[audio_idx];
-            if (chunk.timestamp_us >= cutoff_timestamp_us) {
-                AVPacket *pkt = av_packet_alloc();
-                if (pkt) {
-                    // For simplicity, assume audio data is already encoded
-                    // In a real implementation, we'd encode the float samples to Opus
-                    // Note: Audio handling would need proper encoding before this point
-                    pkt->stream_index = audio_stream->index;
-                    pkt->pts = chunk.timestamp_us;
-                    pkt->dts = chunk.timestamp_us;
-                    
-                    av_interleaved_write_frame(fmt_ctx, pkt);
-                    av_packet_free(&pkt);
-                }
-            }
+            // TODO: Audio encoding not yet implemented
+            // Audio chunks in replay buffer are raw float samples that need to be 
+            // encoded to Opus before muxing. Skip audio packets for now.
+            // When implementing:
+            // 1. Encode float samples to Opus
+            // 2. Create packet from encoded data
+            // 3. Set proper pts/dts
+            // 4. Write packet to muxer
             audio_idx++;
         }
     }
