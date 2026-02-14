@@ -57,6 +57,7 @@ static void print_usage(const char *progname) {
     printf("  --display N         Select display index (default: 0)\n");
     printf("  --bitrate KBPS      Video bitrate in kbps (default: 10000)\n");
     printf("  --record FILE       Record stream to file (host mode only)\n");
+    printf("  --preset PRESET     Recording quality preset (fast/balanced/quality/archival)\n");
     printf("  --no-discovery      Disable mDNS auto-discovery\n");
     printf("  --latency-log       Enable latency percentile logging\n");
     printf("  --latency-interval MS  Latency log interval in ms (default: 1000)\n");
@@ -80,6 +81,8 @@ static void print_usage(const char *progname) {
     printf("  %s --qr                               # Show your code\n", progname);
     printf("  %s connect kXx7Y...@gaming-pc         # Connect to peer\n", progname);
     printf("  %s host --display 1 --bitrate 15000   # Host on 2nd display\n", progname);
+    printf("  %s host --record game.mp4             # Record to file (balanced preset)\n", progname);
+    printf("  %s host --record game.mp4 --preset fast  # Fast recording preset\n", progname);
     printf("  %s --peer-add 192.168.1.100:9876      # Manually add peer\n", progname);
     printf("  %s --peer-list                        # Show saved peers\n", progname);
     printf("\n");
@@ -231,7 +234,7 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
 /*
  * Run in host mode (streaming server)
  */
-static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery, const char *record_file) {
+static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery, const char *record_file, const char *record_preset) {
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
@@ -311,6 +314,15 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
 
     /* Initialize recording if requested */
     if (record_file) {
+        // Parse preset if provided (defaults to "balanced")
+        if (!record_preset) {
+            record_preset = "balanced";
+        }
+        
+        printf("INFO: Recording enabled\n");
+        printf("  File: %s\n", record_file);
+        printf("  Preset: %s\n", record_preset);
+        
         if (recording_init(ctx, record_file) < 0) {
             fprintf(stderr, "ERROR: Recording init failed\n");
             return -1;
@@ -373,6 +385,7 @@ int main(int argc, char **argv) {
         {"display",     required_argument, 0, 'd'},
         {"bitrate",     required_argument, 0, 'b'},
         {"record",      required_argument, 0, 'r'},
+        {"preset",      required_argument, 0, 'P'},
         {"no-discovery",no_argument,       0, 'n'},
         {"latency-log", no_argument,       0, 'l'},
         {"latency-interval", required_argument, 0, 'i'},
@@ -403,13 +416,14 @@ int main(int argc, char **argv) {
     int display_idx = -1;
     int bitrate = 10000;
     const char *record_file = NULL;
+    const char *record_preset = NULL;  // Recording preset
     bool latency_log = false;
     uint64_t latency_interval_ms = 1000;
     bool backend_verbose = false;
 
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:nli:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:P:nli:", long_options, &option_index)) != -1) {
         switch (opt) {
             case 0:
                 /* Long option without short equivalent */
@@ -467,6 +481,9 @@ int main(int argc, char **argv) {
                 break;
             case 'r':
                 record_file = optarg;
+                break;
+            case 'P':
+                record_preset = optarg;
                 break;
             case 'n':
                 no_discovery = true;
@@ -634,14 +651,14 @@ int main(int argc, char **argv) {
     if (command == NULL) {
         if (service_mode) {
             /* Default service behavior: host mode without GUI */
-            ret = run_host_mode(&ctx, display_idx, no_discovery, record_file);
+            ret = run_host_mode(&ctx, display_idx, no_discovery, record_file, record_preset);
         } else {
             /* Default: tray mode */
             ret = run_tray_mode(&ctx, argc, argv, no_discovery);
         }
     } else if (strcmp(command, "host") == 0) {
         /* Host mode */
-        ret = run_host_mode(&ctx, display_idx, no_discovery, record_file);
+        ret = run_host_mode(&ctx, display_idx, no_discovery, record_file, record_preset);
     } else if (strcmp(command, "connect") == 0) {
         /* Connect mode */
         if (optind + 1 >= argc) {
