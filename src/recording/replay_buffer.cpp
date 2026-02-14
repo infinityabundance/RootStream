@@ -318,8 +318,15 @@ int replay_buffer_save(replay_buffer_t *buffer,
             if (frame.timestamp_us >= cutoff_timestamp_us) {
                 AVPacket *pkt = av_packet_alloc();
                 if (pkt) {
-                    pkt->data = frame.data;
-                    pkt->size = frame.size;
+                    // Use av_packet_from_data to properly manage packet data ownership
+                    // av_packet_from_data makes a copy of the data
+                    int ret = av_packet_from_data(pkt, av_memdup(frame.data, frame.size), frame.size);
+                    if (ret < 0) {
+                        av_packet_free(&pkt);
+                        video_idx++;
+                        continue;
+                    }
+                    
                     pkt->stream_index = video_stream->index;
                     pkt->pts = frame.timestamp_us;
                     pkt->dts = frame.timestamp_us;
@@ -341,6 +348,7 @@ int replay_buffer_save(replay_buffer_t *buffer,
                 if (pkt) {
                     // For simplicity, assume audio data is already encoded
                     // In a real implementation, we'd encode the float samples to Opus
+                    // Note: Audio handling would need proper encoding before this point
                     pkt->stream_index = audio_stream->index;
                     pkt->pts = chunk.timestamp_us;
                     pkt->dts = chunk.timestamp_us;
