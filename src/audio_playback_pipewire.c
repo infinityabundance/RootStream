@@ -110,13 +110,12 @@ int audio_playback_init_pipewire(rootstream_ctx_t *ctx) {
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
     
     const struct spa_pod *params[1];
-    struct spa_audio_info_raw info = SPA_AUDIO_INFO_RAW_INIT(
-        .format = SPA_AUDIO_FORMAT_S16,
-        .channels = pw->channels,
-        .rate = pw->sample_rate
-    );
-    
-    params[0] = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, &info);
+    params[0] = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, 
+        &SPA_AUDIO_INFO_RAW_INIT(
+            .format = SPA_AUDIO_FORMAT_S16,
+            .channels = pw->channels,
+            .rate = pw->sample_rate
+        ));
 
     /* Connect stream for playback */
     if (pw_stream_connect(
