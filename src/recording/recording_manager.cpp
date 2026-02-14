@@ -15,8 +15,9 @@ extern "C" {
 
 RecordingManager::RecordingManager() 
     : format_ctx(nullptr), video_stream(nullptr), audio_stream(nullptr),
-      video_codec_ctx(nullptr), disk_manager(nullptr), frame_drop_count(0),
-      next_recording_id(1) {
+      video_codec_ctx(nullptr), h264_enc(nullptr), vp9_enc(nullptr), av1_enc(nullptr),
+      replay_buffer(nullptr), replay_buffer_enabled(false),
+      disk_manager(nullptr), frame_drop_count(0), next_recording_id(1) {
     
     is_recording.store(false);
     is_paused.store(false);
@@ -24,6 +25,7 @@ RecordingManager::RecordingManager()
     
     memset(&config, 0, sizeof(config));
     memset(&active_recording, 0, sizeof(active_recording));
+    memset(&metadata, 0, sizeof(metadata));
     
     config.max_storage_mb = 10000;  // 10GB default
     config.auto_cleanup_threshold_percent = 90;
@@ -328,6 +330,12 @@ void RecordingManager::cleanup() {
         }
     }
     
+    if (replay_buffer_enabled && replay_buffer) {
+        disable_replay_buffer();
+    }
+    
+    cleanup_encoders();
+    
     if (disk_manager) {
         delete disk_manager;
         disk_manager = nullptr;
@@ -389,6 +397,164 @@ int RecordingManager::init_muxer(enum ContainerFormat format) {
         format_ctx = nullptr;
         return -1;
     }
+    
+    return 0;
+}
+
+int RecordingManager::encode_frame_with_active_encoder(const uint8_t *frame_data, 
+                                                       uint32_t width, uint32_t height, 
+                                                       const char *pixel_format) {
+    // This is a placeholder implementation
+    // In a full implementation, this would use the appropriate encoder (H.264, VP9, or AV1)
+    // based on the active recording's video codec setting
+    return 0;
+}
+
+void RecordingManager::cleanup_encoders() {
+    // Cleanup encoder wrappers if they exist
+    h264_enc = nullptr;
+    vp9_enc = nullptr;
+    av1_enc = nullptr;
+}
+
+// Replay buffer methods
+int RecordingManager::enable_replay_buffer(uint32_t duration_seconds, uint32_t max_memory_mb) {
+    if (replay_buffer_enabled) {
+        fprintf(stderr, "ERROR: Replay buffer already enabled\n");
+        return -1;
+    }
+    
+    replay_buffer = replay_buffer_create(duration_seconds, max_memory_mb);
+    if (!replay_buffer) {
+        fprintf(stderr, "ERROR: Failed to create replay buffer\n");
+        return -1;
+    }
+    
+    replay_buffer_enabled = true;
+    printf("✓ Replay buffer enabled: %u seconds, max memory: %u MB\n", 
+           duration_seconds, max_memory_mb);
+    
+    return 0;
+}
+
+int RecordingManager::disable_replay_buffer() {
+    if (!replay_buffer_enabled) {
+        return 0;
+    }
+    
+    if (replay_buffer) {
+        replay_buffer_destroy(replay_buffer);
+        replay_buffer = nullptr;
+    }
+    
+    replay_buffer_enabled = false;
+    printf("✓ Replay buffer disabled\n");
+    
+    return 0;
+}
+
+int RecordingManager::save_replay_buffer(const char *filename, uint32_t duration_sec) {
+    if (!replay_buffer_enabled || !replay_buffer) {
+        fprintf(stderr, "ERROR: Replay buffer not enabled\n");
+        return -1;
+    }
+    
+    if (!filename) {
+        fprintf(stderr, "ERROR: Invalid filename\n");
+        return -1;
+    }
+    
+    // Generate full filepath
+    char filepath[2048];
+    if (filename[0] == '/') {
+        // Absolute path
+        strncpy(filepath, filename, sizeof(filepath) - 1);
+    } else {
+        // Relative to output directory
+        snprintf(filepath, sizeof(filepath), "%s/%s", config.output_directory, filename);
+    }
+    
+    printf("Saving replay buffer to: %s\n", filepath);
+    
+    int ret = replay_buffer_save(replay_buffer, filepath, duration_sec);
+    if (ret != 0) {
+        fprintf(stderr, "ERROR: Failed to save replay buffer\n");
+        return -1;
+    }
+    
+    printf("✓ Replay buffer saved successfully\n");
+    return 0;
+}
+
+// Metadata methods
+int RecordingManager::add_chapter_marker(const char *title, const char *description) {
+    if (!is_recording.load()) {
+        fprintf(stderr, "ERROR: Not recording\n");
+        return -1;
+    }
+    
+    if (!title) {
+        return -1;
+    }
+    
+    // Add chapter marker to metadata
+    if (metadata.marker_count >= MAX_CHAPTER_MARKERS) {
+        fprintf(stderr, "WARNING: Maximum chapter markers reached\n");
+        return -1;
+    }
+    
+    chapter_marker_t *marker = &metadata.markers[metadata.marker_count];
+    marker->timestamp_us = (uint64_t)time(nullptr) * 1000000ULL - active_recording.start_time_us;
+    strncpy(marker->title, title, sizeof(marker->title) - 1);
+    
+    if (description) {
+        strncpy(marker->description, description, sizeof(marker->description) - 1);
+    }
+    
+    metadata.marker_count++;
+    
+    printf("✓ Chapter marker added: %s at %.1fs\n", title, marker->timestamp_us / 1000000.0);
+    
+    return 0;
+}
+
+int RecordingManager::set_game_name(const char *name) {
+    if (!name) {
+        return -1;
+    }
+    
+    strncpy(metadata.game_name, name, sizeof(metadata.game_name) - 1);
+    
+    if (is_recording.load()) {
+        strncpy(active_recording.metadata, name, sizeof(active_recording.metadata) - 1);
+    }
+    
+    printf("✓ Game name set: %s\n", name);
+    
+    return 0;
+}
+
+int RecordingManager::add_audio_track(const char *name, uint8_t channels, uint32_t sample_rate) {
+    if (!name) {
+        return -1;
+    }
+    
+    if (metadata.track_count >= MAX_AUDIO_TRACKS) {
+        fprintf(stderr, "WARNING: Maximum audio tracks reached\n");
+        return -1;
+    }
+    
+    audio_track_info_t *track = &metadata.tracks[metadata.track_count];
+    track->track_id = metadata.track_count;
+    strncpy(track->name, name, sizeof(track->name) - 1);
+    track->channels = channels;
+    track->sample_rate = sample_rate;
+    track->enabled = true;
+    track->volume = 1.0f;
+    
+    metadata.track_count++;
+    
+    printf("✓ Audio track added: %s (%u ch, %u Hz)\n", name, channels, sample_rate);
     
     return 0;
 }
