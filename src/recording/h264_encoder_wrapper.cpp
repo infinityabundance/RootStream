@@ -177,6 +177,14 @@ int h264_encoder_encode_frame(h264_encoder_t *encoder,
     // Detect input pixel format
     enum AVPixelFormat input_format = detect_pixel_format(pixel_format);
     
+    // For YUV420P input, we don't need conversion
+    if (input_format == AV_PIX_FMT_YUV420P) {
+        // YUV420P requires special handling with three planes
+        // For now, we require conversion through RGB
+        fprintf(stderr, "ERROR: Direct YUV420P input not yet supported, use RGB/RGBA\n");
+        return -1;
+    }
+    
     // Initialize swscale context if needed
     if (!encoder->sws_ctx) {
         encoder->sws_ctx = sws_getContext(
@@ -191,9 +199,10 @@ int h264_encoder_encode_frame(h264_encoder_t *encoder,
         }
     }
     
-    // Calculate stride for input format
-    int src_stride = encoder->width * (input_format == AV_PIX_FMT_RGBA || 
-                                       input_format == AV_PIX_FMT_BGRA ? 4 : 3);
+    // Calculate stride for input format (RGB/RGBA/BGR/BGRA only)
+    int bytes_per_pixel = (input_format == AV_PIX_FMT_RGBA || 
+                          input_format == AV_PIX_FMT_BGRA) ? 4 : 3;
+    int src_stride = encoder->width * bytes_per_pixel;
     
     // Convert to YUV420P
     const uint8_t *src_data[1] = { frame_data };
@@ -257,9 +266,9 @@ int h264_encoder_request_keyframe(h264_encoder_t *encoder) {
         return -1;
     }
     
-    // Force keyframe by setting picture type
+    // Force keyframe by setting picture type and flags
     encoder->frame->pict_type = AV_PICTURE_TYPE_I;
-    encoder->frame->key_frame = 1;
+    encoder->frame->flags |= AV_FRAME_FLAG_KEY;
     
     return 0;
 }

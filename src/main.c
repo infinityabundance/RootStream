@@ -315,7 +315,7 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
     /* Initialize recording if requested */
     if (record_file) {
         // Parse preset if provided (defaults to "balanced")
-        if (!record_preset || strlen(record_preset) == 0) {
+        if (!record_preset) {
             record_preset = "balanced";
         }
         
