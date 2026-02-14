@@ -121,6 +121,9 @@ if(ENABLE_UNIT_TESTS)
             ${CMAKE_SOURCE_DIR}/src/recording/disk_manager.cpp
             ${CMAKE_SOURCE_DIR}/src/recording/replay_buffer.cpp
             ${CMAKE_SOURCE_DIR}/src/recording/recording_metadata.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/h264_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/vp9_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/av1_encoder_wrapper.cpp
         )
         target_include_directories(test_recording_manager_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
         target_link_libraries(test_recording_manager_integration 
@@ -129,6 +132,20 @@ if(ENABLE_UNIT_TESTS)
         )
         add_test(NAME RecordingManagerIntegrationUnit COMMAND test_recording_manager_integration)
         set_tests_properties(RecordingManagerIntegrationUnit PROPERTIES LABELS "unit")
+        
+        # PHASE 27.2: Encoder integration test
+        add_executable(test_encoder_integration unit/test_encoder_integration.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/h264_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/vp9_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/av1_encoder_wrapper.cpp
+        )
+        target_include_directories(test_encoder_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_encoder_integration 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME EncoderIntegrationUnit COMMAND test_encoder_integration)
+        set_tests_properties(EncoderIntegrationUnit PROPERTIES LABELS "unit")
         
         message(STATUS "Recording system tests enabled (FFmpeg found)")
     else()

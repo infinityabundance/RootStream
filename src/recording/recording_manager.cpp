@@ -1,5 +1,8 @@
 #include "recording_manager.h"
 #include "recording_presets.h"
+#include "h264_encoder_wrapper.h"
+#include "vp9_encoder_wrapper.h"
+#include "av1_encoder_wrapper.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -116,6 +119,31 @@ int RecordingManager::start_recording(enum RecordingPreset preset, const char *g
         return -1;
     }
     
+    // Initialize video encoder
+    // Note: Using default 1920x1080 @ 60fps for now
+    // In a full implementation, these would come from capture settings
+    uint32_t width = 1920;
+    uint32_t height = 1080;
+    uint32_t fps = 60;
+    uint32_t bitrate_kbps = (preset_cfg->video_codec == VIDEO_CODEC_H264) ? 
+                            preset_cfg->h264_bitrate_kbps : 
+                            (preset_cfg->video_codec == VIDEO_CODEC_VP9) ?
+                            preset_cfg->vp9_bitrate_kbps :
+                            preset_cfg->av1_bitrate_kbps;
+    
+    if (init_video_encoder(preset_cfg->video_codec, width, height, fps, bitrate_kbps) != 0) {
+        fprintf(stderr, "ERROR: Failed to initialize video encoder\n");
+        // Cleanup muxer on failure
+        if (format_ctx) {
+            if (!(format_ctx->oformat->flags & AVFMT_NOFILE)) {
+                avio_closep(&format_ctx->pb);
+            }
+            avformat_free_context(format_ctx);
+            format_ctx = nullptr;
+        }
+        return -1;
+    }
+    
     is_recording.store(true);
     is_paused.store(false);
     
@@ -133,6 +161,9 @@ int RecordingManager::stop_recording() {
     
     is_recording.store(false);
     is_paused.store(false);
+    
+    // Flush and cleanup encoders before finalizing muxer
+    cleanup_encoders();
     
     // Finalize muxer
     if (format_ctx) {
@@ -362,7 +393,145 @@ int RecordingManager::update_recording_metadata() {
 
 int RecordingManager::init_video_encoder(enum VideoCodec codec, uint32_t width, uint32_t height, 
                                         uint32_t fps, uint32_t bitrate_kbps) {
-    // Placeholder - would initialize H.264/VP9/AV1 encoder here
+    // Get preset configuration
+    const struct RecordingPresetConfig *preset_cfg = get_recording_preset(active_recording.preset);
+    
+    // Initialize the appropriate encoder based on codec type
+    switch (codec) {
+        case VIDEO_CODEC_H264: {
+            // Check if H.264 encoder is available
+            if (!h264_encoder_available()) {
+                fprintf(stderr, "ERROR: H.264 encoder not available\n");
+                return -1;
+            }
+            
+            // Allocate encoder
+            h264_enc = (h264_encoder *)malloc(sizeof(h264_encoder));
+            if (!h264_enc) {
+                fprintf(stderr, "ERROR: Failed to allocate H.264 encoder\n");
+                return -1;
+            }
+            memset(h264_enc, 0, sizeof(h264_encoder));
+            
+            // Initialize H.264 encoder
+            int ret = h264_encoder_init(h264_enc, width, height, fps, bitrate_kbps,
+                                       preset_cfg->h264_preset, preset_cfg->h264_crf);
+            if (ret != 0) {
+                fprintf(stderr, "ERROR: Failed to initialize H.264 encoder\n");
+                free(h264_enc);
+                h264_enc = nullptr;
+                return -1;
+            }
+            
+            printf("✓ H.264 encoder initialized: %ux%u @ %u fps, preset=%s, bitrate=%u kbps\n",
+                   width, height, fps, preset_cfg->h264_preset, bitrate_kbps);
+            break;
+        }
+        
+        case VIDEO_CODEC_VP9: {
+            // Check if VP9 encoder is available
+            if (!vp9_encoder_available()) {
+                fprintf(stderr, "ERROR: VP9 encoder not available\n");
+                return -1;
+            }
+            
+            // Allocate encoder
+            vp9_enc = (vp9_encoder *)malloc(sizeof(vp9_encoder));
+            if (!vp9_enc) {
+                fprintf(stderr, "ERROR: Failed to allocate VP9 encoder\n");
+                return -1;
+            }
+            memset(vp9_enc, 0, sizeof(vp9_encoder));
+            
+            // Initialize VP9 encoder
+            // Use -1 for quality to enable bitrate mode
+            int ret = vp9_encoder_init(vp9_enc, width, height, fps, bitrate_kbps,
+                                      preset_cfg->vp9_cpu_used, -1);
+            if (ret != 0) {
+                fprintf(stderr, "ERROR: Failed to initialize VP9 encoder\n");
+                free(vp9_enc);
+                vp9_enc = nullptr;
+                return -1;
+            }
+            
+            printf("✓ VP9 encoder initialized: %ux%u @ %u fps, cpu_used=%d, bitrate=%u kbps\n",
+                   width, height, fps, preset_cfg->vp9_cpu_used, bitrate_kbps);
+            break;
+        }
+        
+        case VIDEO_CODEC_AV1: {
+            // Check if AV1 encoder is available
+            if (!av1_encoder_available()) {
+                fprintf(stderr, "ERROR: AV1 encoder not available\n");
+                return -1;
+            }
+            
+            // Allocate encoder
+            av1_enc = (av1_encoder *)malloc(sizeof(av1_encoder));
+            if (!av1_enc) {
+                fprintf(stderr, "ERROR: Failed to allocate AV1 encoder\n");
+                return -1;
+            }
+            memset(av1_enc, 0, sizeof(av1_encoder));
+            
+            // Initialize AV1 encoder
+            // Use -1 for CRF to enable bitrate mode
+            int ret = av1_encoder_init(av1_enc, width, height, fps, bitrate_kbps,
+                                      preset_cfg->av1_cpu_used, -1);
+            if (ret != 0) {
+                fprintf(stderr, "ERROR: Failed to initialize AV1 encoder\n");
+                free(av1_enc);
+                av1_enc = nullptr;
+                return -1;
+            }
+            
+            printf("✓ AV1 encoder initialized: %ux%u @ %u fps, cpu_used=%d, bitrate=%u kbps\n",
+                   width, height, fps, preset_cfg->av1_cpu_used, bitrate_kbps);
+            break;
+        }
+        
+        default:
+            fprintf(stderr, "ERROR: Unknown video codec: %d\n", codec);
+            return -1;
+    }
+    
+    // Create video stream in the muxer
+    if (!format_ctx) {
+        fprintf(stderr, "ERROR: Format context not initialized\n");
+        return -1;
+    }
+    
+    video_stream = avformat_new_stream(format_ctx, nullptr);
+    if (!video_stream) {
+        fprintf(stderr, "ERROR: Failed to create video stream\n");
+        return -1;
+    }
+    
+    // Set stream parameters based on codec
+    video_stream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
+    video_stream->codecpar->width = width;
+    video_stream->codecpar->height = height;
+    video_stream->time_base = (AVRational){1, (int)fps};
+    video_stream->avg_frame_rate = (AVRational){(int)fps, 1};
+    
+    switch (codec) {
+        case VIDEO_CODEC_H264:
+            video_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+            break;
+        case VIDEO_CODEC_VP9:
+            video_stream->codecpar->codec_id = AV_CODEC_ID_VP9;
+            break;
+        case VIDEO_CODEC_AV1:
+            video_stream->codecpar->codec_id = AV_CODEC_ID_AV1;
+            break;
+    }
+    
+    // Store video parameters in recording info
+    active_recording.video_width = width;
+    active_recording.video_height = height;
+    active_recording.video_fps = fps;
+    active_recording.video_bitrate_kbps = bitrate_kbps;
+    
     return 0;
 }
 
@@ -404,17 +573,135 @@ int RecordingManager::init_muxer(enum ContainerFormat format) {
 int RecordingManager::encode_frame_with_active_encoder(const uint8_t *frame_data, 
                                                        uint32_t width, uint32_t height, 
                                                        const char *pixel_format) {
-    // This is a placeholder implementation
-    // In a full implementation, this would use the appropriate encoder (H.264, VP9, or AV1)
-    // based on the active recording's video codec setting
-    return 0;
+    if (!frame_data || !pixel_format) {
+        return -1;
+    }
+    
+    uint8_t *encoded_data = nullptr;
+    size_t encoded_size = 0;
+    bool is_keyframe = false;
+    int ret = -1;
+    
+    // Encode frame with the appropriate encoder
+    switch (active_recording.video_codec) {
+        case VIDEO_CODEC_H264:
+            if (!h264_enc || !h264_enc->initialized) {
+                fprintf(stderr, "ERROR: H.264 encoder not initialized\n");
+                return -1;
+            }
+            ret = h264_encoder_encode_frame(h264_enc, frame_data, pixel_format,
+                                           &encoded_data, &encoded_size, &is_keyframe);
+            break;
+            
+        case VIDEO_CODEC_VP9:
+            if (!vp9_enc || !vp9_enc->initialized) {
+                fprintf(stderr, "ERROR: VP9 encoder not initialized\n");
+                return -1;
+            }
+            ret = vp9_encoder_encode_frame(vp9_enc, frame_data, pixel_format,
+                                          &encoded_data, &encoded_size, &is_keyframe);
+            break;
+            
+        case VIDEO_CODEC_AV1:
+            if (!av1_enc || !av1_enc->initialized) {
+                fprintf(stderr, "ERROR: AV1 encoder not initialized\n");
+                return -1;
+            }
+            ret = av1_encoder_encode_frame(av1_enc, frame_data, pixel_format,
+                                          &encoded_data, &encoded_size, &is_keyframe);
+            break;
+            
+        default:
+            fprintf(stderr, "ERROR: Unknown video codec\n");
+            return -1;
+    }
+    
+    if (ret != 0 || !encoded_data || encoded_size == 0) {
+        // Encoding failed or no output (some encoders may delay output)
+        return ret;
+    }
+    
+    // Create packet from encoded data
+    if (!format_ctx || !video_stream) {
+        fprintf(stderr, "ERROR: Format context or video stream not initialized\n");
+        return -1;
+    }
+    
+    // Allocate memory for packet data
+    uint8_t *packet_data = (uint8_t *)av_memdup(encoded_data, encoded_size);
+    if (!packet_data) {
+        fprintf(stderr, "ERROR: Failed to allocate packet data\n");
+        return -1;
+    }
+    
+    AVPacket *pkt = av_packet_alloc();
+    if (!pkt) {
+        fprintf(stderr, "ERROR: Failed to allocate packet\n");
+        av_free(packet_data);
+        return -1;
+    }
+    
+    // Set packet data
+    ret = av_packet_from_data(pkt, packet_data, encoded_size);
+    if (ret < 0) {
+        fprintf(stderr, "ERROR: Failed to create packet from data\n");
+        av_free(packet_data);
+        av_packet_free(&pkt);
+        return -1;
+    }
+    
+    // Set packet properties
+    pkt->stream_index = video_stream->index;
+    pkt->pts = active_recording.duration_us;
+    pkt->dts = active_recording.duration_us;
+    
+    if (is_keyframe) {
+        pkt->flags |= AV_PKT_FLAG_KEY;
+    }
+    
+    // Write packet to muxer
+    ret = av_interleaved_write_frame(format_ctx, pkt);
+    if (ret < 0) {
+        char errbuf[128];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        fprintf(stderr, "ERROR: Failed to write frame: %s\n", errbuf);
+    }
+    
+    av_packet_free(&pkt);
+    
+    return ret;
 }
 
 void RecordingManager::cleanup_encoders() {
-    // Cleanup encoder wrappers if they exist
-    h264_enc = nullptr;
-    vp9_enc = nullptr;
-    av1_enc = nullptr;
+    // Cleanup H.264 encoder
+    if (h264_enc) {
+        if (h264_enc->initialized) {
+            h264_encoder_flush(h264_enc);
+            h264_encoder_cleanup(h264_enc);
+        }
+        free(h264_enc);
+        h264_enc = nullptr;
+    }
+    
+    // Cleanup VP9 encoder
+    if (vp9_enc) {
+        if (vp9_enc->initialized) {
+            vp9_encoder_flush(vp9_enc);
+            vp9_encoder_cleanup(vp9_enc);
+        }
+        free(vp9_enc);
+        vp9_enc = nullptr;
+    }
+    
+    // Cleanup AV1 encoder
+    if (av1_enc) {
+        if (av1_enc->initialized) {
+            av1_encoder_flush(av1_enc);
+            av1_encoder_cleanup(av1_enc);
+        }
+        free(av1_enc);
+        av1_enc = nullptr;
+    }
 }
 
 // Replay buffer methods
