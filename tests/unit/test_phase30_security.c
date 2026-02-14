@@ -134,12 +134,12 @@ void test_token_generation(void) {
         FAIL("Token 2 and 3 are identical");
     } else if (strcmp(token1, token3) == 0) {
         FAIL("Token 1 and 3 are identical");
-    } else if (strlen(token1) < 32) {
-        FAIL("Token 1 is too short");
-    } else if (strlen(token2) < 32) {
-        FAIL("Token 2 is too short");
-    } else if (strlen(token3) < 32) {
-        FAIL("Token 3 is too short");
+    } else if (strlen(token1) < 64) {
+        FAIL("Token 1 is too short (expected 64+ hex chars from random bytes)");
+    } else if (strlen(token2) < 64) {
+        FAIL("Token 2 is too short (expected 64+ hex chars from random bytes)");
+    } else if (strlen(token3) < 64) {
+        FAIL("Token 3 is too short (expected 64+ hex chars from random bytes)");
     } else {
         PASS();
     }
