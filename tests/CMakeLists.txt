@@ -115,6 +115,18 @@ if(ENABLE_UNIT_TESTS)
         add_test(NAME ReplayBufferUnit COMMAND test_replay_buffer)
         set_tests_properties(ReplayBufferUnit PROPERTIES LABELS "unit")
         
+        # PHASE 27.3: Replay buffer with codec support test
+        add_executable(test_replay_buffer_codecs unit/test_replay_buffer_codecs.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/replay_buffer.cpp
+        )
+        target_include_directories(test_replay_buffer_codecs PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_replay_buffer_codecs 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME ReplayBufferCodecsUnit COMMAND test_replay_buffer_codecs)
+        set_tests_properties(ReplayBufferCodecsUnit PROPERTIES LABELS "unit")
+        
         # RecordingManager integration test
         add_executable(test_recording_manager_integration unit/test_recording_manager_integration.cpp
             ${CMAKE_SOURCE_DIR}/src/recording/recording_manager.cpp

@@ -230,6 +230,12 @@ int RecordingManager::submit_video_frame(const uint8_t *frame_data,
                                         const char *pixel_format,
                                         uint64_t timestamp_us) {
     if (!is_recording.load() || is_paused.load()) {
+        // Still add to replay buffer even if not recording
+        if (replay_buffer_enabled && replay_buffer && frame_data) {
+            // TODO: Encode frame before adding to replay buffer
+            // For now, we would need the encoded frame data
+            // This will be fully integrated when the encoding thread is implemented
+        }
         return 0;
     }
     
@@ -247,8 +253,12 @@ int RecordingManager::submit_video_frame(const uint8_t *frame_data,
         }
     }
     
-    // For now, just count frames (actual encoding would happen in encoding thread)
-    // This is a minimal implementation
+    // TODO: Actual encoding would happen in encoding thread
+    // Once frames are encoded, they should be added to replay buffer:
+    // if (replay_buffer_enabled && replay_buffer) {
+    //     replay_buffer_add_video_frame(replay_buffer, encoded_data, encoded_size,
+    //                                   width, height, timestamp_us, is_keyframe);
+    // }
     
     return 0;
 }
@@ -761,9 +771,53 @@ int RecordingManager::save_replay_buffer(const char *filename, uint32_t duration
         snprintf(filepath, sizeof(filepath), "%s/%s", config.output_directory, filename);
     }
     
+    // Determine codec to use
+    // If recording is active, use the active codec
+    // Otherwise, use H.264 as default
+    enum VideoCodec codec = VIDEO_CODEC_H264;
+    if (is_recording.load()) {
+        codec = active_recording.video_codec;
+        printf("Saving replay buffer with active recording codec: %d\n", codec);
+    } else {
+        printf("Saving replay buffer with default codec: H.264\n");
+    }
+    
     printf("Saving replay buffer to: %s\n", filepath);
     
-    int ret = replay_buffer_save(replay_buffer, filepath, duration_sec);
+    int ret = replay_buffer_save(replay_buffer, filepath, duration_sec, codec);
+    if (ret != 0) {
+        fprintf(stderr, "ERROR: Failed to save replay buffer\n");
+        return -1;
+    }
+    
+    printf("✓ Replay buffer saved successfully\n");
+    return 0;
+}
+
+int RecordingManager::save_replay_buffer(const char *filename, uint32_t duration_sec, enum VideoCodec codec) {
+    if (!replay_buffer_enabled || !replay_buffer) {
+        fprintf(stderr, "ERROR: Replay buffer not enabled\n");
+        return -1;
+    }
+    
+    if (!filename) {
+        fprintf(stderr, "ERROR: Invalid filename\n");
+        return -1;
+    }
+    
+    // Generate full filepath
+    char filepath[2048];
+    if (filename[0] == '/') {
+        // Absolute path
+        strncpy(filepath, filename, sizeof(filepath) - 1);
+    } else {
+        // Relative to output directory
+        snprintf(filepath, sizeof(filepath), "%s/%s", config.output_directory, filename);
+    }
+    
+    printf("Saving replay buffer to: %s with specified codec: %d\n", filepath, codec);
+    
+    int ret = replay_buffer_save(replay_buffer, filepath, duration_sec, codec);
     if (ret != 0) {
         fprintf(stderr, "ERROR: Failed to save replay buffer\n");
         return -1;

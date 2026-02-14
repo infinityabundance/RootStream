@@ -201,7 +201,8 @@ int replay_buffer_add_audio_chunk(replay_buffer_t *buffer,
 
 int replay_buffer_save(replay_buffer_t *buffer,
                        const char *filename,
-                       uint32_t duration_sec) {
+                       uint32_t duration_sec,
+                       enum VideoCodec video_codec) {
     if (!buffer || !filename) {
         return -1;
     }
@@ -214,8 +215,8 @@ int replay_buffer_save(replay_buffer_t *buffer,
         return -1;
     }
     
-    printf("Replay Buffer: Saving %u frames to '%s'\n",
-           (uint32_t)buffer->video_frames.size(), filename);
+    printf("Replay Buffer: Saving %u frames to '%s' with codec %d\n",
+           (uint32_t)buffer->video_frames.size(), filename, video_codec);
     
     // Calculate time range to save
     uint64_t save_duration_us;
@@ -248,7 +249,24 @@ int replay_buffer_save(replay_buffer_t *buffer,
         }
         
         video_stream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-        video_stream->codecpar->codec_id = AV_CODEC_ID_H264; // Assume H.264 encoded frames
+        
+        // Set codec ID based on specified codec
+        switch (video_codec) {
+            case VIDEO_CODEC_H264:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+                break;
+            case VIDEO_CODEC_VP9:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_VP9;
+                break;
+            case VIDEO_CODEC_AV1:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_AV1;
+                break;
+            default:
+                fprintf(stderr, "Replay Buffer: Unknown codec %d, defaulting to H.264\n", video_codec);
+                video_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+                break;
+        }
+        
         video_stream->codecpar->width = first_frame.width;
         video_stream->codecpar->height = first_frame.height;
         video_stream->time_base = (AVRational){1, 1000000}; // Microseconds
