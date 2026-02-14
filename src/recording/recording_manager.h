@@ -3,6 +3,8 @@
 
 #include "recording_types.h"
 #include "disk_manager.h"
+#include "recording_metadata.h"
+#include "replay_buffer.h"
 #include <string>
 #include <queue>
 #include <mutex>
@@ -16,6 +18,11 @@ struct AVCodecContext;
 struct AVPacket;
 struct AVFrame;
 
+// Encoder wrappers forward declarations
+struct h264_encoder;
+struct vp9_encoder;
+struct av1_encoder;
+
 class RecordingManager {
 private:
     struct {
@@ -26,6 +33,7 @@ private:
     } config;
     
     recording_info_t active_recording;
+    recording_metadata_t metadata;
     std::atomic<bool> is_recording;
     std::atomic<bool> is_paused;
     
@@ -34,6 +42,15 @@ private:
     AVStream *video_stream;
     AVStream *audio_stream;
     AVCodecContext *video_codec_ctx;
+    
+    // Encoder wrappers
+    h264_encoder *h264_enc;
+    vp9_encoder *vp9_enc;
+    av1_encoder *av1_enc;
+    
+    // Replay buffer
+    replay_buffer_t *replay_buffer;
+    bool replay_buffer_enabled;
     
     // Frame queues
     std::queue<video_frame_t> video_queue;
@@ -79,6 +96,16 @@ public:
     int set_max_storage(uint64_t max_mb);
     int set_auto_cleanup(bool enabled, uint32_t threshold_percent);
     
+    // Replay buffer control
+    int enable_replay_buffer(uint32_t duration_seconds, uint32_t max_memory_mb);
+    int disable_replay_buffer();
+    int save_replay_buffer(const char *filename, uint32_t duration_sec);
+    
+    // Metadata control
+    int add_chapter_marker(const char *title, const char *description);
+    int set_game_name(const char *name);
+    int add_audio_track(const char *name, uint8_t channels, uint32_t sample_rate);
+    
     // Query state
     bool is_recording_active();
     bool is_recording_paused();
@@ -97,6 +124,8 @@ private:
     int update_recording_metadata();
     int init_video_encoder(enum VideoCodec codec, uint32_t width, uint32_t height, uint32_t fps, uint32_t bitrate_kbps);
     int init_muxer(enum ContainerFormat format);
+    int encode_frame_with_active_encoder(const uint8_t *frame_data, uint32_t width, uint32_t height, const char *pixel_format);
+    void cleanup_encoders();
 };
 
 #endif /* RECORDING_MANAGER_H */

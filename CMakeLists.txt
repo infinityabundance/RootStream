@@ -92,7 +92,34 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(NCURSES ncurses)
     
     # PHASE 18: Recording support with FFmpeg
-    pkg_check_modules(FFMPEG libavformat libavcodec libavutil)
+    pkg_check_modules(FFMPEG libavformat libavcodec libavutil libswscale)
+    
+    # PHASE 25.1: Additional codec support
+    if(FFMPEG_FOUND)
+        # Check for VP9 codec (libvpx-vp9)
+        execute_process(
+            COMMAND pkg-config --exists vpx
+            RESULT_VARIABLE VPX_EXISTS
+        )
+        if(VPX_EXISTS EQUAL 0)
+            add_compile_definitions(HAVE_LIBVPX)
+            message(STATUS "  VP9 encoder (libvpx) found")
+        else()
+            message(STATUS "  VP9 encoder (libvpx) not found - VP9 support disabled")
+        endif()
+        
+        # Check for AV1 codec (libaom)
+        execute_process(
+            COMMAND pkg-config --exists aom
+            RESULT_VARIABLE AOM_EXISTS
+        )
+        if(AOM_EXISTS EQUAL 0)
+            add_compile_definitions(HAVE_LIBAOM)
+            message(STATUS "  AV1 encoder (libaom) found")
+        else()
+            message(STATUS "  AV1 encoder (libaom) not found - AV1 support disabled")
+        endif()
+    endif()
 
     if(VAAPI_FOUND)
         add_compile_definitions(HAVE_VAAPI)
@@ -209,6 +236,11 @@ if(FFMPEG_FOUND)
     list(APPEND LINUX_SOURCES
         src/recording/disk_manager.cpp
         src/recording/recording_manager.cpp
+        src/recording/h264_encoder_wrapper.cpp
+        src/recording/vp9_encoder_wrapper.cpp
+        src/recording/av1_encoder_wrapper.cpp
+        src/recording/replay_buffer.cpp
+        src/recording/recording_metadata.cpp
     )
 endif()
 
