@@ -108,20 +108,38 @@ void test_token_generation(void) {
     }
     
     /* Create a test user */
-    auth_manager_add_user(auth, "tokentest", "SecurePass123", ROLE_ADMIN);
+    if (auth_manager_add_user(auth, "tokentest", "SecurePass123", ROLE_ADMIN) != 0) {
+        FAIL("Failed to create test user");
+        auth_manager_cleanup(auth);
+        return;
+    }
     
     /* Generate multiple tokens and verify they're different */
     TEST("generate unique tokens");
     char token1[512], token2[512], token3[512];
     
-    if (auth_manager_authenticate(auth, "tokentest", "SecurePass123", token1, sizeof(token1)) != 0 ||
-        auth_manager_authenticate(auth, "tokentest", "SecurePass123", token2, sizeof(token2)) != 0 ||
-        auth_manager_authenticate(auth, "tokentest", "SecurePass123", token3, sizeof(token3)) != 0) {
-        FAIL("Token generation failed");
-    } else if (strcmp(token1, token2) == 0 || strcmp(token2, token3) == 0 || strcmp(token1, token3) == 0) {
-        FAIL("Tokens are not unique");
-    } else if (strlen(token1) < 32 || strlen(token2) < 32 || strlen(token3) < 32) {
-        FAIL("Tokens are too short");
+    int auth1 = auth_manager_authenticate(auth, "tokentest", "SecurePass123", token1, sizeof(token1));
+    int auth2 = auth_manager_authenticate(auth, "tokentest", "SecurePass123", token2, sizeof(token2));
+    int auth3 = auth_manager_authenticate(auth, "tokentest", "SecurePass123", token3, sizeof(token3));
+    
+    if (auth1 != 0) {
+        FAIL("First token generation failed");
+    } else if (auth2 != 0) {
+        FAIL("Second token generation failed");
+    } else if (auth3 != 0) {
+        FAIL("Third token generation failed");
+    } else if (strcmp(token1, token2) == 0) {
+        FAIL("Token 1 and 2 are identical");
+    } else if (strcmp(token2, token3) == 0) {
+        FAIL("Token 2 and 3 are identical");
+    } else if (strcmp(token1, token3) == 0) {
+        FAIL("Token 1 and 3 are identical");
+    } else if (strlen(token1) < 32) {
+        FAIL("Token 1 is too short");
+    } else if (strlen(token2) < 32) {
+        FAIL("Token 2 is too short");
+    } else if (strlen(token3) < 32) {
+        FAIL("Token 3 is too short");
     } else {
         PASS();
     }

@@ -85,18 +85,29 @@ static int validate_password_strength(const char *password) {
 
 /**
  * Generate cryptographically secure token
+ * Returns 0 on success, -1 on error
  */
-static void generate_token(const char *username, user_role_t role, char *token, size_t token_size) {
+static int generate_token(const char *username, user_role_t role, char *token, size_t token_size) {
     // Generate cryptographically random bytes
     uint8_t random_bytes[32];
-    crypto_prim_random_bytes(random_bytes, sizeof(random_bytes));
+    if (crypto_prim_random_bytes(random_bytes, sizeof(random_bytes)) != 0) {
+        fprintf(stderr, "CRITICAL: Failed to generate random bytes for token\n");
+        crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
+        return -1;
+    }
     
     // Convert to hex string
     const char hex[] = "0123456789abcdef";
     size_t pos = 0;
     
     // Add prefix with username and role for debugging (optional)
-    pos += snprintf(token + pos, token_size - pos, "%s_%d_", username, role);
+    int written = snprintf(token + pos, token_size - pos, "%s_%d_", username, role);
+    if (written < 0 || (size_t)written >= token_size - pos) {
+        fprintf(stderr, "ERROR: Token buffer too small\n");
+        crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
+        return -1;
+    }
+    pos += written;
     
     // Add random hex string
     for (size_t i = 0; i < sizeof(random_bytes) && pos < token_size - 2; i++) {
@@ -107,6 +118,7 @@ static void generate_token(const char *username, user_role_t role, char *token, 
     
     // Securely wipe random bytes from memory
     crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
+    return 0;
 }
 
 /**
@@ -308,7 +320,11 @@ int auth_manager_authenticate(auth_manager_t *auth,
     }
 
     // Generate token
-    generate_token(username, user->role, token_out, token_size);
+    if (generate_token(username, user->role, token_out, token_size) != 0) {
+        pthread_mutex_unlock(&auth->lock);
+        fprintf(stderr, "Failed to generate token for user: %s\n", username);
+        return -1;
+    }
 
     // Create session
     if (auth->session_count < MAX_SESSIONS) {

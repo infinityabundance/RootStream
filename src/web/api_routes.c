@@ -11,20 +11,40 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 
 // Global auth manager (should be passed through context in production)
 static auth_manager_t *g_auth_manager = NULL;
+static pthread_mutex_t g_auth_manager_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * Set the auth manager for API routes
  */
 void api_routes_set_auth_manager(auth_manager_t *auth) {
+    pthread_mutex_lock(&g_auth_manager_lock);
     g_auth_manager = auth;
+    pthread_mutex_unlock(&g_auth_manager_lock);
+}
+
+/**
+ * Get the auth manager safely
+ */
+static auth_manager_t *get_auth_manager(void) {
+    pthread_mutex_lock(&g_auth_manager_lock);
+    auth_manager_t *auth = g_auth_manager;
+    pthread_mutex_unlock(&g_auth_manager_lock);
+    return auth;
 }
 
 /**
  * Simple JSON string value extractor
  * Finds "key":"value" pattern and extracts value
+ * 
+ * Note: This function is used for parsing authentication requests.
+ * While the extraction itself may have variable timing based on input length,
+ * the actual password verification uses Argon2id with constant-time comparison,
+ * which protects against timing attacks on the password itself.
+ * The timing variations in JSON parsing are negligible compared to network latency.
  */
 static int extract_json_string(const char *json, const char *key, char *value, size_t value_size) {
     if (!json || !key || !value) {
@@ -291,7 +311,8 @@ int api_route_post_auth_login(const http_request_t *req,
                               char **response_body,
                               size_t *response_size,
                               char **content_type) {
-    if (!g_auth_manager) {
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
         char error_json[] = "{\"success\": false, \"error\": \"Authentication system not initialized\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
@@ -319,7 +340,7 @@ int api_route_post_auth_login(const http_request_t *req,
     
     // Authenticate with auth_manager
     char token[512] = {0};
-    if (auth_manager_authenticate(g_auth_manager, username, password, token, sizeof(token)) != 0) {
+    if (auth_manager_authenticate(auth, username, password, token, sizeof(token)) != 0) {
         char error_json[] = "{\"success\": false, \"error\": \"Invalid credentials\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
@@ -327,7 +348,7 @@ int api_route_post_auth_login(const http_request_t *req,
     // Get user role
     char verify_username[256];
     user_role_t role;
-    if (auth_manager_verify_token(g_auth_manager, token, verify_username, sizeof(verify_username), &role) != 0) {
+    if (auth_manager_verify_token(auth, token, verify_username, sizeof(verify_username), &role) != 0) {
         char error_json[] = "{\"success\": false, \"error\": \"Token generation failed\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
@@ -352,7 +373,8 @@ int api_route_post_auth_logout(const http_request_t *req,
                                char **response_body,
                                size_t *response_size,
                                char **content_type) {
-    if (!g_auth_manager) {
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
         char error_json[] = "{\"success\": false, \"error\": \"Authentication system not initialized\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
@@ -365,7 +387,7 @@ int api_route_post_auth_logout(const http_request_t *req,
             token += 7;
         }
         
-        auth_manager_invalidate_session(g_auth_manager, token);
+        auth_manager_invalidate_session(auth, token);
     }
     
     char json[] = "{\"success\": true, \"message\": \"Logged out\"}";
@@ -376,7 +398,8 @@ int api_route_get_auth_verify(const http_request_t *req,
                               char **response_body,
                               size_t *response_size,
                               char **content_type) {
-    if (!g_auth_manager) {
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
         char error_json[] = "{\"valid\": false, \"error\": \"Authentication system not initialized\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
@@ -396,7 +419,7 @@ int api_route_get_auth_verify(const http_request_t *req,
     // Verify token
     char username[256];
     user_role_t role;
-    if (auth_manager_verify_token(g_auth_manager, token, username, sizeof(username), &role) != 0) {
+    if (auth_manager_verify_token(auth, token, username, sizeof(username), &role) != 0) {
         char error_json[] = "{\"valid\": false, \"error\": \"Invalid or expired token\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
