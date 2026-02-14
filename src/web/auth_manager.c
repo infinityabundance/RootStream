@@ -1,8 +1,11 @@
 /**
  * PHASE 19: Web Dashboard - Authentication Manager Implementation
+ * PHASE 30: Security - Use Argon2 and remove hardcoded credentials
  */
 
 #include "auth_manager.h"
+#include "../security/user_auth.h"
+#include "../security/crypto_primitives.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -15,7 +18,7 @@
 
 typedef struct {
     char username[256];
-    char password_hash[256];
+    char password_hash[USER_AUTH_HASH_LEN];  // Use Argon2 hash size
     user_role_t role;
     bool is_active;
 } user_entry_t;
@@ -36,26 +39,74 @@ struct auth_manager {
 };
 
 /**
- * Simple hash function (for demonstration)
- * In production, use bcrypt or similar
+ * Validate password strength
+ * Returns 0 on success, -1 if password is too weak
  */
-static void simple_hash(const char *input, char *output, size_t output_size) {
-    unsigned long hash = 5381;
-    int c;
-    
-    while ((c = *input++)) {
-        hash = ((hash << 5) + hash) + c;
+static int validate_password_strength(const char *password) {
+    if (!password) {
+        return -1;
     }
     
-    snprintf(output, output_size, "%lx", hash);
+    size_t len = strlen(password);
+    
+    // Minimum length check
+    if (len < 8) {
+        fprintf(stderr, "Password too short (minimum 8 characters)\n");
+        return -1;
+    }
+    
+    // Maximum length check
+    if (len > 128) {
+        fprintf(stderr, "Password too long (maximum 128 characters)\n");
+        return -1;
+    }
+    
+    // Check for at least one letter and one number
+    bool has_letter = false;
+    bool has_digit = false;
+    
+    for (size_t i = 0; i < len; i++) {
+        if ((password[i] >= 'a' && password[i] <= 'z') || 
+            (password[i] >= 'A' && password[i] <= 'Z')) {
+            has_letter = true;
+        }
+        if (password[i] >= '0' && password[i] <= '9') {
+            has_digit = true;
+        }
+    }
+    
+    if (!has_letter || !has_digit) {
+        fprintf(stderr, "Password must contain at least one letter and one number\n");
+        return -1;
+    }
+    
+    return 0;
 }
 
 /**
- * Generate token
+ * Generate cryptographically secure token
  */
 static void generate_token(const char *username, user_role_t role, char *token, size_t token_size) {
-    time_t now = time(NULL);
-    snprintf(token, token_size, "%s_%d_%ld_%ld", username, role, now, (long)rand());
+    // Generate cryptographically random bytes
+    uint8_t random_bytes[32];
+    crypto_prim_random_bytes(random_bytes, sizeof(random_bytes));
+    
+    // Convert to hex string
+    const char hex[] = "0123456789abcdef";
+    size_t pos = 0;
+    
+    // Add prefix with username and role for debugging (optional)
+    pos += snprintf(token + pos, token_size - pos, "%s_%d_", username, role);
+    
+    // Add random hex string
+    for (size_t i = 0; i < sizeof(random_bytes) && pos < token_size - 2; i++) {
+        token[pos++] = hex[(random_bytes[i] >> 4) & 0xF];
+        token[pos++] = hex[random_bytes[i] & 0xF];
+    }
+    token[pos] = '\0';
+    
+    // Securely wipe random bytes from memory
+    crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
 }
 
 /**
@@ -67,24 +118,62 @@ auth_manager_t *auth_manager_init(void) {
         return NULL;
     }
 
+    // Initialize crypto primitives and user_auth
+    if (crypto_prim_init() != 0) {
+        fprintf(stderr, "Failed to initialize crypto primitives\n");
+        free(auth);
+        return NULL;
+    }
+    
+    if (user_auth_init() != 0) {
+        fprintf(stderr, "Failed to initialize user authentication\n");
+        free(auth);
+        return NULL;
+    }
+
     pthread_mutex_init(&auth->lock, NULL);
     auth->user_count = 0;
     auth->session_count = 0;
 
-    // Add default admin user
-    auth_manager_add_user(auth, "admin", "admin", ROLE_ADMIN);
+    // SECURITY: Do NOT create default admin user with hardcoded credentials
+    // Initial admin must be created through environment variables or setup script
+    // Check environment variable for initial admin setup
+    const char *admin_user = getenv("ROOTSTREAM_ADMIN_USERNAME");
+    const char *admin_pass = getenv("ROOTSTREAM_ADMIN_PASSWORD");
+    
+    if (admin_user && admin_pass && strlen(admin_user) > 0 && strlen(admin_pass) > 0) {
+        if (auth_manager_add_user(auth, admin_user, admin_pass, ROLE_ADMIN) == 0) {
+            printf("Initial admin user created from environment variables\n");
+        } else {
+            fprintf(stderr, "WARNING: Failed to create initial admin user\n");
+        }
+    } else {
+        printf("WARNING: No initial admin user created. Set ROOTSTREAM_ADMIN_USERNAME "
+               "and ROOTSTREAM_ADMIN_PASSWORD environment variables to create one.\n");
+    }
 
     return auth;
 }
 
 /**
- * Add user
+ * Add user with password strength validation and Argon2 hashing
  */
 int auth_manager_add_user(auth_manager_t *auth,
                          const char *username,
                          const char *password,
                          user_role_t role) {
     if (!auth || !username || !password || auth->user_count >= MAX_USERS) {
+        return -1;
+    }
+    
+    // Validate username
+    if (strlen(username) == 0 || strlen(username) >= sizeof(((user_entry_t*)0)->username)) {
+        fprintf(stderr, "Invalid username length\n");
+        return -1;
+    }
+    
+    // Validate password strength
+    if (validate_password_strength(password) != 0) {
         return -1;
     }
 
@@ -94,6 +183,7 @@ int auth_manager_add_user(auth_manager_t *auth,
     for (int i = 0; i < auth->user_count; i++) {
         if (strcmp(auth->users[i].username, username) == 0) {
             pthread_mutex_unlock(&auth->lock);
+            fprintf(stderr, "User already exists: %s\n", username);
             return -1;
         }
     }
@@ -101,7 +191,15 @@ int auth_manager_add_user(auth_manager_t *auth,
     // Add new user
     user_entry_t *user = &auth->users[auth->user_count];
     strncpy(user->username, username, sizeof(user->username) - 1);
-    simple_hash(password, user->password_hash, sizeof(user->password_hash));
+    user->username[sizeof(user->username) - 1] = '\0';
+    
+    // Hash password using Argon2 via user_auth
+    if (user_auth_hash_password(password, user->password_hash) != 0) {
+        pthread_mutex_unlock(&auth->lock);
+        fprintf(stderr, "Failed to hash password\n");
+        return -1;
+    }
+    
     user->role = role;
     user->is_active = true;
 
@@ -109,7 +207,7 @@ int auth_manager_add_user(auth_manager_t *auth,
 
     pthread_mutex_unlock(&auth->lock);
 
-    printf("Added user: %s (role: %d)\n", username, role);
+    printf("Added user: %s (role: %d) with Argon2 hashed password\n", username, role);
     
     return 0;
 }
@@ -138,7 +236,7 @@ int auth_manager_remove_user(auth_manager_t *auth, const char *username) {
 }
 
 /**
- * Change password
+ * Change password with validation and Argon2 hashing
  */
 int auth_manager_change_password(auth_manager_t *auth,
                                 const char *username,
@@ -146,19 +244,30 @@ int auth_manager_change_password(auth_manager_t *auth,
     if (!auth || !username || !new_password) {
         return -1;
     }
+    
+    // Validate password strength
+    if (validate_password_strength(new_password) != 0) {
+        return -1;
+    }
 
     pthread_mutex_lock(&auth->lock);
 
     for (int i = 0; i < auth->user_count; i++) {
         if (strcmp(auth->users[i].username, username) == 0) {
-            simple_hash(new_password, auth->users[i].password_hash,
-                       sizeof(auth->users[i].password_hash));
+            // Hash password using Argon2 via user_auth
+            if (user_auth_hash_password(new_password, auth->users[i].password_hash) != 0) {
+                pthread_mutex_unlock(&auth->lock);
+                fprintf(stderr, "Failed to hash new password\n");
+                return -1;
+            }
             pthread_mutex_unlock(&auth->lock);
+            printf("Password changed for user: %s\n", username);
             return 0;
         }
     }
 
     pthread_mutex_unlock(&auth->lock);
+    fprintf(stderr, "User not found: %s\n", username);
     return -1;
 }
 
@@ -191,11 +300,10 @@ int auth_manager_authenticate(auth_manager_t *auth,
         return -1;
     }
 
-    // Verify password
-    char password_hash[256];
-    simple_hash(password, password_hash, sizeof(password_hash));
-    if (strcmp(user->password_hash, password_hash) != 0) {
+    // Verify password using Argon2 via user_auth
+    if (!user_auth_verify_password(password, user->password_hash)) {
         pthread_mutex_unlock(&auth->lock);
+        fprintf(stderr, "Authentication failed for user: %s\n", username);
         return -1;
     }
 

@@ -508,10 +508,11 @@ All errors follow this format:
 ### Using curl
 
 ```bash
-# Login
+# Login (use your configured username/password)
+# Set ROOTSTREAM_ADMIN_USERNAME and ROOTSTREAM_ADMIN_PASSWORD environment variables
 TOKEN=$(curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin"}' \
+  -d '{"username":"your_username","password":"your_secure_password"}' \
   | jq -r '.token')
 
 # Get host info
@@ -532,11 +533,11 @@ curl -X PUT http://localhost:8080/api/settings/video \
 ### Using JavaScript/Fetch
 
 ```javascript
-// Login
+// Login (use your configured credentials)
 const response = await fetch('/api/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'admin', password: 'admin' })
+  body: JSON.stringify({ username: 'your_username', password: 'your_secure_password' })
 });
 const { token } = await response.json();
 localStorage.setItem('authToken', token);
