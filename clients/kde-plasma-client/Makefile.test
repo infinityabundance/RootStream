@@ -1,0 +1,35 @@
+# Simple test Makefile for Vulkan renderer
+CC = gcc
+CFLAGS = -Wall -Wextra -I. -I../../include
+LDFLAGS = -lX11 -lvulkan -lm
+
+# Check if Vulkan is available
+VULKAN_FOUND := $(shell pkg-config --exists vulkan && echo yes)
+ifeq ($(VULKAN_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags vulkan)
+    LDFLAGS += $(shell pkg-config --libs vulkan)
+endif
+
+# Check if X11 is available
+X11_FOUND := $(shell pkg-config --exists x11 && echo yes)
+ifeq ($(X11_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags x11)
+    LDFLAGS += $(shell pkg-config --libs x11)
+endif
+
+SOURCES = test_vulkan_basic.c \
+          src/renderer/vulkan_renderer.c \
+          src/renderer/vulkan_x11.c
+
+OBJECTS = $(SOURCES:.c=.o)
+
+test_vulkan: $(OBJECTS)
+	$(CC) $(OBJECTS) -o test_vulkan $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) test_vulkan
+
+.PHONY: clean
