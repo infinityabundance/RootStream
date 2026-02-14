@@ -1,0 +1,37 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Compiled shaders (generated from GLSL)
+*.spv
+
+# Test binaries
+test_vulkan
+test_*
+
+# Qt artifacts
+*.moc
+moc_*.cpp
+qrc_*.cpp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# macOS
+.DS_Store
+*.dSYM/
