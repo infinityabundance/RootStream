@@ -50,6 +50,14 @@ typedef void* VkCommandPool;
 typedef void* VkCommandBuffer;
 typedef void* VkSemaphore;
 typedef void* VkFence;
+typedef void* VkRenderPass;
+typedef void* VkPipelineLayout;
+typedef void* VkPipeline;
+typedef void* VkFramebuffer;
+typedef void* VkDescriptorSetLayout;
+typedef void* VkDescriptorPool;
+typedef void* VkDescriptorSet;
+typedef void* VkSampler;
 typedef uint32_t VkFormat;
 typedef struct { uint32_t width, height; } VkExtent2D;
 typedef uint32_t VkResult;
@@ -89,6 +97,18 @@ struct vulkan_context_s {
     VkDeviceMemory nv12_uv_memory;
     VkImageView nv12_y_view;
     VkImageView nv12_uv_view;
+    VkSampler sampler;
+    
+    // Render pass and pipeline
+    VkRenderPass render_pass;
+    VkPipelineLayout pipeline_layout;
+    VkPipeline graphics_pipeline;
+    VkFramebuffer *framebuffers;
+    
+    // Descriptor sets
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorPool descriptor_pool;
+    VkDescriptorSet descriptor_set;
     
     // Command buffers
     VkCommandPool command_pool;
@@ -103,6 +123,7 @@ struct vulkan_context_s {
     bool vsync_enabled;
     int width;
     int height;
+    uint32_t current_frame;
     
     char last_error[256];
 };
@@ -569,6 +590,201 @@ static int create_sync_objects(vulkan_context_t *ctx) {
 #endif // HAVE_VULKAN_HEADERS
 }
 
+#ifdef HAVE_VULKAN_HEADERS
+// Helper function to create a shader module from SPIR-V bytecode
+static VkShaderModule create_shader_module(VkDevice device, const uint32_t *code, size_t code_size) {
+    VkShaderModuleCreateInfo create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = code_size;
+    create_info.pCode = code;
+    
+    VkShaderModule shader_module;
+    if (vkCreateShaderModule(device, &create_info, NULL, &shader_module) != VK_SUCCESS) {
+        return VK_NULL_HANDLE;
+    }
+    
+    return shader_module;
+}
+#endif
+
+static int create_render_pass(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Color attachment (swapchain image)
+    VkAttachmentDescription color_attachment = {0};
+    color_attachment.format = ctx->swapchain_format;
+    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    
+    VkAttachmentReference color_attachment_ref = {0};
+    color_attachment_ref.attachment = 0;
+    color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    
+    // Subpass
+    VkSubpassDescription subpass = {0};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment_ref;
+    
+    // Subpass dependency
+    VkSubpassDependency dependency = {0};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    
+    // Create render pass
+    VkRenderPassCreateInfo render_pass_info = {0};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = 1;
+    render_pass_info.pAttachments = &color_attachment;
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass;
+    render_pass_info.dependencyCount = 1;
+    render_pass_info.pDependencies = &dependency;
+    
+    VkResult result = vkCreateRenderPass(ctx->device, &render_pass_info, NULL, &ctx->render_pass);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create render pass: %d", result);
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+static int create_descriptor_set_layout(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Descriptor bindings for Y and UV textures
+    VkDescriptorSetLayoutBinding bindings[2] = {0};
+    
+    // Binding 0: Y plane sampler
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[0].pImmutableSamplers = NULL;
+    
+    // Binding 1: UV plane sampler
+    bindings[1].binding = 1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[1].pImmutableSamplers = NULL;
+    
+    VkDescriptorSetLayoutCreateInfo layout_info = {0};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 2;
+    layout_info.pBindings = bindings;
+    
+    VkResult result = vkCreateDescriptorSetLayout(ctx->device, &layout_info, NULL, &ctx->descriptor_set_layout);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create descriptor set layout: %d", result);
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+static int create_framebuffers(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    ctx->framebuffers = malloc(sizeof(VkFramebuffer) * ctx->swapchain_image_count);
+    
+    for (uint32_t i = 0; i < ctx->swapchain_image_count; i++) {
+        VkImageView attachments[] = {
+            ctx->swapchain_image_views[i]
+        };
+        
+        VkFramebufferCreateInfo framebuffer_info = {0};
+        framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_info.renderPass = ctx->render_pass;
+        framebuffer_info.attachmentCount = 1;
+        framebuffer_info.pAttachments = attachments;
+        framebuffer_info.width = ctx->swapchain_extent.width;
+        framebuffer_info.height = ctx->swapchain_extent.height;
+        framebuffer_info.layers = 1;
+        
+        VkResult result = vkCreateFramebuffer(ctx->device, &framebuffer_info, NULL, &ctx->framebuffers[i]);
+        if (result != VK_SUCCESS) {
+            snprintf(ctx->last_error, sizeof(ctx->last_error),
+                    "Failed to create framebuffer %d: %d", i, result);
+            return -1;
+        }
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+// Embedded SPIR-V shader bytecode (compiled from GLSL shaders)
+// In a real implementation, these would be loaded from .spv files
+// For now, we'll use a placeholder that creates a simple pipeline
+
+static int create_graphics_pipeline(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Note: In production, these would be compiled SPIR-V shaders
+    // For this stub, we'll create the pipeline layout without actual shaders
+    
+    // Create pipeline layout
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &ctx->descriptor_set_layout;
+    pipeline_layout_info.pushConstantRangeCount = 0;
+    
+    VkResult result = vkCreatePipelineLayout(ctx->device, &pipeline_layout_info, NULL, &ctx->pipeline_layout);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create pipeline layout: %d", result);
+        return -1;
+    }
+    
+    // TODO: Load and create shader modules from SPIR-V files
+    // For now, we mark pipeline as NULL indicating shaders need to be added
+    ctx->graphics_pipeline = VK_NULL_HANDLE;
+    
+    // In a complete implementation:
+    // 1. Load vertex shader SPIR-V from fullscreen.vert.spv
+    // 2. Load fragment shader SPIR-V from nv12_to_rgb.frag.spv
+    // 3. Create shader modules
+    // 4. Set up pipeline stages
+    // 5. Configure vertex input (none for fullscreen quad)
+    // 6. Configure input assembly (triangle strip)
+    // 7. Configure viewport and scissor (dynamic)
+    // 8. Configure rasterization
+    // 9. Configure multisampling
+    // 10. Configure color blending
+    // 11. Create graphics pipeline
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 vulkan_context_t* vulkan_init(void *native_window) {
     vulkan_context_t *ctx = calloc(1, sizeof(vulkan_context_t));
     if (!ctx) {
@@ -657,6 +873,30 @@ vulkan_context_t* vulkan_init(void *native_window) {
         return NULL;
     }
     
+    // Create render pass
+    if (create_render_pass(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Create descriptor set layout
+    if (create_descriptor_set_layout(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Create graphics pipeline
+    if (create_graphics_pipeline(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Create framebuffers
+    if (create_framebuffers(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
     return ctx;
 }
 
@@ -676,8 +916,102 @@ int vulkan_render(vulkan_context_t *ctx) {
         return -1;
     }
     
-    // TODO: Implement rendering
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    if (ctx->backend == VULKAN_BACKEND_HEADLESS) {
+        return 0;  // No rendering needed for headless
+    }
+    
+    // Wait for previous frame to finish
+    vkWaitForFences(ctx->device, 1, &ctx->in_flight_fence, VK_TRUE, UINT64_MAX);
+    vkResetFences(ctx->device, 1, &ctx->in_flight_fence);
+    
+    // Acquire next image from swapchain
+    uint32_t image_index;
+    VkResult result = vkAcquireNextImageKHR(ctx->device, ctx->swapchain, UINT64_MAX,
+                                           ctx->image_available_semaphore, VK_NULL_HANDLE, &image_index);
+    
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        // Swapchain needs to be recreated (e.g., window resized)
+        return 0;  // Skip this frame
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to acquire swapchain image: %d", result);
+        return -1;
+    }
+    
+    // Record command buffer
+    VkCommandBuffer command_buffer = ctx->command_buffers[image_index];
+    
+    vkResetCommandBuffer(command_buffer, 0);
+    
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = 0;
+    begin_info.pInheritanceInfo = NULL;
+    
+    if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to begin recording command buffer");
+        return -1;
+    }
+    
+    // Begin render pass
+    VkRenderPassBeginInfo render_pass_info = {0};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_info.renderPass = ctx->render_pass;
+    render_pass_info.framebuffer = ctx->framebuffers[image_index];
+    render_pass_info.renderArea.offset.x = 0;
+    render_pass_info.renderArea.offset.y = 0;
+    render_pass_info.renderArea.extent = ctx->swapchain_extent;
+    
+    VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    render_pass_info.clearValueCount = 1;
+    render_pass_info.pClearValues = &clear_color;
+    
+    vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    
+    // TODO: Bind pipeline and draw when shaders are loaded
+    // For now, just clear to black
+    // vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->graphics_pipeline);
+    // vkCmdDraw(command_buffer, 4, 1, 0, 0);  // Draw fullscreen quad
+    
+    vkCmdEndRenderPass(command_buffer);
+    
+    if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to record command buffer");
+        return -1;
+    }
+    
+    // Submit command buffer
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    
+    VkSemaphore wait_semaphores[] = {ctx->image_available_semaphore};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = wait_stages;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    
+    VkSemaphore signal_semaphores[] = {ctx->render_finished_semaphore};
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = signal_semaphores;
+    
+    if (vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, ctx->in_flight_fence) != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to submit draw command buffer");
+        return -1;
+    }
+    
+    ctx->current_frame = image_index;
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 int vulkan_present(vulkan_context_t *ctx) {
@@ -685,8 +1019,42 @@ int vulkan_present(vulkan_context_t *ctx) {
         return -1;
     }
     
-    // TODO: Implement present
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    if (ctx->backend == VULKAN_BACKEND_HEADLESS) {
+        return 0;  // No presentation needed for headless
+    }
+    
+    // Present the image
+    VkPresentInfoKHR present_info = {0};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    
+    VkSemaphore wait_semaphores[] = {ctx->render_finished_semaphore};
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = wait_semaphores;
+    
+    VkSwapchainKHR swapchains[] = {ctx->swapchain};
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swapchains;
+    present_info.pImageIndices = &ctx->current_frame;
+    present_info.pResults = NULL;
+    
+    VkResult result = vkQueuePresentKHR(ctx->present_queue, &present_info);
+    
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        // Swapchain needs to be recreated
+        return 0;  // Not an error, just needs recreation
+    } else if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to present swapchain image: %d", result);
+        return -1;
+    }
+    
     return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 int vulkan_set_vsync(vulkan_context_t *ctx, bool enabled) {
@@ -758,6 +1126,36 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     // Destroy command pool
     if (ctx->command_pool != VK_NULL_HANDLE) {
         vkDestroyCommandPool(ctx->device, ctx->command_pool, NULL);
+    }
+    
+    // Destroy framebuffers
+    if (ctx->framebuffers) {
+        for (uint32_t i = 0; i < ctx->swapchain_image_count; i++) {
+            if (ctx->framebuffers[i] != VK_NULL_HANDLE) {
+                vkDestroyFramebuffer(ctx->device, ctx->framebuffers[i], NULL);
+            }
+        }
+        free(ctx->framebuffers);
+    }
+    
+    // Destroy graphics pipeline
+    if (ctx->graphics_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(ctx->device, ctx->graphics_pipeline, NULL);
+    }
+    
+    // Destroy pipeline layout
+    if (ctx->pipeline_layout != VK_NULL_HANDLE) {
+        vkDestroyPipelineLayout(ctx->device, ctx->pipeline_layout, NULL);
+    }
+    
+    // Destroy render pass
+    if (ctx->render_pass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(ctx->device, ctx->render_pass, NULL);
+    }
+    
+    // Destroy descriptor set layout
+    if (ctx->descriptor_set_layout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(ctx->device, ctx->descriptor_set_layout, NULL);
     }
     
     // Destroy swapchain image views
