@@ -338,20 +338,28 @@ docker run -d -p 80:80 -p 8080:8080 -p 8081:8081 \
 
 ## Security Hardening
 
-### 1. Change Default Credentials
+### 1. Configure Initial Admin Credentials
+
+**IMPORTANT**: No default credentials are created. You must set up an initial admin account using environment variables:
 
 ```bash
-# First login, then immediately change password
+# Set environment variables before starting RootStream
+export ROOTSTREAM_ADMIN_USERNAME="your_admin_username"
+export ROOTSTREAM_ADMIN_PASSWORD="YourSecurePassword123!"
+
+# Start RootStream - it will create the admin user on first run
+./rootstream-host
+
+# Login with your configured credentials
 curl -X POST http://localhost:8080/api/auth/login \
     -H "Content-Type: application/json" \
-    -d '{"username":"admin","password":"admin"}'
-
-# Use token to change password
-curl -X POST http://localhost:8080/api/auth/change-password \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"old_password":"admin","new_password":"NewSecurePassword123!"}'
+    -d '{"username":"your_admin_username","password":"YourSecurePassword123!"}'
 ```
+
+**Password Requirements**:
+- Minimum 8 characters
+- Must contain at least one letter and one number
+- Maximum 128 characters
 
 ### 2. Enable HTTPS
 

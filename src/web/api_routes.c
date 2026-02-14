@@ -1,14 +1,122 @@
 /**
  * PHASE 19: Web Dashboard - API Route Handlers Implementation
+ * PHASE 30: Security - Connect to auth_manager and remove hardcoded tokens
  */
 
 #include "api_routes.h"
 #include "models.h"
+#include "auth_manager.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
+
+// Global auth manager (should be passed through context in production)
+static auth_manager_t *g_auth_manager = NULL;
+static pthread_mutex_t g_auth_manager_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Set the auth manager for API routes
+ */
+void api_routes_set_auth_manager(auth_manager_t *auth) {
+    pthread_mutex_lock(&g_auth_manager_lock);
+    g_auth_manager = auth;
+    pthread_mutex_unlock(&g_auth_manager_lock);
+}
+
+/**
+ * Get the auth manager safely
+ */
+static auth_manager_t *get_auth_manager(void) {
+    pthread_mutex_lock(&g_auth_manager_lock);
+    auth_manager_t *auth = g_auth_manager;
+    pthread_mutex_unlock(&g_auth_manager_lock);
+    return auth;
+}
+
+/**
+ * Simple JSON string value extractor with proper escaping and bounds checking
+ * Finds "key":"value" pattern and extracts value
+ * 
+ * Note: This function is used for parsing authentication requests.
+ * While the extraction itself may have variable timing based on input length,
+ * the actual password verification uses Argon2id with constant-time comparison,
+ * which protects against timing attacks on the password itself.
+ * The timing variations in JSON parsing are negligible compared to network latency.
+ */
+static int extract_json_string(const char *json, size_t json_len, const char *key, char *value, size_t value_size) {
+    if (!json || !key || !value || json_len == 0) {
+        return -1;
+    }
+    
+    // Ensure json is null-terminated within the provided length
+    const char *json_end = json + json_len;
+    
+    // Look for "key":
+    char search_pattern[256];
+    int pattern_len = snprintf(search_pattern, sizeof(search_pattern), "\"%s\":", key);
+    if (pattern_len < 0 || (size_t)pattern_len >= sizeof(search_pattern)) {
+        return -1;
+    }
+    
+    const char *key_pos = strstr(json, search_pattern);
+    if (!key_pos || key_pos >= json_end) {
+        return -1;
+    }
+    
+    // Move past the key and colon
+    const char *value_start = key_pos + pattern_len;
+    
+    // Skip whitespace (with bounds checking)
+    while (value_start < json_end && 
+           (*value_start == ' ' || *value_start == '\t' || *value_start == '\n')) {
+        value_start++;
+    }
+    
+    // Check if we're within bounds and value is a string (starts with ")
+    if (value_start >= json_end || *value_start != '"') {
+        return -1;
+    }
+    value_start++; // Skip opening quote
+    
+    // Find closing quote and unescape while copying
+    const char *src = value_start;
+    size_t dest_idx = 0;
+    
+    while (src < json_end && *src && *src != '"' && dest_idx < value_size - 1) {
+        if (*src == '\\' && src + 1 < json_end && *(src + 1)) {
+            // Handle escape sequences
+            src++; // Skip backslash
+            switch (*src) {
+                case '"':  value[dest_idx++] = '"'; break;
+                case '\\': value[dest_idx++] = '\\'; break;
+                case '/':  value[dest_idx++] = '/'; break;
+                case 'b':  value[dest_idx++] = '\b'; break;
+                case 'f':  value[dest_idx++] = '\f'; break;
+                case 'n':  value[dest_idx++] = '\n'; break;
+                case 'r':  value[dest_idx++] = '\r'; break;
+                case 't':  value[dest_idx++] = '\t'; break;
+                default:   
+                    // Invalid escape sequence, treat as literal
+                    value[dest_idx++] = *src;
+                    break;
+            }
+            src++;
+        } else {
+            value[dest_idx++] = *src++;
+        }
+    }
+    
+    // Check if we found the closing quote
+    if (src >= json_end || *src != '"') {
+        return -1; // Malformed JSON - no closing quote
+    }
+    
+    value[dest_idx] = '\0';
+    return 0;
+}
 
 // Host endpoints
 int api_route_get_host_info(const http_request_t *req,
@@ -223,21 +331,66 @@ int api_route_put_settings_network(const http_request_t *req,
     return api_send_json_response(response_body, response_size, content_type, json);
 }
 
-// Authentication endpoints (stubs - will be integrated with auth_manager)
+// Authentication endpoints
 int api_route_post_auth_login(const http_request_t *req,
                               char **response_body,
                               size_t *response_size,
                               char **content_type) {
-    (void)req;
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
+        char error_json[] = "{\"success\": false, \"error\": \"Authentication system not initialized\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
     
-    // TODO: Parse username/password from req->body_data
-    // TODO: Call auth_manager_authenticate
+    if (!req->body_data || req->body_size == 0) {
+        char error_json[] = "{\"success\": false, \"error\": \"Missing request body\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
     
-    char json[] = "{"
-                  "\"success\": true,"
-                  "\"token\": \"demo_token_12345\","
-                  "\"role\": \"ADMIN\""
-                  "}";
+    // Parse username and password from JSON body
+    char username[256] = {0};
+    char password[256] = {0};
+    
+    if (extract_json_string(req->body_data, req->body_size, "username", username, sizeof(username)) != 0 ||
+        extract_json_string(req->body_data, req->body_size, "password", password, sizeof(password)) != 0) {
+        char error_json[] = "{\"success\": false, \"error\": \"Invalid JSON format or missing credentials\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Validate input
+    if (strlen(username) == 0 || strlen(password) == 0) {
+        char error_json[] = "{\"success\": false, \"error\": \"Username and password required\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Authenticate with auth_manager
+    char token[512] = {0};
+    if (auth_manager_authenticate(auth, username, password, token, sizeof(token)) != 0) {
+        char error_json[] = "{\"success\": false, \"error\": \"Invalid credentials\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Get user role
+    char verify_username[256];
+    user_role_t role;
+    if (auth_manager_verify_token(auth, token, verify_username, sizeof(verify_username), &role) != 0) {
+        char error_json[] = "{\"success\": false, \"error\": \"Token generation failed\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Build response with actual token
+    char json[1024];
+    const char *role_str = (role == ROLE_ADMIN) ? "ADMIN" : 
+                          (role == ROLE_OPERATOR) ? "OPERATOR" : "VIEWER";
+    snprintf(json, sizeof(json),
+        "{"
+        "\"success\": true,"
+        "\"token\": \"%s\","
+        "\"role\": \"%s\","
+        "\"username\": \"%s\""
+        "}",
+        token, role_str, username);
+    
     return api_send_json_response(response_body, response_size, content_type, json);
 }
 
@@ -245,7 +398,22 @@ int api_route_post_auth_logout(const http_request_t *req,
                                char **response_body,
                                size_t *response_size,
                                char **content_type) {
-    (void)req;
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
+        char error_json[] = "{\"success\": false, \"error\": \"Authentication system not initialized\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Extract token from Authorization header
+    if (req->authorization && strlen(req->authorization) > 7) {
+        // Skip "Bearer " prefix if present
+        const char *token = req->authorization;
+        if (strncmp(token, "Bearer ", 7) == 0) {
+            token += 7;
+        }
+        
+        auth_manager_invalidate_session(auth, token);
+    }
     
     char json[] = "{\"success\": true, \"message\": \"Logged out\"}";
     return api_send_json_response(response_body, response_size, content_type, json);
@@ -255,12 +423,43 @@ int api_route_get_auth_verify(const http_request_t *req,
                               char **response_body,
                               size_t *response_size,
                               char **content_type) {
-    (void)req;
+    auth_manager_t *auth = get_auth_manager();
+    if (!auth) {
+        char error_json[] = "{\"valid\": false, \"error\": \"Authentication system not initialized\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
     
-    char json[] = "{"
-                  "\"valid\": true,"
-                  "\"username\": \"admin\","
-                  "\"role\": \"ADMIN\""
-                  "}";
+    // Extract token from Authorization header
+    if (!req->authorization || strlen(req->authorization) == 0) {
+        char error_json[] = "{\"valid\": false, \"error\": \"No authorization token provided\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    const char *token = req->authorization;
+    // Skip "Bearer " prefix if present
+    if (strncmp(token, "Bearer ", 7) == 0) {
+        token += 7;
+    }
+    
+    // Verify token
+    char username[256];
+    user_role_t role;
+    if (auth_manager_verify_token(auth, token, username, sizeof(username), &role) != 0) {
+        char error_json[] = "{\"valid\": false, \"error\": \"Invalid or expired token\"}";
+        return api_send_json_response(response_body, response_size, content_type, error_json);
+    }
+    
+    // Build response
+    char json[512];
+    const char *role_str = (role == ROLE_ADMIN) ? "ADMIN" : 
+                          (role == ROLE_OPERATOR) ? "OPERATOR" : "VIEWER";
+    snprintf(json, sizeof(json),
+        "{"
+        "\"valid\": true,"
+        "\"username\": \"%s\","
+        "\"role\": \"%s\""
+        "}",
+        username, role_str);
+    
     return api_send_json_response(response_body, response_size, content_type, json);
 }

@@ -1,12 +1,18 @@
 /**
  * @file user_model.cpp
  * @brief Implementation of user model
+ * PHASE 30: Security - Implement proper password validation with Argon2
  */
 
 #include "user_model.h"
 #include <iostream>
 #include <chrono>
 #include <sstream>
+
+// Use libsodium for password verification (Argon2)
+extern "C" {
+#include <sodium.h>
+}
 
 namespace rootstream {
 namespace database {
@@ -273,15 +279,35 @@ int User::deleteUser(DatabaseManager& db) {
 }
 
 bool User::validatePassword(const std::string& password) const {
-    // TODO: Implement proper password validation with bcrypt or argon2
-    // This requires linking against a password hashing library
-    // Example with bcrypt: return bcrypt::check_password(password, data_.password_hash);
+    if (!loaded_) {
+        std::cerr << "Cannot validate password for unloaded user" << std::endl;
+        return false;
+    }
     
-    // WARNING: This is a placeholder that always returns false
-    // Do not use in production without implementing proper password hashing
-    std::cerr << "WARNING: validatePassword not implemented - integrate bcrypt or argon2" << std::endl;
-    (void)password; // Suppress unused parameter warning
-    return false;
+    if (password.empty() || data_.password_hash.empty()) {
+        std::cerr << "Password or hash is empty" << std::endl;
+        return false;
+    }
+    
+    // Initialize libsodium if not already initialized
+    static bool sodium_initialized = false;
+    if (!sodium_initialized) {
+        if (sodium_init() < 0) {
+            std::cerr << "Failed to initialize libsodium" << std::endl;
+            return false;
+        }
+        sodium_initialized = true;
+    }
+    
+    // Verify password using libsodium's Argon2 verification
+    // The hash must be in libsodium's format (Argon2id)
+    int result = crypto_pwhash_str_verify(
+        data_.password_hash.c_str(),
+        password.c_str(),
+        password.length()
+    );
+    
+    return (result == 0);
 }
 
 } // namespace models

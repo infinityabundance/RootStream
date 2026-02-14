@@ -75,9 +75,11 @@ The Terraform configuration provisions:
 aws_region = "us-east-1"
 environment = "production"
 
-# Database credentials (use secure method in production)
+# Database credentials (MUST use secure method in production)
+# Use AWS Secrets Manager, environment variables, or vault
+# NEVER commit actual passwords to version control
 db_username = "rootstream_admin"
-db_password = "CHANGE_ME_SECURE_PASSWORD"
+db_password = "USE_SECRETS_MANAGER_OR_ENV_VAR"
 
 # Node configuration
 node_desired_size = 3

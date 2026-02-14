@@ -13,6 +13,9 @@
 extern "C" {
 #endif
 
+// Forward declaration
+typedef struct auth_manager auth_manager_t;
+
 // Host endpoints
 int api_route_get_host_info(const http_request_t *req,
                             char **response_body,
@@ -108,6 +111,11 @@ int api_route_get_auth_verify(const http_request_t *req,
                               char **response_body,
                               size_t *response_size,
                               char **content_type);
+
+/**
+ * Set the auth manager for API routes to use
+ */
+void api_routes_set_auth_manager(auth_manager_t *auth);
 
 #ifdef __cplusplus
 }
