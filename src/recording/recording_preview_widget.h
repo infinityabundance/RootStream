@@ -45,7 +45,7 @@ private:
     QPixmap scaledPixmap;
     
     bool previewEnabled;
-    float scaleF factor;
+    float scaleFactor;
     uint32_t frameCount;
     uint64_t lastUpdateTime;
 };
