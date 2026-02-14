@@ -415,9 +415,3 @@ int api_route_get_auth_verify(const http_request_t *req,
     
     return api_send_json_response(response_body, response_size, content_type, json);
 }
-                  "\"valid\": true,"
-                  "\"username\": \"admin\","
-                  "\"role\": \"ADMIN\""
-                  "}";
-    return api_send_json_response(response_body, response_size, content_type, json);
-}
