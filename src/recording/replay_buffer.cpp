@@ -353,10 +353,10 @@ int replay_buffer_save(replay_buffer_t *buffer,
                 }
             }
             video_idx++;
-        } else if (audio_stream) {
+        } else {
             // TODO: Audio encoding not yet implemented
             // Audio chunks in replay buffer are raw float samples that need to be 
-            // encoded to Opus before muxing. Skip audio packets for now.
+            // encoded to Opus before muxing. Skip audio chunks for now.
             // When implementing:
             // 1. Encode float samples to Opus
             // 2. Create packet from encoded data
