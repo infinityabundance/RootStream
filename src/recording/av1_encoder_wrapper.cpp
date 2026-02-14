@@ -264,7 +264,7 @@ int av1_encoder_request_keyframe(av1_encoder_t *encoder) {
     }
     
     encoder->frame->pict_type = AV_PICTURE_TYPE_I;
-    encoder->frame->key_frame = 1;
+    encoder->frame->flags |= AV_FRAME_FLAG_KEY;
     
     return 0;
 }

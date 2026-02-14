@@ -163,27 +163,21 @@ int recording_metadata_write_to_mp4(const recording_metadata_t *metadata,
     av_dict_set(&fmt_ctx->metadata, "session_id", session_id_str, 0);
     
     // Add chapter markers
+    // Note: Adding chapters properly requires using avformat_write_header() with chapters
+    // or re-muxing the file. For now, we just add metadata tags.
+    // TODO: Implement proper chapter support via re-muxing or during recording
+    
+    char chapter_list[1024] = "";
     for (uint32_t i = 0; i < metadata->marker_count; i++) {
         const chapter_marker_t *marker = &metadata->markers[i];
-        
-        AVChapter *chapter = (AVChapter *)av_malloc(sizeof(AVChapter));
-        if (!chapter) {
-            continue;
-        }
-        
-        chapter->id = i;
-        chapter->time_base = (AVRational){1, 1000000};  // Microseconds
-        chapter->start = marker->timestamp_us;
-        chapter->end = AV_NOPTS_VALUE;  // Will be set by next chapter or end
-        
-        av_dict_set(&chapter->metadata, "title", marker->title, 0);
-        if (marker->description[0] != '\0') {
-            av_dict_set(&chapter->metadata, "description", marker->description, 0);
-        }
-        
-        // Note: Actually adding chapters requires re-muxing the file
-        // This is simplified for demonstration
-        av_free(chapter);
+        char chapter_entry[256];
+        snprintf(chapter_entry, sizeof(chapter_entry), 
+                 "Chapter %u: %s (%.2fs); ", 
+                 i + 1, marker->title, marker->timestamp_us / 1000000.0);
+        strncat(chapter_list, chapter_entry, sizeof(chapter_list) - strlen(chapter_list) - 1);
+    }
+    if (chapter_list[0] != '\0') {
+        av_dict_set(&fmt_ctx->metadata, "chapters", chapter_list, 0);
     }
     
     avformat_close_input(&fmt_ctx);
