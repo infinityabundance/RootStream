@@ -37,7 +37,7 @@ static auth_manager_t *get_auth_manager(void) {
 }
 
 /**
- * Simple JSON string value extractor
+ * Simple JSON string value extractor with proper escaping and bounds checking
  * Finds "key":"value" pattern and extracts value
  * 
  * Note: This function is used for parsing authentication requests.
@@ -46,50 +46,75 @@ static auth_manager_t *get_auth_manager(void) {
  * which protects against timing attacks on the password itself.
  * The timing variations in JSON parsing are negligible compared to network latency.
  */
-static int extract_json_string(const char *json, const char *key, char *value, size_t value_size) {
-    if (!json || !key || !value) {
+static int extract_json_string(const char *json, size_t json_len, const char *key, char *value, size_t value_size) {
+    if (!json || !key || !value || json_len == 0) {
         return -1;
     }
     
+    // Ensure json is null-terminated within the provided length
+    const char *json_end = json + json_len;
+    
     // Look for "key":
     char search_pattern[256];
-    snprintf(search_pattern, sizeof(search_pattern), "\"%s\":", key);
+    int pattern_len = snprintf(search_pattern, sizeof(search_pattern), "\"%s\":", key);
+    if (pattern_len < 0 || (size_t)pattern_len >= sizeof(search_pattern)) {
+        return -1;
+    }
+    
     const char *key_pos = strstr(json, search_pattern);
-    if (!key_pos) {
+    if (!key_pos || key_pos >= json_end) {
         return -1;
     }
     
     // Move past the key and colon
-    const char *value_start = key_pos + strlen(search_pattern);
+    const char *value_start = key_pos + pattern_len;
     
-    // Skip whitespace
-    while (*value_start == ' ' || *value_start == '\t' || *value_start == '\n') {
+    // Skip whitespace (with bounds checking)
+    while (value_start < json_end && 
+           (*value_start == ' ' || *value_start == '\t' || *value_start == '\n')) {
         value_start++;
     }
     
-    // Check if value is a string (starts with ")
-    if (*value_start != '"') {
+    // Check if we're within bounds and value is a string (starts with ")
+    if (value_start >= json_end || *value_start != '"') {
         return -1;
     }
     value_start++; // Skip opening quote
     
-    // Find closing quote
-    const char *value_end = value_start;
-    while (*value_end && *value_end != '"') {
-        if (*value_end == '\\' && *(value_end + 1)) {
-            value_end++; // Skip escaped character
+    // Find closing quote and unescape while copying
+    const char *src = value_start;
+    size_t dest_idx = 0;
+    
+    while (src < json_end && *src && *src != '"' && dest_idx < value_size - 1) {
+        if (*src == '\\' && src + 1 < json_end && *(src + 1)) {
+            // Handle escape sequences
+            src++; // Skip backslash
+            switch (*src) {
+                case '"':  value[dest_idx++] = '"'; break;
+                case '\\': value[dest_idx++] = '\\'; break;
+                case '/':  value[dest_idx++] = '/'; break;
+                case 'b':  value[dest_idx++] = '\b'; break;
+                case 'f':  value[dest_idx++] = '\f'; break;
+                case 'n':  value[dest_idx++] = '\n'; break;
+                case 'r':  value[dest_idx++] = '\r'; break;
+                case 't':  value[dest_idx++] = '\t'; break;
+                default:   
+                    // Invalid escape sequence, treat as literal
+                    value[dest_idx++] = *src;
+                    break;
+            }
+            src++;
+        } else {
+            value[dest_idx++] = *src++;
         }
-        value_end++;
     }
     
-    // Copy value
-    size_t len = value_end - value_start;
-    if (len >= value_size) {
-        len = value_size - 1;
+    // Check if we found the closing quote
+    if (src >= json_end || *src != '"') {
+        return -1; // Malformed JSON - no closing quote
     }
-    strncpy(value, value_start, len);
-    value[len] = '\0';
     
+    value[dest_idx] = '\0';
     return 0;
 }
 
@@ -326,8 +351,8 @@ int api_route_post_auth_login(const http_request_t *req,
     char username[256] = {0};
     char password[256] = {0};
     
-    if (extract_json_string(req->body_data, "username", username, sizeof(username)) != 0 ||
-        extract_json_string(req->body_data, "password", password, sizeof(password)) != 0) {
+    if (extract_json_string(req->body_data, req->body_size, "username", username, sizeof(username)) != 0 ||
+        extract_json_string(req->body_data, req->body_size, "password", password, sizeof(password)) != 0) {
         char error_json[] = "{\"success\": false, \"error\": \"Invalid JSON format or missing credentials\"}";
         return api_send_json_response(response_body, response_size, content_type, error_json);
     }
