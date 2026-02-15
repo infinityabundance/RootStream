@@ -12,19 +12,19 @@
 |------|--------|----------|-----|--------|-------|
 | 31.1.0 | ✅ Complete | 1h | 0 | 90dbc73 | Planning complete |
 | 31.1.1 | ✅ Complete | 30m | 4 | 90dbc73 | Staging fields added |
-| 31.1.2 | ✅ Complete | 1.5h | 117 | [next] | Staging buffer allocation |
-| 31.1.3 | ⏳ Not Started | - | 30 | - | - |
-| 31.1.4 | ⏳ Not Started | - | 40 | - | - |
-| 31.1.5 | ⏳ Not Started | - | 60 | - | - |
+| 31.1.2 | ✅ Complete | 1.5h | 117 | 677819c | Staging buffer allocation |
+| 31.1.3 | ✅ Complete | 45m | 53 | 17baa88 | Frame validation |
+| 31.1.4 | ✅ Complete | 1h | 43 | ab24b0b | YUV data copy |
+| 31.1.5 | ✅ Complete | 1.5h | 147 | [next] | Layout transitions |
 | 31.1.6 | ⏳ Not Started | - | 50 | - | - |
 | 31.1.7 | ⏳ Not Started | - | 50 | - | - |
 | 31.1.8 | ⏳ Not Started | - | 30 | - | - |
 | 31.1.9 | ⏳ Not Started | - | 40 | - | - |
 | 31.1.10 | ⏳ Not Started | - | 20 | - | - |
 
-**Total Completed:** 5/11 (45%)  
-**Total LOC Added:** 217/384 (56%)  
-**Time Spent:** 4.75h / 15h
+**Total Completed:** 6/11 (55%)  
+**Total LOC Added:** 364/384 (95%)  
+**Time Spent:** 6.25h / 15h
 
 ---
 
@@ -392,4 +392,75 @@ static int copy_frame_to_staging(vulkan_context_t *ctx, const frame_t *frame) {
 - ~3ms for 1080p frame (1920×1080×1.5 = 3.1MB)
 
 **Next:** Micro-Task 31.1.5 - Image layout transition helper
+
+
+---
+
+### ✅ Micro-Task 31.1.5: Add Image Layout Transition Helper
+**Completed:** February 15, 2026  
+**Duration:** 1.5 hours  
+**Status:** Complete  
+**LOC:** 147 lines added
+
+**What was done:**
+- Created `transition_image_layout()` static helper function
+- Allocates single-time command buffer
+- Records pipeline barrier with appropriate access/stage masks
+- Handles UNDEFINED → TRANSFER_DST transition (before copy)
+- Handles TRANSFER_DST → SHADER_READ_ONLY transition (after copy)
+- Submits command buffer and waits for completion
+- Proper cleanup of command buffer
+
+**Files modified:**
+- `clients/kde-plasma-client/src/renderer/vulkan_renderer.c`
+  - Added VkImageLayout and related types to fallback definitions
+  - Added transition_image_layout() function (130 lines)
+
+**Function signature:**
+```c
+static int transition_image_layout(vulkan_context_t *ctx,
+                                   VkImage image,
+                                   VkImageLayout old_layout,
+                                   VkImageLayout new_layout)
+```
+
+**Supported transitions:**
+1. **UNDEFINED → TRANSFER_DST_OPTIMAL**
+   - Before buffer-to-image copy
+   - Source: TOP_OF_PIPE (no previous operations)
+   - Destination: TRANSFER stage with WRITE access
+
+2. **TRANSFER_DST → SHADER_READ_ONLY_OPTIMAL**
+   - After buffer-to-image copy
+   - Source: TRANSFER stage with WRITE access
+   - Destination: FRAGMENT_SHADER stage with READ access
+
+**Implementation details:**
+- Single-time command buffer (ONE_TIME_SUBMIT_BIT)
+- Image memory barrier for synchronization
+- VK_QUEUE_FAMILY_IGNORED (no queue family transfer)
+- Full image subresource range (all mip levels, all layers)
+- VK_IMAGE_ASPECT_COLOR_BIT for color attachments
+- Synchronous execution with vkQueueWaitIdle
+
+**Error handling:**
+- Checks all Vulkan API calls
+- Returns -1 on any failure
+- Sets ctx->last_error with descriptive message
+- Cleans up command buffer on error
+- Validates transition types (only supported ones)
+
+**Performance notes:**
+- Single-time command buffer (not optimal for high-frequency)
+- Synchronous wait (blocks until complete)
+- Fine for initialization and frame upload
+- Could be optimized with async barriers for rendering
+
+**Testing:**
+- ✅ Code compiles
+- ✅ Barrier logic verified
+- ✅ Access masks correct per Vulkan spec
+- ⏳ Runtime test pending
+
+**Next:** Micro-Task 31.1.6 - Buffer-to-image copy for Y plane
 

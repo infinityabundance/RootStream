@@ -59,10 +59,21 @@ typedef void* VkDescriptorPool;
 typedef void* VkDescriptorSet;
 typedef void* VkSampler;
 typedef uint32_t VkFormat;
+typedef uint32_t VkImageLayout;
+typedef uint32_t VkAccessFlags;
+typedef uint32_t VkPipelineStageFlags;
 typedef struct { uint32_t width, height; } VkExtent2D;
 typedef uint32_t VkResult;
 #define VK_NULL_HANDLE NULL
 #define VK_SUCCESS 0
+#define VK_IMAGE_LAYOUT_UNDEFINED 0
+#define VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 6
+#define VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 5
+#define VK_ACCESS_TRANSFER_WRITE_BIT 0x00001000
+#define VK_ACCESS_SHADER_READ_BIT 0x00000020
+#define VK_PIPELINE_STAGE_TRANSFER_BIT 0x00001000
+#define VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080
+#define VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001
 #endif
 
 /**
@@ -1117,6 +1128,138 @@ static int copy_frame_to_staging(vulkan_context_t *ctx, const frame_t *frame) {
     memcpy(staging_ptr + y_size, frame_data + y_size, uv_size);
     
     return 0;
+}
+
+/**
+ * Transition image layout using pipeline barrier
+ * 
+ * Creates a single-time command buffer to transition an image from
+ * one layout to another. This is needed before/after copy operations
+ * and to prepare images for shader access.
+ * 
+ * @param ctx Vulkan context
+ * @param image Image to transition
+ * @param old_layout Current layout
+ * @param new_layout Desired layout
+ * @return 0 on success, -1 on failure
+ */
+static int transition_image_layout(vulkan_context_t *ctx,
+                                   VkImage image,
+                                   VkImageLayout old_layout,
+                                   VkImageLayout new_layout) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Allocate single-time command buffer
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = ctx->command_pool;
+    alloc_info.commandBufferCount = 1;
+    
+    VkCommandBuffer command_buffer;
+    VkResult result = vkAllocateCommandBuffers(ctx->device, &alloc_info, &command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate command buffer for layout transition: %d", result);
+        return -1;
+    }
+    
+    // Begin command buffer
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    
+    result = vkBeginCommandBuffer(command_buffer, &begin_info);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to begin command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Set up barrier based on transition type
+    VkImageMemoryBarrier barrier = {0};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    
+    // Determine access masks and pipeline stages based on layouts
+    VkPipelineStageFlags source_stage;
+    VkPipelineStageFlags destination_stage;
+    
+    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && 
+        new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        // Before copy: prepare for transfer write
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
+               new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        // After copy: prepare for shader read
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Unsupported layout transition: %u -> %u", old_layout, new_layout);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Record pipeline barrier
+    vkCmdPipelineBarrier(
+        command_buffer,
+        source_stage, destination_stage,
+        0,  // dependency flags
+        0, NULL,  // memory barriers
+        0, NULL,  // buffer memory barriers
+        1, &barrier  // image memory barriers
+    );
+    
+    // End command buffer
+    result = vkEndCommandBuffer(command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to end command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Submit command buffer
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    
+    result = vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to submit command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Wait for completion
+    vkQueueWaitIdle(ctx->graphics_queue);
+    
+    // Free command buffer
+    vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 int vulkan_render(vulkan_context_t *ctx) {
