@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <netinet/in.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,7 @@ struct network_client_s {
     int socket_fd;
     char *host;
     int port;
+    struct sockaddr_in server_addr;
     
     // Connection state
     bool connected;
@@ -72,6 +74,12 @@ void network_client_set_error_callback(network_client_t *client,
 
 // Error handling
 const char* network_client_get_error(const network_client_t *client);
+
+// Handshake functions
+int network_client_start_handshake(network_client_t *client);
+int network_client_process_handshake_response(network_client_t *client,
+                                              const uint8_t *data,
+                                              size_t len);
 
 #ifdef __cplusplus
 }
