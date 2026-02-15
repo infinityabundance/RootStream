@@ -10,9 +10,9 @@
 
 | Task | Status | Duration | LOC | Commit | Notes |
 |------|--------|----------|-----|--------|-------|
-| 31.1.0 | ✅ Complete | 1h | 0 | Initial | Planning complete |
-| 31.1.1 | ✅ Complete | 30m | 4 | [hash] | Staging fields added |
-| 31.1.2 | ⏳ In Progress | - | 50 | - | - |
+| 31.1.0 | ✅ Complete | 1h | 0 | 90dbc73 | Planning complete |
+| 31.1.1 | ✅ Complete | 30m | 4 | 90dbc73 | Staging fields added |
+| 31.1.2 | ✅ Complete | 1.5h | 117 | [next] | Staging buffer allocation |
 | 31.1.3 | ⏳ Not Started | - | 30 | - | - |
 | 31.1.4 | ⏳ Not Started | - | 40 | - | - |
 | 31.1.5 | ⏳ Not Started | - | 60 | - | - |
@@ -22,9 +22,9 @@
 | 31.1.9 | ⏳ Not Started | - | 40 | - | - |
 | 31.1.10 | ⏳ Not Started | - | 20 | - | - |
 
-**Total Completed:** 2/11 (18%)  
-**Total LOC Added:** 4/384 (1%)  
-**Time Spent:** 1.5h / 15h
+**Total Completed:** 3/11 (27%)  
+**Total LOC Added:** 121/384 (32%)  
+**Time Spent:** 3h / 15h
 
 ---
 
@@ -86,7 +86,54 @@ size_t staging_size;
 
 ---
 
-### ⏳ Micro-Task 31.1.2: Create Staging Buffer Allocation Function
+### ✅ Micro-Task 31.1.2: Create Staging Buffer Allocation Function
+**Completed:** February 15, 2026  
+**Duration:** 1.5 hours  
+**Status:** Complete  
+**LOC:** 117 lines added
+
+**What was done:**
+- Created `create_staging_buffer()` static function
+- Implemented VkBuffer creation with TRANSFER_SRC usage
+- Allocated HOST_VISIBLE | HOST_COHERENT memory
+- Bound buffer to memory
+- Mapped memory persistently for CPU access
+- Added call from vulkan_init() after device creation
+- Added cleanup to vulkan_cleanup()
+
+**Files modified:**
+- `clients/kde-plasma-client/src/renderer/vulkan_renderer.c`
+
+**Function added:**
+```c
+static int create_staging_buffer(vulkan_context_t *ctx, size_t size) {
+    // Rounds size to nearest MB
+    // Creates VkBuffer with TRANSFER_SRC usage
+    // Allocates HOST_VISIBLE | HOST_COHERENT memory
+    // Binds buffer and maps memory persistently
+    return 0;
+}
+```
+
+**Integration:**
+- Called from `vulkan_init()` with 4MB size (enough for 1080p NV12)
+- Cleanup added to `vulkan_cleanup()` to unmap and free resources
+
+**Testing:**
+- ✅ Code structure correct
+- ⏳ Runtime test pending (needs full build)
+
+**Technical details:**
+- Buffer size: 4MB (handles 1080p NV12: 1920×1080×1.5 = ~3.1MB)
+- Memory properties: HOST_VISIBLE | HOST_COHERENT (for CPU access)
+- Persistent mapping: Memory mapped once at creation
+- Error handling: All Vulkan calls checked, cleanup on failure
+
+**Next:** Micro-Task 31.1.3 - Frame validation function
+
+---
+
+### ⏳ Micro-Task 31.1.3: Add Frame Validation Function
 **Status:** In Progress  
 **Estimated Duration:** 2 hours  
 **Estimated LOC:** 50 lines

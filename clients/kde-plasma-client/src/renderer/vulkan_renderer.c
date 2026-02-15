@@ -796,6 +796,108 @@ static int create_graphics_pipeline(vulkan_context_t *ctx) {
 #endif // HAVE_VULKAN_HEADERS
 }
 
+/**
+ * Create staging buffer for frame uploads
+ * 
+ * Allocates a HOST_VISIBLE buffer for transferring frame data from CPU to GPU.
+ * For 1080p NV12: width(1920) * height(1080) * 1.5 = 3,110,400 bytes (~3MB)
+ * Using 4MB to accommodate various resolutions up to 1080p.
+ */
+static int create_staging_buffer(vulkan_context_t *ctx, size_t size) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Round up to nearest MB for better allocation
+    size = ((size + 1048576 - 1) / 1048576) * 1048576;
+    ctx->staging_size = size;
+    
+    // Create buffer
+    VkBufferCreateInfo buffer_info = {0};
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = size;
+    buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    
+    VkResult result = vkCreateBuffer(ctx->device, &buffer_info, NULL, &ctx->staging_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create staging buffer: %d", result);
+        return -1;
+    }
+    
+    // Get memory requirements
+    VkMemoryRequirements mem_requirements;
+    vkGetBufferMemoryRequirements(ctx->device, ctx->staging_buffer, &mem_requirements);
+    
+    // Find suitable memory type (HOST_VISIBLE | HOST_COHERENT)
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(ctx->physical_device, &mem_properties);
+    
+    uint32_t memory_type_index = UINT32_MAX;
+    uint32_t required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+        if ((mem_requirements.memoryTypeBits & (1 << i)) &&
+            (mem_properties.memoryTypes[i].propertyFlags & required_properties) == required_properties) {
+            memory_type_index = i;
+            break;
+        }
+    }
+    
+    if (memory_type_index == UINT32_MAX) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to find suitable memory type for staging buffer");
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Allocate memory
+    VkMemoryAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize = mem_requirements.size;
+    alloc_info.memoryTypeIndex = memory_type_index;
+    
+    result = vkAllocateMemory(ctx->device, &alloc_info, NULL, &ctx->staging_memory);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate staging buffer memory: %d", result);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Bind buffer to memory
+    result = vkBindBufferMemory(ctx->device, ctx->staging_buffer, ctx->staging_memory, 0);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to bind staging buffer memory: %d", result);
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        ctx->staging_memory = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Map memory persistently
+    result = vkMapMemory(ctx->device, ctx->staging_memory, 0, size, 0, &ctx->staging_mapped);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to map staging buffer memory: %d", result);
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        ctx->staging_memory = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 vulkan_context_t* vulkan_init(void *native_window) {
     vulkan_context_t *ctx = calloc(1, sizeof(vulkan_context_t));
     if (!ctx) {
@@ -862,6 +964,14 @@ vulkan_context_t* vulkan_init(void *native_window) {
     
     // Create logical device
     if (create_logical_device(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Create staging buffer for frame uploads (4MB for 1080p NV12)
+    // NV12 1080p: 1920 * 1080 * 1.5 = 3,110,400 bytes
+    size_t staging_size = 4 * 1024 * 1024;  // 4MB
+    if (create_staging_buffer(ctx, staging_size) != 0) {
         vulkan_cleanup(ctx);
         return NULL;
     }
@@ -1187,6 +1297,17 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     // Destroy swapchain
     if (ctx->swapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(ctx->device, ctx->swapchain, NULL);
+    }
+    
+    // Clean up staging buffer
+    if (ctx->staging_mapped && ctx->staging_memory != VK_NULL_HANDLE) {
+        vkUnmapMemory(ctx->device, ctx->staging_memory);
+    }
+    if (ctx->staging_buffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+    }
+    if (ctx->staging_memory != VK_NULL_HANDLE) {
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
     }
     
     // Destroy device
