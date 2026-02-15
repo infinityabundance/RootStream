@@ -982,6 +982,35 @@ static void configure_vertex_input(VkPipelineVertexInputStateCreateInfo *vertex_
 #endif // HAVE_VULKAN_HEADERS
 }
 
+// Create pipeline layout with descriptor set layout
+static int create_pipeline_layout(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Configure pipeline layout
+    VkPipelineLayoutCreateInfo layout_info = {0};
+    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_info.setLayoutCount = 1;
+    layout_info.pSetLayouts = &ctx->descriptor_set_layout;
+    layout_info.pushConstantRangeCount = 0;  // No push constants needed
+    layout_info.pPushConstantRanges = NULL;
+    
+    // Create the pipeline layout
+    VkResult result = vkCreatePipelineLayout(
+        ctx->device, &layout_info, NULL, &ctx->pipeline_layout);
+    
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create pipeline layout (error code: %d)", result);
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 // Helper to create a simple solid color pipeline for testing
 // This creates a minimal pipeline that can draw geometry without textures
 static int create_graphics_pipeline(vulkan_context_t *ctx) {
