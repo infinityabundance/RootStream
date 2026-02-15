@@ -745,6 +745,60 @@ static int create_descriptor_set_layout(vulkan_context_t *ctx) {
 #endif // HAVE_VULKAN_HEADERS
 }
 
+static int create_descriptor_pool(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Define pool size for combined image samplers
+    // We need 2 samplers (Y and UV textures)
+    VkDescriptorPoolSize pool_size = {0};
+    pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    pool_size.descriptorCount = 2;  // Y + UV
+    
+    // Create descriptor pool
+    VkDescriptorPoolCreateInfo pool_info = {0};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = 1;  // We only need one descriptor set
+    
+    VkResult result = vkCreateDescriptorPool(ctx->device, &pool_info, NULL, &ctx->descriptor_pool);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create descriptor pool: %d", result);
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+static int allocate_descriptor_sets(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Allocate descriptor set from pool
+    VkDescriptorSetAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = ctx->descriptor_pool;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &ctx->descriptor_set_layout;
+    
+    VkResult result = vkAllocateDescriptorSets(ctx->device, &alloc_info, &ctx->descriptor_set);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate descriptor sets: %d", result);
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 static int create_framebuffers(vulkan_context_t *ctx) {
 #ifndef HAVE_VULKAN_HEADERS
     snprintf(ctx->last_error, sizeof(ctx->last_error),
@@ -1131,6 +1185,18 @@ vulkan_context_t* vulkan_init(void *native_window) {
     
     // Create descriptor set layout
     if (create_descriptor_set_layout(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Create descriptor pool
+    if (create_descriptor_pool(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Allocate descriptor sets
+    if (allocate_descriptor_sets(ctx) != 0) {
         vulkan_cleanup(ctx);
         return NULL;
     }
@@ -1924,6 +1990,11 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     // Destroy render pass
     if (ctx->render_pass != VK_NULL_HANDLE) {
         vkDestroyRenderPass(ctx->device, ctx->render_pass, NULL);
+    }
+    
+    // Destroy descriptor pool (this automatically frees all descriptor sets)
+    if (ctx->descriptor_pool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(ctx->device, ctx->descriptor_pool, NULL);
     }
     
     // Destroy descriptor set layout
