@@ -799,6 +799,61 @@ static int allocate_descriptor_sets(vulkan_context_t *ctx) {
 #endif // HAVE_VULKAN_HEADERS
 }
 
+static int update_descriptor_sets(vulkan_context_t *ctx) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Check if image views and sampler are created
+    if (ctx->nv12_y_view == VK_NULL_HANDLE || 
+        ctx->nv12_uv_view == VK_NULL_HANDLE || 
+        ctx->sampler == VK_NULL_HANDLE) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Image views or sampler not created yet");
+        return -1;
+    }
+    
+    // Prepare image info for Y texture (binding 0)
+    VkDescriptorImageInfo y_image_info = {0};
+    y_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    y_image_info.imageView = ctx->nv12_y_view;
+    y_image_info.sampler = ctx->sampler;
+    
+    // Prepare image info for UV texture (binding 1)
+    VkDescriptorImageInfo uv_image_info = {0};
+    uv_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    uv_image_info.imageView = ctx->nv12_uv_view;
+    uv_image_info.sampler = ctx->sampler;
+    
+    // Create write descriptors for both bindings
+    VkWriteDescriptorSet descriptor_writes[2] = {0};
+    
+    // Write descriptor for Y texture (binding 0)
+    descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[0].dstSet = ctx->descriptor_set;
+    descriptor_writes[0].dstBinding = 0;
+    descriptor_writes[0].dstArrayElement = 0;
+    descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[0].descriptorCount = 1;
+    descriptor_writes[0].pImageInfo = &y_image_info;
+    
+    // Write descriptor for UV texture (binding 1)
+    descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_writes[1].dstSet = ctx->descriptor_set;
+    descriptor_writes[1].dstBinding = 1;
+    descriptor_writes[1].dstArrayElement = 0;
+    descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[1].descriptorCount = 1;
+    descriptor_writes[1].pImageInfo = &uv_image_info;
+    
+    // Update all descriptor sets (no return value, always succeeds)
+    vkUpdateDescriptorSets(ctx->device, 2, descriptor_writes, 0, NULL);
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 static int create_framebuffers(vulkan_context_t *ctx) {
 #ifndef HAVE_VULKAN_HEADERS
     snprintf(ctx->last_error, sizeof(ctx->last_error),
