@@ -59,6 +59,7 @@ typedef void* VkDescriptorPool;
 typedef void* VkDescriptorSet;
 typedef void* VkSampler;
 typedef void* VkBuffer;
+typedef void* VkShaderModule;
 typedef uint32_t VkFormat;
 typedef uint32_t VkImageLayout;
 typedef uint32_t VkAccessFlags;
@@ -819,10 +820,83 @@ static int create_graphics_pipeline(vulkan_context_t *ctx) {
     return 0;
 #endif // HAVE_VULKAN_HEADERS
 }
-    // 10. Configure color blending
-    // 11. Create graphics pipeline
+
+/**
+ * Load shader module from SPIR-V file
+ * 
+ * Reads a compiled SPIR-V shader file and creates a VkShaderModule.
+ * SPIR-V files should be compiled from GLSL using glslangValidator or similar.
+ * 
+ * @param ctx Vulkan context
+ * @param filepath Path to .spv file (e.g., "shader/vertex.spv")
+ * @return VkShaderModule handle, or VK_NULL_HANDLE on failure
+ */
+static VkShaderModule load_shader_module(vulkan_context_t *ctx, const char *filepath) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return VK_NULL_HANDLE;
+#else
+    // Open file in binary mode
+    FILE *file = fopen(filepath, "rb");
+    if (!file) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to open shader file: %s", filepath);
+        return VK_NULL_HANDLE;
+    }
     
-    return 0;
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    if (file_size <= 0) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Invalid shader file size: %ld", file_size);
+        fclose(file);
+        return VK_NULL_HANDLE;
+    }
+    
+    // Allocate buffer for SPIR-V bytecode
+    uint32_t *code = (uint32_t *)malloc(file_size);
+    if (!code) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate memory for shader (%ld bytes)", file_size);
+        fclose(file);
+        return VK_NULL_HANDLE;
+    }
+    
+    // Read SPIR-V bytecode
+    size_t bytes_read = fread(code, 1, file_size, file);
+    fclose(file);
+    
+    if (bytes_read != (size_t)file_size) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to read shader file (expected %ld, got %zu)", 
+                file_size, bytes_read);
+        free(code);
+        return VK_NULL_HANDLE;
+    }
+    
+    // Create shader module
+    VkShaderModuleCreateInfo create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = file_size;
+    create_info.pCode = code;
+    
+    VkShaderModule shader_module;
+    VkResult result = vkCreateShaderModule(ctx->device, &create_info, NULL, &shader_module);
+    
+    // Free bytecode buffer (Vulkan makes internal copy)
+    free(code);
+    
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create shader module: %d", result);
+        return VK_NULL_HANDLE;
+    }
+    
+    return shader_module;
 #endif // HAVE_VULKAN_HEADERS
 }
 
