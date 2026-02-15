@@ -1395,6 +1395,125 @@ static int copy_staging_to_y_image(vulkan_context_t *ctx,
 #endif // HAVE_VULKAN_HEADERS
 }
 
+/**
+ * Copy UV plane from staging buffer to device image
+ * 
+ * Transitions the UV image to TRANSFER_DST layout, copies data from
+ * the staging buffer (after Y plane), and leaves image in TRANSFER_DST
+ * (will be transitioned to SHADER_READ_ONLY later).
+ * 
+ * @param ctx Vulkan context
+ * @param width Frame width
+ * @param height Frame height
+ * @return 0 on success, -1 on failure
+ */
+static int copy_staging_to_uv_image(vulkan_context_t *ctx, 
+                                    uint32_t width, 
+                                    uint32_t height) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Transition UV image to TRANSFER_DST layout
+    if (transition_image_layout(ctx, ctx->nv12_uv_image,
+                               VK_IMAGE_LAYOUT_UNDEFINED,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    // Allocate single-time command buffer
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = ctx->command_pool;
+    alloc_info.commandBufferCount = 1;
+    
+    VkCommandBuffer command_buffer;
+    VkResult result = vkAllocateCommandBuffers(ctx->device, &alloc_info, &command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate command buffer for UV plane copy: %d", result);
+        return -1;
+    }
+    
+    // Begin command buffer
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    
+    result = vkBeginCommandBuffer(command_buffer, &begin_info);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to begin command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Calculate UV plane offset (after Y plane)
+    uint32_t y_size = width * height;
+    uint32_t uv_width = width / 2;
+    uint32_t uv_height = height / 2;
+    
+    // Set up buffer-to-image copy region
+    VkBufferImageCopy region = {0};
+    region.bufferOffset = y_size;  // UV plane starts after Y plane
+    region.bufferRowLength = 0;  // Tightly packed
+    region.bufferImageHeight = 0;  // Tightly packed
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset.x = 0;
+    region.imageOffset.y = 0;
+    region.imageOffset.z = 0;
+    region.imageExtent.width = uv_width;
+    region.imageExtent.height = uv_height;
+    region.imageExtent.depth = 1;
+    
+    // Record copy command
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        ctx->staging_buffer,
+        ctx->nv12_uv_image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region
+    );
+    
+    // End command buffer
+    result = vkEndCommandBuffer(command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to end command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Submit command buffer
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    
+    result = vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to submit command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Wait for completion
+    vkQueueWaitIdle(ctx->graphics_queue);
+    
+    // Free command buffer
+    vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 int vulkan_render(vulkan_context_t *ctx) {
     if (!ctx) {
         return -1;
