@@ -1379,6 +1379,12 @@ vulkan_context_t* vulkan_init(void *native_window) {
         return NULL;
     }
     
+    // Create pipeline layout
+    if (create_pipeline_layout(ctx) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
     // Create graphics pipeline
     if (create_graphics_pipeline(ctx) != 0) {
         vulkan_cleanup(ctx);
