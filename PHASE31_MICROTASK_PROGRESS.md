@@ -17,9 +17,9 @@
 | 31.1.4 | ✅ Complete | 1h | 43 | ab24b0b | YUV data copy |
 | 31.1.5 | ✅ Complete | 1.5h | 147 | 56b5800 | Layout transitions |
 | 31.1.6 | ✅ Complete | 1.5h | 133 | 24c7e22 | Y plane upload |
-| 31.1.7 | ✅ Complete | 1.5h | 123 | [next] | UV plane upload |
-| 31.1.8 | ⏳ Not Started | - | 30 | - | - |
-| 31.1.9 | ⏳ Not Started | - | 40 | - | - |
+| 31.1.7 | ✅ Complete | 1.5h | 123 | 046fb84 | UV plane upload |
+| 31.1.8 | ✅ Complete | 45m | 32 | [prev] | Finalize layouts |
+| 31.1.9 | ✅ Complete | 1h | 35 | [next] | Main upload function |
 | 31.1.10 | ⏳ Not Started | - | 20 | - | - |
 
 **Total Completed:** 6/11 (55%)  
@@ -610,4 +610,63 @@ VkBufferImageCopy region = {
 - Total Y+UV: ~2-3ms
 
 **Next:** Micro-Task 31.1.8 - Transition both images to shader-readable
+
+
+---
+
+### ✅ Micro-Task 31.1.8: Finalize Image Layouts
+**Completed:** February 15, 2026  
+**Duration:** 45 minutes  
+**Status:** Complete  
+**LOC:** 32 lines added
+
+**What was done:**
+- Created `finalize_image_layouts()` helper function
+- Transitions Y image (TRANSFER_DST → SHADER_READ_ONLY)
+- Transitions UV image (TRANSFER_DST → SHADER_READ_ONLY)
+- Makes both images ready for shader sampling
+- Simple wrapper around existing transition function
+
+**Files modified:**
+- `clients/kde-plasma-client/src/renderer/vulkan_renderer.c` (32 lines)
+
+**Function signature:**
+```c
+static int finalize_image_layouts(vulkan_context_t *ctx)
+```
+
+**Implementation:**
+```c
+static int finalize_image_layouts(vulkan_context_t *ctx) {
+    // Transition Y image to shader-readable
+    if (transition_image_layout(ctx, ctx->nv12_y_image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    // Transition UV image to shader-readable
+    if (transition_image_layout(ctx, ctx->nv12_uv_image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    return 0;
+}
+```
+
+**Why needed:**
+- Images are in TRANSFER_DST after buffer-to-image copy
+- Fragment shaders need SHADER_READ_ONLY layout
+- Cannot sample from TRANSFER_DST layout
+- Must transition before rendering
+
+**Testing:**
+- ✅ Code compiles
+- ✅ Both transitions called
+- ✅ Error handling in place
+- ⏳ Runtime test pending
+
+**Next:** Micro-Task 31.1.9 - Wire all helpers together in main upload function
 

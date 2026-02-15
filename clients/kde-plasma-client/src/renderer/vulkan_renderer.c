@@ -1056,10 +1056,41 @@ int vulkan_upload_frame(vulkan_context_t *ctx, const frame_t *frame) {
         return -1;
     }
     
-    // TODO: Implement frame upload
-    snprintf(ctx->last_error, sizeof(ctx->last_error),
-            "Frame upload not yet implemented");
-    return -1;
+    // Validate frame data
+    if (validate_frame(frame) != 0) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Invalid frame data");
+        return -1;
+    }
+    
+    // Copy frame data to staging buffer
+    if (copy_frame_to_staging(ctx, frame) != 0) {
+        // Error message set by copy_frame_to_staging
+        return -1;
+    }
+    
+    // Copy Y plane from staging to device image
+    if (copy_staging_to_y_image(ctx, frame->width, frame->height) != 0) {
+        // Error message set by copy_staging_to_y_image
+        return -1;
+    }
+    
+    // Copy UV plane from staging to device image
+    if (copy_staging_to_uv_image(ctx, frame->width, frame->height) != 0) {
+        // Error message set by copy_staging_to_uv_image
+        return -1;
+    }
+    
+    // Transition both images to shader-readable layout
+    if (finalize_image_layouts(ctx) != 0) {
+        // Error message set by finalize_image_layouts
+        return -1;
+    }
+    
+    // Update frame counter
+    ctx->current_frame++;
+    
+    return 0;
 }
 
 /**
@@ -1512,6 +1543,38 @@ static int copy_staging_to_uv_image(vulkan_context_t *ctx,
     
     return 0;
 #endif // HAVE_VULKAN_HEADERS
+}
+
+/**
+ * Finalize image layouts for shader access
+ * 
+ * Transitions both Y and UV images from TRANSFER_DST layout to
+ * SHADER_READ_ONLY layout, making them ready for sampling in
+ * fragment shaders.
+ * 
+ * @param ctx Vulkan context
+ * @return 0 on success, -1 on failure
+ */
+static int finalize_image_layouts(vulkan_context_t *ctx) {
+    if (!ctx) {
+        return -1;
+    }
+    
+    // Transition Y image to shader-readable
+    if (transition_image_layout(ctx, ctx->nv12_y_image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    // Transition UV image to shader-readable
+    if (transition_image_layout(ctx, ctx->nv12_uv_image,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    return 0;
 }
 
 int vulkan_render(vulkan_context_t *ctx) {
