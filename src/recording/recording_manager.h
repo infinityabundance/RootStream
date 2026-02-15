@@ -100,6 +100,7 @@ public:
     int enable_replay_buffer(uint32_t duration_seconds, uint32_t max_memory_mb);
     int disable_replay_buffer();
     int save_replay_buffer(const char *filename, uint32_t duration_sec);
+    int save_replay_buffer(const char *filename, uint32_t duration_sec, enum VideoCodec codec);
     
     // Metadata control
     int add_chapter_marker(const char *title, const char *description);

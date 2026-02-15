@@ -54,6 +54,15 @@ pkg_check_modules(VAAPI libva libva-drm)
 pkg_check_modules(PULSEAUDIO libpulse-simple libpulse)
 pkg_check_modules(PIPEWIRE libpipewire-0.3)
 
+# Find FFmpeg for recording
+pkg_check_modules(FFMPEG libavformat libavcodec libavutil libswscale)
+if(FFMPEG_FOUND)
+    message(STATUS "FFmpeg found - recording features enabled")
+    add_definitions(-DENABLE_RECORDING)
+else()
+    message(WARNING "FFmpeg not found - recording features disabled")
+endif()
+
 # Wayland (for Vulkan renderer)
 if(ENABLE_RENDERER_VULKAN)
     pkg_check_modules(WAYLAND wayland-client)
@@ -65,6 +74,7 @@ endif()
 # Include RootStream library
 include_directories(${CMAKE_SOURCE_DIR}/../../include)
 include_directories(${CMAKE_SOURCE_DIR}/../../src)
+include_directories(${CMAKE_SOURCE_DIR}/../../src/recording)
 
 # Sources
 set(SOURCES
@@ -78,6 +88,16 @@ set(SOURCES
     src/logmanager.cpp
     src/connectiondialog.cpp
     src/mainwindow.cpp
+    src/recording_manager_wrapper.cpp
+    # Recording system sources
+    ${CMAKE_SOURCE_DIR}/../../src/recording/recording_manager.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/disk_manager.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/replay_buffer.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/recording_metadata.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/h264_encoder_wrapper.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/vp9_encoder_wrapper.cpp
+    ${CMAKE_SOURCE_DIR}/../../src/recording/av1_encoder_wrapper.cpp
+)
     # Audio components
     src/audio/audio_player.cpp
     src/audio/opus_decoder.cpp
@@ -174,6 +194,16 @@ target_link_libraries(rootstream-kde-client PRIVATE
     ${SAMPLERATE_LIBRARIES}
     ${ALSA_LIBRARIES}
 )
+
+# Link FFmpeg if recording is enabled
+if(FFMPEG_FOUND)
+    target_link_libraries(rootstream-kde-client PRIVATE
+        ${FFMPEG_LIBRARIES}
+    )
+    target_include_directories(rootstream-kde-client PRIVATE
+        ${FFMPEG_INCLUDE_DIRS}
+    )
+endif()
 
 # Link OpenGL if renderer is enabled
 if(ENABLE_RENDERER_OPENGL)

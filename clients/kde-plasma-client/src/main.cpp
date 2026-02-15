@@ -5,7 +5,7 @@
  * Licensed under MIT License
  */
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QCommandLineParser>
@@ -16,10 +16,12 @@
 #include "peermanager.h"
 #include "settingsmanager.h"
 #include "logmanager.h"
+#include "mainwindow.h"
+#include "recording_manager_wrapper.h"
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     app.setApplicationName("RootStream KDE Client");
     app.setOrganizationName("RootStream");
     app.setApplicationVersion("1.0.0");
@@ -48,6 +50,23 @@ int main(int argc, char *argv[])
     );
     parser.addOption(autoConnectOption);
     
+    // Recording options
+    QCommandLineOption outputDirOption(
+        "output-dir",
+        "Output directory for recordings",
+        "path",
+        QDir::homePath() + "/Videos/RootStream"
+    );
+    parser.addOption(outputDirOption);
+    
+    QCommandLineOption replayBufferOption(
+        "replay-buffer-seconds",
+        "Enable replay buffer with specified duration",
+        "seconds",
+        "30"
+    );
+    parser.addOption(replayBufferOption);
+    
     parser.process(app);
     
     // Initialize components
@@ -55,6 +74,22 @@ int main(int argc, char *argv[])
     LogManager logManager;
     RootStreamClient client;
     PeerManager peerManager(&client);
+    
+    // Initialize recording manager
+    RecordingManagerWrapper recordingManager;
+    QString outputDir = parser.value(outputDirOption);
+    if (!recordingManager.initialize(outputDir)) {
+        std::cerr << "Warning: Failed to initialize recording manager" << std::endl;
+    }
+    
+    // Enable replay buffer if requested
+    if (parser.isSet(replayBufferOption)) {
+        int duration = parser.value(replayBufferOption).toInt();
+        if (duration > 0) {
+            recordingManager.enableReplayBuffer(duration, 500); // 500MB default
+            std::cout << "Replay buffer enabled: " << duration << " seconds" << std::endl;
+        }
+    }
     
     // Enable AI logging if requested
     if (parser.isSet(aiLoggingOption)) {
@@ -74,32 +109,9 @@ int main(int argc, char *argv[])
         client.setBitrate(settingsManager.getBitrate());
     }
     
-    // Create QML engine
-    QQmlApplicationEngine engine;
-    
-    // Register QML types
-    qmlRegisterType<RootStreamClient>("RootStream", 1, 0, "RootStreamClient");
-    qmlRegisterType<PeerManager>("RootStream", 1, 0, "PeerManager");
-    qmlRegisterType<SettingsManager>("RootStream", 1, 0, "SettingsManager");
-    qmlRegisterType<LogManager>("RootStream", 1, 0, "LogManager");
-    
-    // Expose objects to QML
-    engine.rootContext()->setContextProperty("rootStreamClient", &client);
-    engine.rootContext()->setContextProperty("peerManager", &peerManager);
-    engine.rootContext()->setContextProperty("settingsManager", &settingsManager);
-    engine.rootContext()->setContextProperty("logManager", &logManager);
-    
-    // Load main QML file
-    const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
-    QObject::connect(
-        &engine, &QQmlApplicationEngine::objectCreated,
-        &app, [url](QObject *obj, const QUrl &objUrl) {
-            if (!obj && url == objUrl)
-                QCoreApplication::exit(-1);
-        },
-        Qt::QueuedConnection
-    );
-    engine.load(url);
+    // Create main window
+    MainWindow mainWindow(&client, &recordingManager);
+    mainWindow.show();
     
     // Auto-connect if specified
     if (parser.isSet(autoConnectOption)) {

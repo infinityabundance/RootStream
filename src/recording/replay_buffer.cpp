@@ -201,7 +201,8 @@ int replay_buffer_add_audio_chunk(replay_buffer_t *buffer,
 
 int replay_buffer_save(replay_buffer_t *buffer,
                        const char *filename,
-                       uint32_t duration_sec) {
+                       uint32_t duration_sec,
+                       enum VideoCodec video_codec) {
     if (!buffer || !filename) {
         return -1;
     }
@@ -214,8 +215,8 @@ int replay_buffer_save(replay_buffer_t *buffer,
         return -1;
     }
     
-    printf("Replay Buffer: Saving %u frames to '%s'\n",
-           (uint32_t)buffer->video_frames.size(), filename);
+    printf("Replay Buffer: Saving %u frames to '%s' with codec %d\n",
+           (uint32_t)buffer->video_frames.size(), filename, video_codec);
     
     // Calculate time range to save
     uint64_t save_duration_us;
@@ -235,33 +236,165 @@ int replay_buffer_save(replay_buffer_t *buffer,
         return -1;
     }
     
-    // TODO: Add video stream setup and muxing
-    // This is a simplified implementation - full muxing would require:
-    // 1. Creating video and audio streams
-    // 2. Writing header
-    // 3. Muxing frames in timestamp order
-    // 4. Writing trailer
+    // Create video stream
+    AVStream *video_stream = nullptr;
+    if (!buffer->video_frames.empty()) {
+        const replay_video_frame_t &first_frame = buffer->video_frames.front();
+        
+        video_stream = avformat_new_stream(fmt_ctx, nullptr);
+        if (!video_stream) {
+            fprintf(stderr, "Replay Buffer: Failed to create video stream\n");
+            avformat_free_context(fmt_ctx);
+            return -1;
+        }
+        
+        video_stream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
+        
+        // Set codec ID based on specified codec
+        switch (video_codec) {
+            case VIDEO_CODEC_H264:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+                break;
+            case VIDEO_CODEC_VP9:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_VP9;
+                break;
+            case VIDEO_CODEC_AV1:
+                video_stream->codecpar->codec_id = AV_CODEC_ID_AV1;
+                break;
+            default:
+                fprintf(stderr, "Replay Buffer: Unknown codec %d, defaulting to H.264\n", video_codec);
+                video_stream->codecpar->codec_id = AV_CODEC_ID_H264;
+                break;
+        }
+        
+        video_stream->codecpar->width = first_frame.width;
+        video_stream->codecpar->height = first_frame.height;
+        video_stream->time_base = (AVRational){1, 1000000}; // Microseconds
+    }
     
-    // For now, just write raw frames (simplified)
-    FILE *f = fopen(filename, "wb");
-    if (!f) {
-        fprintf(stderr, "Replay Buffer: Failed to open output file\n");
+    // Create audio stream if audio chunks exist
+    // TODO: Audio encoding not yet fully implemented
+    // Audio stream creation is disabled until proper Opus encoding is added
+    AVStream *audio_stream = nullptr;
+    /*
+    if (!buffer->audio_chunks.empty()) {
+        const replay_audio_chunk_t &first_chunk = buffer->audio_chunks.front();
+        
+        audio_stream = avformat_new_stream(fmt_ctx, nullptr);
+        if (!audio_stream) {
+            fprintf(stderr, "Replay Buffer: Failed to create audio stream\n");
+            avformat_free_context(fmt_ctx);
+            return -1;
+        }
+        
+        audio_stream->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
+        audio_stream->codecpar->codec_id = AV_CODEC_ID_OPUS; // Assume Opus encoded audio
+        audio_stream->codecpar->ch_layout.nb_channels = first_chunk.channels;
+        audio_stream->codecpar->sample_rate = first_chunk.sample_rate;
+        audio_stream->time_base = (AVRational){1, 1000000}; // Microseconds
+    }
+    */
+    
+    // Open output file
+    if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+        ret = avio_open(&fmt_ctx->pb, filename, AVIO_FLAG_WRITE);
+        if (ret < 0) {
+            fprintf(stderr, "Replay Buffer: Could not open output file '%s'\n", filename);
+            avformat_free_context(fmt_ctx);
+            return -1;
+        }
+    }
+    
+    // Write header
+    ret = avformat_write_header(fmt_ctx, nullptr);
+    if (ret < 0) {
+        fprintf(stderr, "Replay Buffer: Error writing header\n");
+        if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+            avio_closep(&fmt_ctx->pb);
+        }
         avformat_free_context(fmt_ctx);
         return -1;
     }
     
+    // Write video and audio frames in timestamp order
+    size_t video_idx = 0;
+    size_t audio_idx = 0;
     size_t frames_written = 0;
-    for (const auto &frame : buffer->video_frames) {
-        if (frame.timestamp_us >= cutoff_timestamp_us) {
-            fwrite(frame.data, 1, frame.size, f);
-            frames_written++;
+    
+    while (video_idx < buffer->video_frames.size() || audio_idx < buffer->audio_chunks.size()) {
+        bool write_video = false;
+        
+        // Determine which packet to write next (video or audio)
+        if (video_idx < buffer->video_frames.size() && audio_idx < buffer->audio_chunks.size()) {
+            // Both available, choose based on timestamp
+            write_video = buffer->video_frames[video_idx].timestamp_us <= 
+                         buffer->audio_chunks[audio_idx].timestamp_us;
+        } else if (video_idx < buffer->video_frames.size()) {
+            write_video = true;
+        } else {
+            write_video = false;
+        }
+        
+        if (write_video) {
+            const auto &frame = buffer->video_frames[video_idx];
+            if (frame.timestamp_us >= cutoff_timestamp_us) {
+                // Allocate memory for packet data
+                uint8_t *data_copy = (uint8_t *)av_memdup(frame.data, frame.size);
+                if (!data_copy) {
+                    fprintf(stderr, "Replay Buffer: Failed to allocate packet data\n");
+                    video_idx++;
+                    continue;
+                }
+                
+                AVPacket *pkt = av_packet_alloc();
+                if (pkt) {
+                    // Use av_packet_from_data to properly manage packet data ownership
+                    int ret = av_packet_from_data(pkt, data_copy, frame.size);
+                    if (ret < 0) {
+                        av_free(data_copy); // Free the allocated memory
+                        av_packet_free(&pkt);
+                        video_idx++;
+                        continue;
+                    }
+                    
+                    pkt->stream_index = video_stream->index;
+                    pkt->pts = frame.timestamp_us;
+                    pkt->dts = frame.timestamp_us;
+                    
+                    if (frame.is_keyframe) {
+                        pkt->flags |= AV_PKT_FLAG_KEY;
+                    }
+                    
+                    av_interleaved_write_frame(fmt_ctx, pkt);
+                    frames_written++;
+                    av_packet_free(&pkt);
+                }
+            }
+            video_idx++;
+        } else {
+            // TODO: Audio encoding not yet implemented
+            // Audio chunks in replay buffer are raw float samples that need to be 
+            // encoded to Opus before muxing. Skip audio chunks for now.
+            // When implementing:
+            // 1. Encode float samples to Opus
+            // 2. Create packet from encoded data
+            // 3. Set proper pts/dts
+            // 4. Write packet to muxer
+            audio_idx++;
         }
     }
     
-    fclose(f);
+    // Write trailer
+    av_write_trailer(fmt_ctx);
+    
+    // Close output file
+    if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+        avio_closep(&fmt_ctx->pb);
+    }
+    
     avformat_free_context(fmt_ctx);
     
-    printf("Replay Buffer: Saved %zu frames\n", frames_written);
+    printf("Replay Buffer: Saved %zu frames to %s\n", frames_written, filename);
     
     return 0;
 }

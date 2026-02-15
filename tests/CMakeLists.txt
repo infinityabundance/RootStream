@@ -92,5 +92,77 @@ if(ENABLE_UNIT_TESTS)
     add_test(NAME DiscoveryCacheUnit COMMAND test_discovery_cache)
     set_tests_properties(DiscoveryCacheUnit PROPERTIES LABELS "unit")
     
+    # PHASE 27: Recording system tests (requires FFmpeg)
+    if(FFMPEG_FOUND)
+        # Container formats test
+        add_executable(test_container_formats unit/test_container_formats.cpp)
+        target_include_directories(test_container_formats PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_container_formats 
+            ${FFMPEG_LIBRARIES}
+        )
+        add_test(NAME ContainerFormatsUnit COMMAND test_container_formats)
+        set_tests_properties(ContainerFormatsUnit PROPERTIES LABELS "unit")
+        
+        # Replay buffer test
+        add_executable(test_replay_buffer unit/test_replay_buffer.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/replay_buffer.cpp
+        )
+        target_include_directories(test_replay_buffer PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_replay_buffer 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME ReplayBufferUnit COMMAND test_replay_buffer)
+        set_tests_properties(ReplayBufferUnit PROPERTIES LABELS "unit")
+        
+        # PHASE 27.3: Replay buffer with codec support test
+        add_executable(test_replay_buffer_codecs unit/test_replay_buffer_codecs.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/replay_buffer.cpp
+        )
+        target_include_directories(test_replay_buffer_codecs PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_replay_buffer_codecs 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME ReplayBufferCodecsUnit COMMAND test_replay_buffer_codecs)
+        set_tests_properties(ReplayBufferCodecsUnit PROPERTIES LABELS "unit")
+        
+        # RecordingManager integration test
+        add_executable(test_recording_manager_integration unit/test_recording_manager_integration.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/recording_manager.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/disk_manager.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/replay_buffer.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/recording_metadata.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/h264_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/vp9_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/av1_encoder_wrapper.cpp
+        )
+        target_include_directories(test_recording_manager_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_recording_manager_integration 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME RecordingManagerIntegrationUnit COMMAND test_recording_manager_integration)
+        set_tests_properties(RecordingManagerIntegrationUnit PROPERTIES LABELS "unit")
+        
+        # PHASE 27.2: Encoder integration test
+        add_executable(test_encoder_integration unit/test_encoder_integration.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/h264_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/vp9_encoder_wrapper.cpp
+            ${CMAKE_SOURCE_DIR}/src/recording/av1_encoder_wrapper.cpp
+        )
+        target_include_directories(test_encoder_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/recording)
+        target_link_libraries(test_encoder_integration 
+            ${FFMPEG_LIBRARIES}
+            pthread
+        )
+        add_test(NAME EncoderIntegrationUnit COMMAND test_encoder_integration)
+        set_tests_properties(EncoderIntegrationUnit PROPERTIES LABELS "unit")
+        
+        message(STATUS "Recording system tests enabled (FFmpeg found)")
+    else()
+        message(STATUS "Recording system tests skipped (FFmpeg not found)")
+    endif()
+    
     message(STATUS "Unit tests enabled")
 endif()

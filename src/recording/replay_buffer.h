@@ -83,11 +83,13 @@ int replay_buffer_add_audio_chunk(replay_buffer_t *buffer,
  * @param buffer        Replay buffer
  * @param filename      Output filename
  * @param duration_sec  Duration to save (0 = all available)
+ * @param video_codec   Video codec to use (from recording_types.h)
  * @return              0 on success, -1 on error
  */
 int replay_buffer_save(replay_buffer_t *buffer,
                        const char *filename,
-                       uint32_t duration_sec);
+                       uint32_t duration_sec,
+                       enum VideoCodec video_codec);
 
 /**
  * Clear all data from the replay buffer
