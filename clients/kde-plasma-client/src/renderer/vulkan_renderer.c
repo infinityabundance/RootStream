@@ -1085,6 +1085,26 @@ vulkan_context_t* vulkan_init(void *native_window) {
         return NULL;
     }
     
+    // Load shaders
+    ctx->vert_shader_module = load_shader_module(ctx,
+        "clients/kde-plasma-client/src/renderer/shader/fullscreen.vert.spv");
+    if (ctx->vert_shader_module == VK_NULL_HANDLE) {
+        // Error already set in ctx->last_error
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    ctx->frag_shader_module = load_shader_module(ctx,
+        "clients/kde-plasma-client/src/renderer/shader/nv12_to_rgb.frag.spv");
+    if (ctx->frag_shader_module == VK_NULL_HANDLE) {
+        // Error already set in ctx->last_error
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
+    // Mark shaders as successfully loaded
+    ctx->shaders_loaded = true;
+    
     // Create swapchain
     if (create_swapchain(ctx) != 0) {
         vulkan_cleanup(ctx);
