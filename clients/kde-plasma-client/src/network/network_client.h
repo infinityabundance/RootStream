@@ -12,6 +12,7 @@ extern "C" {
 
 // Forward declarations
 typedef struct network_client_s network_client_t;
+struct frame_buffer_t;  // Defined in .c file
 
 // Callback types
 typedef void (*frame_callback_t)(void *user_data, 
@@ -49,6 +50,9 @@ struct network_client_s {
     void *user_data;
     frame_callback_t on_frame;
     error_callback_t on_error;
+    
+    // Frame reassembly buffers
+    struct frame_buffer_t *frame_buffers[16];  // MAX_PENDING_FRAMES
     
     // Error message buffer
     char last_error[256];

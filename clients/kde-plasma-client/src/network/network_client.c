@@ -25,6 +25,7 @@
 
 // Network constants
 #define MAX_PACKET_SIZE 1400  // UDP MTU-safe packet size
+#define MAX_PENDING_FRAMES 16  // Maximum number of frames being reassembled
 
 // Handshake packet structure
 struct handshake_packet_t {
@@ -58,10 +59,31 @@ struct packet_header_t {
     uint16_t size;  // Payload size
 } __attribute__((packed));
 
+// Video chunk header (follows packet header for PKT_VIDEO)
+struct video_chunk_header_t {
+    uint32_t frame_id;
+    uint32_t total_size;
+    uint32_t offset;
+    uint16_t chunk_size;
+    uint16_t flags;
+    uint64_t timestamp_us;
+} __attribute__((packed));
+
+// Frame buffer for reassembly
+struct frame_buffer_t {
+    uint32_t frame_id;
+    uint32_t total_size;
+    uint32_t received_size;
+    uint8_t *data;
+    uint64_t timestamp_us;
+    bool in_use;
+};
+
 // Forward declarations
 static uint64_t get_timestamp_microseconds(void);
 static int derive_shared_secret(network_client_t *client);
 static void* receive_thread_func(void *arg);
+static int process_video_chunk(network_client_t *client, const uint8_t *packet, size_t len);
 
 // Create a new network client
 network_client_t* network_client_create(const char *host, int port) {
@@ -81,6 +103,11 @@ network_client_t* network_client_create(const char *host, int port) {
     client->connected = false;
     client->handshake_complete = false;
     client->running = false;
+    
+    // Initialize frame buffers to NULL
+    for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
+        client->frame_buffers[i] = NULL;
+    }
     
     // Initialize mutex
     if (pthread_mutex_init(&client->mutex, NULL) != 0) {
@@ -136,6 +163,17 @@ void network_client_destroy(network_client_t *client) {
     // Disconnect if connected
     if (client->connected) {
         network_client_disconnect(client);
+    }
+    
+    // Free frame buffers
+    for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
+        if (client->frame_buffers[i]) {
+            if (client->frame_buffers[i]->data) {
+                free(client->frame_buffers[i]->data);
+            }
+            free(client->frame_buffers[i]);
+            client->frame_buffers[i] = NULL;
+        }
     }
     
     // Cleanup
@@ -456,6 +494,109 @@ int network_client_process_handshake_response(network_client_t *client,
 #endif
 }
 
+// Process video chunk and reassemble frames
+static int process_video_chunk(network_client_t *client, const uint8_t *packet, size_t len) {
+    if (!client || !packet) {
+        return -1;
+    }
+    
+    // Need at least packet header + video chunk header
+    if (len < sizeof(struct packet_header_t) + sizeof(struct video_chunk_header_t)) {
+        return -1;
+    }
+    
+    // Skip packet header, get to video chunk header
+    const uint8_t *chunk_data = packet + sizeof(struct packet_header_t);
+    const struct video_chunk_header_t *chunk_hdr = (const struct video_chunk_header_t*)chunk_data;
+    
+    uint32_t frame_id = ntohl(chunk_hdr->frame_id);
+    uint32_t total_size = ntohl(chunk_hdr->total_size);
+    uint32_t offset = ntohl(chunk_hdr->offset);
+    uint16_t chunk_size = ntohs(chunk_hdr->chunk_size);
+    uint64_t timestamp_us = be64toh(chunk_hdr->timestamp_us);
+    
+    // Validate chunk parameters
+    if (offset + chunk_size > total_size) {
+        fprintf(stderr, "Invalid chunk: offset=%u size=%u total=%u\n",
+               offset, chunk_size, total_size);
+        return -1;
+    }
+    
+    // Find or allocate frame buffer
+    struct frame_buffer_t *fb = NULL;
+    for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
+        if (client->frame_buffers[i] && client->frame_buffers[i]->frame_id == frame_id) {
+            fb = client->frame_buffers[i];
+            break;
+        }
+    }
+    
+    // Allocate new buffer if not found
+    if (!fb) {
+        // Find free slot
+        for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
+            if (!client->frame_buffers[i]) {
+                fb = (struct frame_buffer_t*)calloc(1, sizeof(struct frame_buffer_t));
+                if (!fb) {
+                    return -1;
+                }
+                fb->frame_id = frame_id;
+                fb->total_size = total_size;
+                fb->received_size = 0;
+                fb->data = (uint8_t*)malloc(total_size);
+                fb->timestamp_us = timestamp_us;
+                fb->in_use = true;
+                
+                if (!fb->data) {
+                    free(fb);
+                    return -1;
+                }
+                
+                client->frame_buffers[i] = fb;
+                break;
+            }
+        }
+        
+        if (!fb) {
+            fprintf(stderr, "No free frame buffers (max %d)\n", MAX_PENDING_FRAMES);
+            return -1;
+        }
+    }
+    
+    // Copy chunk data to frame buffer
+    const uint8_t *chunk_payload = chunk_data + sizeof(struct video_chunk_header_t);
+    memcpy(fb->data + offset, chunk_payload, chunk_size);
+    fb->received_size += chunk_size;
+    
+    // Check if frame is complete
+    if (fb->received_size >= fb->total_size) {
+        // Frame complete! Invoke callback
+        if (client->on_frame) {
+            // For NV12 format: Y plane followed by interleaved UV
+            // Assuming width/height can be derived from total_size
+            // This is a simplified version - real implementation needs width/height in protocol
+            client->on_frame(client->user_data, 
+                           fb->data, NULL,  // Y data, UV data (NULL for now)
+                           0, 0,  // width, height (0 for now - need protocol extension)
+                           fb->timestamp_us);
+        }
+        
+        // Free the frame buffer
+        free(fb->data);
+        
+        // Find and clear the slot
+        for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
+            if (client->frame_buffers[i] == fb) {
+                free(client->frame_buffers[i]);
+                client->frame_buffers[i] = NULL;
+                break;
+            }
+        }
+    }
+    
+    return 0;
+}
+
 // Receive thread function - continuously receives packets from server
 static void* receive_thread_func(void *arg) {
     network_client_t *client = (network_client_t*)arg;
@@ -535,10 +676,12 @@ static void* receive_thread_func(void *arg) {
                 break;
                 
             case PKT_VIDEO:
-                // Video frame packet - will be handled by frame reassembly (Task 32.1.5)
-                // For now, just log it
-                fprintf(stderr, "Received video packet (%zd bytes) - reassembly not yet implemented\n", 
-                       received);
+                // Video frame packet - process chunk and reassemble
+                if (process_video_chunk(client, recv_buffer, received) == 0) {
+                    // Chunk processed successfully (may or may not complete frame)
+                } else {
+                    fprintf(stderr, "Failed to process video chunk\n");
+                }
                 break;
                 
             case PKT_AUDIO:
