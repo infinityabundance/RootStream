@@ -60,6 +60,16 @@ typedef void* VkDescriptorSet;
 typedef void* VkSampler;
 typedef void* VkBuffer;
 typedef void* VkShaderModule;
+typedef uint32_t VkShaderStageFlags;
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    uint32_t flags;
+    VkShaderStageFlags stage;
+    VkShaderModule module;
+    const char* pName;
+    const void* pSpecializationInfo;
+} VkPipelineShaderStageCreateInfo;
 typedef uint32_t VkFormat;
 typedef uint32_t VkImageLayout;
 typedef uint32_t VkAccessFlags;
@@ -94,6 +104,9 @@ typedef uint32_t VkResult;
 #define VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080
 #define VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001
 #define VK_IMAGE_ASPECT_COLOR_BIT 0x00000001
+#define VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO 18
+#define VK_SHADER_STAGE_VERTEX_BIT 0x00000001
+#define VK_SHADER_STAGE_FRAGMENT_BIT 0x00000010
 #endif
 
 /**
@@ -883,6 +896,54 @@ static int create_framebuffers(vulkan_context_t *ctx) {
             return -1;
         }
     }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+/**
+ * Configure shader stages for graphics pipeline
+ * 
+ * Sets up vertex and fragment shader stages using the loaded shader modules.
+ * Both shaders use "main" as the entry point function.
+ * 
+ * @param ctx Vulkan context with loaded shader modules
+ * @param stages Array of 2 shader stage create infos to fill (vertex, fragment)
+ * @return 0 on success, -1 on error
+ */
+static int create_shader_stages(vulkan_context_t *ctx,
+                                VkPipelineShaderStageCreateInfo stages[2]) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Check if shaders are loaded
+    if (!ctx->shaders_loaded || 
+        ctx->vert_shader_module == VK_NULL_HANDLE || 
+        ctx->frag_shader_module == VK_NULL_HANDLE) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Shader modules not loaded");
+        return -1;
+    }
+    
+    // Configure vertex shader stage
+    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[0].pNext = NULL;
+    stages[0].flags = 0;
+    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    stages[0].module = ctx->vert_shader_module;
+    stages[0].pName = "main";  // Entry point function name
+    stages[0].pSpecializationInfo = NULL;
+    
+    // Configure fragment shader stage
+    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stages[1].pNext = NULL;
+    stages[1].flags = 0;
+    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    stages[1].module = ctx->frag_shader_module;
+    stages[1].pName = "main";  // Entry point function name
+    stages[1].pSpecializationInfo = NULL;
     
     return 0;
 #endif // HAVE_VULKAN_HEADERS
