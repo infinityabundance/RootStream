@@ -79,6 +79,15 @@ struct frame_buffer_t {
     bool in_use;
 };
 
+// Ping/Pong packet structure
+struct ping_packet_t {
+    uint32_t magic;
+    uint8_t version;
+    uint8_t type;  // PKT_PING or PKT_PONG
+    uint16_t flags;
+    uint64_t timestamp_us;
+} __attribute__((packed));
+
 // Forward declarations
 static uint64_t get_timestamp_microseconds(void);
 static int derive_shared_secret(network_client_t *client);
@@ -108,6 +117,10 @@ network_client_t* network_client_create(const char *host, int port) {
     for (int i = 0; i < MAX_PENDING_FRAMES; i++) {
         client->frame_buffers[i] = NULL;
     }
+    
+    // Initialize keepalive timing
+    client->last_ping_sent = 0;
+    client->last_pong_received = 0;
     
     // Initialize mutex
     if (pthread_mutex_init(&client->mutex, NULL) != 0) {
@@ -597,6 +610,33 @@ static int process_video_chunk(network_client_t *client, const uint8_t *packet, 
     return 0;
 }
 
+// Send ping packet to server
+static int send_ping(network_client_t *client) {
+    if (!client || !client->connected) {
+        return -1;
+    }
+    
+    struct ping_packet_t packet;
+    memset(&packet, 0, sizeof(packet));
+    
+    packet.magic = htonl(PROTOCOL_MAGIC);
+    packet.version = PROTOCOL_VERSION;
+    packet.type = PKT_PING;
+    packet.flags = 0;
+    packet.timestamp_us = htobe64(get_timestamp_microseconds());
+    
+    ssize_t sent = sendto(client->socket_fd, &packet, sizeof(packet), 0,
+                         (struct sockaddr*)&client->server_addr,
+                         sizeof(client->server_addr));
+    
+    if (sent == sizeof(packet)) {
+        client->last_ping_sent = get_timestamp_microseconds();
+        return 0;
+    }
+    
+    return -1;
+}
+
 // Receive thread function - continuously receives packets from server
 static void* receive_thread_func(void *arg) {
     network_client_t *client = (network_client_t*)arg;
@@ -618,6 +658,20 @@ static void* receive_thread_func(void *arg) {
     
     while (client->running) {
         from_len = sizeof(from_addr);
+        
+        // Check if we need to send a ping (every 5 seconds)
+        uint64_t now = get_timestamp_microseconds();
+        if (client->handshake_complete && 
+            (now - client->last_ping_sent) > 5000000) {  // 5 seconds
+            send_ping(client);
+        }
+        
+        // Check for timeout (15 seconds since last pong)
+        if (client->handshake_complete && client->last_pong_received > 0 &&
+            (now - client->last_pong_received) > 15000000) {  // 15 seconds
+            fprintf(stderr, "Keepalive timeout - connection may be dead\n");
+            // Could trigger reconnection here
+        }
         
         // Receive packet
         ssize_t received = recvfrom(client->socket_fd, recv_buffer, sizeof(recv_buffer), 0,
@@ -690,9 +744,13 @@ static void* receive_thread_func(void *arg) {
                 break;
                 
             case PKT_PING:
+                // Server sent ping - respond with pong (not typical but handle it)
+                fprintf(stderr, "Received ping from server\n");
+                break;
+                
             case PKT_PONG:
-                // Keepalive packets - will be handled in Task 32.1.6
-                fprintf(stderr, "Received keepalive packet (type %u)\n", header->type);
+                // Pong response from server - update last pong time
+                client->last_pong_received = get_timestamp_microseconds();
                 break;
                 
             default:

@@ -54,6 +54,10 @@ struct network_client_s {
     // Frame reassembly buffers
     struct frame_buffer_t *frame_buffers[16];  // MAX_PENDING_FRAMES
     
+    // Keepalive timing
+    uint64_t last_ping_sent;
+    uint64_t last_pong_received;
+    
     // Error message buffer
     char last_error[256];
 };
