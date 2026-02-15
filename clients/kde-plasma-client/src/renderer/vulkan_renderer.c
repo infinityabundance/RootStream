@@ -70,6 +70,15 @@ typedef struct {
     const char* pName;
     const void* pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
+typedef struct {
+    uint32_t sType;
+    const void* pNext;
+    uint32_t flags;
+    uint32_t vertexBindingDescriptionCount;
+    const void* pVertexBindingDescriptions;
+    uint32_t vertexAttributeDescriptionCount;
+    const void* pVertexAttributeDescriptions;
+} VkPipelineVertexInputStateCreateInfo;
 typedef uint32_t VkFormat;
 typedef uint32_t VkImageLayout;
 typedef uint32_t VkAccessFlags;
@@ -105,6 +114,7 @@ typedef uint32_t VkResult;
 #define VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001
 #define VK_IMAGE_ASPECT_COLOR_BIT 0x00000001
 #define VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO 18
+#define VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO 19
 #define VK_SHADER_STAGE_VERTEX_BIT 0x00000001
 #define VK_SHADER_STAGE_FRAGMENT_BIT 0x00000010
 #endif
@@ -946,6 +956,29 @@ static int create_shader_stages(vulkan_context_t *ctx,
     stages[1].pSpecializationInfo = NULL;
     
     return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+/**
+ * Configure vertex input state for graphics pipeline
+ * 
+ * Sets up empty vertex input state since our fullscreen quad is generated
+ * procedurally in the vertex shader. No vertex buffers or attributes needed.
+ * 
+ * @param vertex_input Pointer to vertex input state structure to configure
+ */
+static void configure_vertex_input(VkPipelineVertexInputStateCreateInfo *vertex_input) {
+#ifndef HAVE_VULKAN_HEADERS
+    (void)vertex_input;  // Unused in non-Vulkan builds
+#else
+    // Configure empty vertex input (no vertex buffers)
+    vertex_input->sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input->pNext = NULL;
+    vertex_input->flags = 0;
+    vertex_input->vertexBindingDescriptionCount = 0;
+    vertex_input->pVertexBindingDescriptions = NULL;
+    vertex_input->vertexAttributeDescriptionCount = 0;
+    vertex_input->pVertexAttributeDescriptions = NULL;
 #endif // HAVE_VULKAN_HEADERS
 }
 
