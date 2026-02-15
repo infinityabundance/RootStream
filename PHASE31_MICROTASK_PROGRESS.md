@@ -22,9 +22,9 @@
 | 31.1.9 | ⏳ Not Started | - | 40 | - | - |
 | 31.1.10 | ⏳ Not Started | - | 20 | - | - |
 
-**Total Completed:** 3/11 (27%)  
-**Total LOC Added:** 121/384 (32%)  
-**Time Spent:** 3h / 15h
+**Total Completed:** 4/11 (36%)  
+**Total LOC Added:** 174/384 (45%)  
+**Time Spent:** 3.75h / 15h
 
 ---
 
@@ -164,7 +164,52 @@ static int create_staging_buffer(vulkan_context_t *ctx, size_t size) {
 
 ---
 
-### ⏳ Micro-Task 31.1.3: Add Frame Validation Function
+### ✅ Micro-Task 31.1.3: Add Frame Validation Function
+**Completed:** February 15, 2026  
+**Duration:** 45 minutes  
+**Status:** Complete  
+**LOC:** 53 lines added
+
+**What was done:**
+- Created `validate_frame()` static helper function
+- Checks frame pointer not NULL
+- Checks data pointer not NULL  
+- Checks width and height > 0
+- Checks format == FRAME_FORMAT_NV12
+- Validates size matches expected NV12 calculation
+- Allows up to 1% padding for alignment
+
+**Files modified:**
+- `clients/kde-plasma-client/src/renderer/vulkan_renderer.c`
+
+**Function added:**
+```c
+static int validate_frame(const frame_t *frame) {
+    // Validates all frame fields
+    // NV12 size: width × height × 1.5
+    // Allows 1% padding for alignment
+    return 0 or -1;
+}
+```
+
+**Validation logic:**
+- **Format check:** Must be FRAME_FORMAT_NV12 (0x3231564E)
+- **Size calculation:** 
+  - Y plane: width × height bytes
+  - UV plane: (width/2) × (height/2) × 2 bytes
+  - Total: width × height × 1.5 bytes
+- **Padding tolerance:** Accepts up to 1% extra for alignment
+
+**Testing:**
+- ✅ Code compiles
+- ✅ Logic validated against NV12 spec
+- ⏳ Runtime test pending
+
+**Next:** Micro-Task 31.1.4 - Copy frame data to staging buffer
+
+---
+
+### ⏳ Micro-Task 31.1.4: Implement YUV Data Copy to Staging
 **Status:** Not Started  
 **Estimated Duration:** 1 hour  
 **Estimated LOC:** 30 lines

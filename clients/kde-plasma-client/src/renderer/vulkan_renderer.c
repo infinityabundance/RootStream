@@ -1032,6 +1032,52 @@ int vulkan_upload_frame(vulkan_context_t *ctx, const frame_t *frame) {
     return -1;
 }
 
+/**
+ * Validate frame data before upload
+ * 
+ * Checks frame pointer, data pointer, dimensions, format, and size.
+ * 
+ * @param frame Frame to validate
+ * @return 0 if valid, -1 if invalid
+ */
+static int validate_frame(const frame_t *frame) {
+    // Check frame pointer
+    if (!frame) {
+        return -1;
+    }
+    
+    // Check data pointer
+    if (!frame->data) {
+        return -1;
+    }
+    
+    // Check dimensions
+    if (frame->width == 0 || frame->height == 0) {
+        return -1;
+    }
+    
+    // Check format (must be NV12)
+    if (frame->format != FRAME_FORMAT_NV12) {
+        return -1;
+    }
+    
+    // Calculate expected size for NV12
+    // NV12: Y plane (width × height) + UV plane (width × height / 2)
+    uint32_t expected_y_size = frame->width * frame->height;
+    uint32_t expected_uv_size = (frame->width / 2) * (frame->height / 2) * 2;
+    uint32_t expected_total = expected_y_size + expected_uv_size;
+    
+    // Allow for some padding in frame size (up to 1% extra)
+    uint32_t max_size = expected_total + (expected_total / 100);
+    
+    // Check size
+    if (frame->size < expected_total || frame->size > max_size) {
+        return -1;
+    }
+    
+    return 0;
+}
+
 int vulkan_render(vulkan_context_t *ctx) {
     if (!ctx) {
         return -1;
