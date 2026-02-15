@@ -99,6 +99,12 @@ struct vulkan_context_s {
     VkImageView nv12_uv_view;
     VkSampler sampler;
     
+    // Staging buffer for frame uploads
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_memory;
+    void *staging_mapped;
+    size_t staging_size;
+    
     // Render pass and pipeline
     VkRenderPass render_pass;
     VkPipelineLayout pipeline_layout;
