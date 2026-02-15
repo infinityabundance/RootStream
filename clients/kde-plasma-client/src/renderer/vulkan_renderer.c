@@ -147,6 +147,11 @@ struct vulkan_context_s {
     VkDescriptorPool descriptor_pool;
     VkDescriptorSet descriptor_set;
     
+    // Shaders
+    VkShaderModule vert_shader_module;
+    VkShaderModule frag_shader_module;
+    bool shaders_loaded;
+    
     // Command buffers
     VkCommandPool command_pool;
     VkCommandBuffer *command_buffers;
@@ -1881,6 +1886,14 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     // Destroy graphics pipeline
     if (ctx->graphics_pipeline != VK_NULL_HANDLE) {
         vkDestroyPipeline(ctx->device, ctx->graphics_pipeline, NULL);
+    }
+    
+    // Destroy shader modules
+    if (ctx->frag_shader_module != VK_NULL_HANDLE) {
+        vkDestroyShaderModule(ctx->device, ctx->frag_shader_module, NULL);
+    }
+    if (ctx->vert_shader_module != VK_NULL_HANDLE) {
+        vkDestroyShaderModule(ctx->device, ctx->vert_shader_module, NULL);
     }
     
     // Destroy pipeline layout
