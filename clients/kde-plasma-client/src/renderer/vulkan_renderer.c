@@ -58,11 +58,29 @@ typedef void* VkDescriptorSetLayout;
 typedef void* VkDescriptorPool;
 typedef void* VkDescriptorSet;
 typedef void* VkSampler;
+typedef void* VkBuffer;
 typedef uint32_t VkFormat;
 typedef uint32_t VkImageLayout;
 typedef uint32_t VkAccessFlags;
 typedef uint32_t VkPipelineStageFlags;
+typedef uint32_t VkImageAspectFlags;
 typedef struct { uint32_t width, height; } VkExtent2D;
+typedef struct { uint32_t width, height, depth; } VkExtent3D;
+typedef struct { int32_t x, y, z; } VkOffset3D;
+typedef struct {
+    VkImageAspectFlags aspectMask;
+    uint32_t mipLevel;
+    uint32_t baseArrayLayer;
+    uint32_t layerCount;
+} VkImageSubresourceLayers;
+typedef struct {
+    uint64_t bufferOffset;
+    uint32_t bufferRowLength;
+    uint32_t bufferImageHeight;
+    VkImageSubresourceLayers imageSubresource;
+    VkOffset3D imageOffset;
+    VkExtent3D imageExtent;
+} VkBufferImageCopy;
 typedef uint32_t VkResult;
 #define VK_NULL_HANDLE NULL
 #define VK_SUCCESS 0
@@ -74,6 +92,7 @@ typedef uint32_t VkResult;
 #define VK_PIPELINE_STAGE_TRANSFER_BIT 0x00001000
 #define VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080
 #define VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001
+#define VK_IMAGE_ASPECT_COLOR_BIT 0x00000001
 #endif
 
 /**
@@ -1227,6 +1246,120 @@ static int transition_image_layout(vulkan_context_t *ctx,
         0, NULL,  // memory barriers
         0, NULL,  // buffer memory barriers
         1, &barrier  // image memory barriers
+    );
+    
+    // End command buffer
+    result = vkEndCommandBuffer(command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to end command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Submit command buffer
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    
+    result = vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to submit command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Wait for completion
+    vkQueueWaitIdle(ctx->graphics_queue);
+    
+    // Free command buffer
+    vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
+/**
+ * Copy Y plane from staging buffer to device image
+ * 
+ * Transitions the Y image to TRANSFER_DST layout, copies data from
+ * the staging buffer, and leaves image in TRANSFER_DST (will be
+ * transitioned to SHADER_READ_ONLY later).
+ * 
+ * @param ctx Vulkan context
+ * @param width Frame width
+ * @param height Frame height
+ * @return 0 on success, -1 on failure
+ */
+static int copy_staging_to_y_image(vulkan_context_t *ctx, 
+                                   uint32_t width, 
+                                   uint32_t height) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Transition Y image to TRANSFER_DST layout
+    if (transition_image_layout(ctx, ctx->nv12_y_image,
+                               VK_IMAGE_LAYOUT_UNDEFINED,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) != 0) {
+        return -1;
+    }
+    
+    // Allocate single-time command buffer
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = ctx->command_pool;
+    alloc_info.commandBufferCount = 1;
+    
+    VkCommandBuffer command_buffer;
+    VkResult result = vkAllocateCommandBuffers(ctx->device, &alloc_info, &command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate command buffer for Y plane copy: %d", result);
+        return -1;
+    }
+    
+    // Begin command buffer
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    
+    result = vkBeginCommandBuffer(command_buffer, &begin_info);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to begin command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Set up buffer-to-image copy region
+    VkBufferImageCopy region = {0};
+    region.bufferOffset = 0;  // Y plane starts at offset 0
+    region.bufferRowLength = 0;  // Tightly packed
+    region.bufferImageHeight = 0;  // Tightly packed
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset.x = 0;
+    region.imageOffset.y = 0;
+    region.imageOffset.z = 0;
+    region.imageExtent.width = width;
+    region.imageExtent.height = height;
+    region.imageExtent.depth = 1;
+    
+    // Record copy command
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        ctx->staging_buffer,
+        ctx->nv12_y_image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region
     );
     
     // End command buffer
