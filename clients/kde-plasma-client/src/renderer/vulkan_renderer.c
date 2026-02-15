@@ -1989,10 +1989,33 @@ int vulkan_render(vulkan_context_t *ctx) {
     
     vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     
-    // TODO: Bind pipeline and draw when shaders are loaded
-    // For now, just clear to black
-    // vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->graphics_pipeline);
-    // vkCmdDraw(command_buffer, 4, 1, 0, 0);  // Draw fullscreen quad
+    // Bind the graphics pipeline
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx->graphics_pipeline);
+    
+    // Bind descriptor sets (Y and UV textures)
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                           ctx->pipeline_layout, 0, 1, &ctx->descriptor_set, 0, NULL);
+    
+    // Set dynamic viewport
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (float)ctx->swapchain_extent.width,
+        .height = (float)ctx->swapchain_extent.height,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    
+    // Set dynamic scissor
+    VkRect2D scissor = {
+        .offset = {0, 0},
+        .extent = ctx->swapchain_extent
+    };
+    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+    
+    // Draw fullscreen quad (4 vertices, 1 instance)
+    vkCmdDraw(command_buffer, 4, 1, 0, 0);
     
     vkCmdEndRenderPass(command_buffer);
     
