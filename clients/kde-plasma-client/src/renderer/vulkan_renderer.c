@@ -59,10 +59,21 @@ typedef void* VkDescriptorPool;
 typedef void* VkDescriptorSet;
 typedef void* VkSampler;
 typedef uint32_t VkFormat;
+typedef uint32_t VkImageLayout;
+typedef uint32_t VkAccessFlags;
+typedef uint32_t VkPipelineStageFlags;
 typedef struct { uint32_t width, height; } VkExtent2D;
 typedef uint32_t VkResult;
 #define VK_NULL_HANDLE NULL
 #define VK_SUCCESS 0
+#define VK_IMAGE_LAYOUT_UNDEFINED 0
+#define VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 6
+#define VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 5
+#define VK_ACCESS_TRANSFER_WRITE_BIT 0x00001000
+#define VK_ACCESS_SHADER_READ_BIT 0x00000020
+#define VK_PIPELINE_STAGE_TRANSFER_BIT 0x00001000
+#define VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT 0x00000080
+#define VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 0x00000001
 #endif
 
 /**
@@ -98,6 +109,12 @@ struct vulkan_context_s {
     VkImageView nv12_y_view;
     VkImageView nv12_uv_view;
     VkSampler sampler;
+    
+    // Staging buffer for frame uploads
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_memory;
+    void *staging_mapped;
+    size_t staging_size;
     
     // Render pass and pipeline
     VkRenderPass render_pass;
@@ -790,6 +807,108 @@ static int create_graphics_pipeline(vulkan_context_t *ctx) {
 #endif // HAVE_VULKAN_HEADERS
 }
 
+/**
+ * Create staging buffer for frame uploads
+ * 
+ * Allocates a HOST_VISIBLE buffer for transferring frame data from CPU to GPU.
+ * For 1080p NV12: width(1920) * height(1080) * 1.5 = 3,110,400 bytes (~3MB)
+ * Using 4MB to accommodate various resolutions up to 1080p.
+ */
+static int create_staging_buffer(vulkan_context_t *ctx, size_t size) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Round up to nearest MB for better allocation
+    size = ((size + 1048576 - 1) / 1048576) * 1048576;
+    ctx->staging_size = size;
+    
+    // Create buffer
+    VkBufferCreateInfo buffer_info = {0};
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = size;
+    buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    
+    VkResult result = vkCreateBuffer(ctx->device, &buffer_info, NULL, &ctx->staging_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to create staging buffer: %d", result);
+        return -1;
+    }
+    
+    // Get memory requirements
+    VkMemoryRequirements mem_requirements;
+    vkGetBufferMemoryRequirements(ctx->device, ctx->staging_buffer, &mem_requirements);
+    
+    // Find suitable memory type (HOST_VISIBLE | HOST_COHERENT)
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(ctx->physical_device, &mem_properties);
+    
+    uint32_t memory_type_index = UINT32_MAX;
+    uint32_t required_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+        if ((mem_requirements.memoryTypeBits & (1 << i)) &&
+            (mem_properties.memoryTypes[i].propertyFlags & required_properties) == required_properties) {
+            memory_type_index = i;
+            break;
+        }
+    }
+    
+    if (memory_type_index == UINT32_MAX) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to find suitable memory type for staging buffer");
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Allocate memory
+    VkMemoryAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize = mem_requirements.size;
+    alloc_info.memoryTypeIndex = memory_type_index;
+    
+    result = vkAllocateMemory(ctx->device, &alloc_info, NULL, &ctx->staging_memory);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate staging buffer memory: %d", result);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Bind buffer to memory
+    result = vkBindBufferMemory(ctx->device, ctx->staging_buffer, ctx->staging_memory, 0);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to bind staging buffer memory: %d", result);
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        ctx->staging_memory = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    // Map memory persistently
+    result = vkMapMemory(ctx->device, ctx->staging_memory, 0, size, 0, &ctx->staging_mapped);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to map staging buffer memory: %d", result);
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+        ctx->staging_buffer = VK_NULL_HANDLE;
+        ctx->staging_memory = VK_NULL_HANDLE;
+        return -1;
+    }
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
+}
+
 vulkan_context_t* vulkan_init(void *native_window) {
     vulkan_context_t *ctx = calloc(1, sizeof(vulkan_context_t));
     if (!ctx) {
@@ -860,6 +979,14 @@ vulkan_context_t* vulkan_init(void *native_window) {
         return NULL;
     }
     
+    // Create staging buffer for frame uploads (4MB for 1080p NV12)
+    // NV12 1080p: 1920 * 1080 * 1.5 = 3,110,400 bytes
+    size_t staging_size = 4 * 1024 * 1024;  // 4MB
+    if (create_staging_buffer(ctx, staging_size) != 0) {
+        vulkan_cleanup(ctx);
+        return NULL;
+    }
+    
     // Create swapchain
     if (create_swapchain(ctx) != 0) {
         vulkan_cleanup(ctx);
@@ -914,6 +1041,225 @@ int vulkan_upload_frame(vulkan_context_t *ctx, const frame_t *frame) {
     snprintf(ctx->last_error, sizeof(ctx->last_error),
             "Frame upload not yet implemented");
     return -1;
+}
+
+/**
+ * Validate frame data before upload
+ * 
+ * Checks frame pointer, data pointer, dimensions, format, and size.
+ * 
+ * @param frame Frame to validate
+ * @return 0 if valid, -1 if invalid
+ */
+static int validate_frame(const frame_t *frame) {
+    // Check frame pointer
+    if (!frame) {
+        return -1;
+    }
+    
+    // Check data pointer
+    if (!frame->data) {
+        return -1;
+    }
+    
+    // Check dimensions
+    if (frame->width == 0 || frame->height == 0) {
+        return -1;
+    }
+    
+    // Check format (must be NV12)
+    if (frame->format != FRAME_FORMAT_NV12) {
+        return -1;
+    }
+    
+    // Calculate expected size for NV12
+    // NV12: Y plane (width × height) + UV plane (width × height / 2)
+    uint32_t expected_y_size = frame->width * frame->height;
+    uint32_t expected_uv_size = (frame->width / 2) * (frame->height / 2) * 2;
+    uint32_t expected_total = expected_y_size + expected_uv_size;
+    
+    // Allow for some padding in frame size (up to 1% extra)
+    uint32_t max_size = expected_total + (expected_total / 100);
+    
+    // Check size
+    if (frame->size < expected_total || frame->size > max_size) {
+        return -1;
+    }
+    
+    return 0;
+}
+
+/**
+ * Copy frame data to staging buffer
+ * 
+ * Copies Y and UV planes from frame data to the persistently-mapped
+ * staging buffer. Y plane is copied first, followed by UV plane.
+ * 
+ * @param ctx Vulkan context
+ * @param frame Frame to copy
+ * @return 0 on success, -1 on failure
+ */
+static int copy_frame_to_staging(vulkan_context_t *ctx, const frame_t *frame) {
+    if (!ctx || !frame || !ctx->staging_mapped) {
+        return -1;
+    }
+    
+    // Calculate plane sizes
+    uint32_t y_size = frame->width * frame->height;
+    uint32_t uv_size = (frame->width / 2) * (frame->height / 2) * 2;  // Interleaved UV
+    uint32_t total_size = y_size + uv_size;
+    
+    // Check staging buffer has enough space
+    if (total_size > ctx->staging_size) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Frame size %u exceeds staging buffer size %zu",
+                total_size, ctx->staging_size);
+        return -1;
+    }
+    
+    // Get pointers
+    uint8_t *staging_ptr = (uint8_t *)ctx->staging_mapped;
+    const uint8_t *frame_data = frame->data;
+    
+    // Copy Y plane (offset 0)
+    memcpy(staging_ptr, frame_data, y_size);
+    
+    // Copy UV plane (offset y_size)
+    memcpy(staging_ptr + y_size, frame_data + y_size, uv_size);
+    
+    return 0;
+}
+
+/**
+ * Transition image layout using pipeline barrier
+ * 
+ * Creates a single-time command buffer to transition an image from
+ * one layout to another. This is needed before/after copy operations
+ * and to prepare images for shader access.
+ * 
+ * @param ctx Vulkan context
+ * @param image Image to transition
+ * @param old_layout Current layout
+ * @param new_layout Desired layout
+ * @return 0 on success, -1 on failure
+ */
+static int transition_image_layout(vulkan_context_t *ctx,
+                                   VkImage image,
+                                   VkImageLayout old_layout,
+                                   VkImageLayout new_layout) {
+#ifndef HAVE_VULKAN_HEADERS
+    snprintf(ctx->last_error, sizeof(ctx->last_error),
+            "Vulkan headers not available at compile time");
+    return -1;
+#else
+    // Allocate single-time command buffer
+    VkCommandBufferAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = ctx->command_pool;
+    alloc_info.commandBufferCount = 1;
+    
+    VkCommandBuffer command_buffer;
+    VkResult result = vkAllocateCommandBuffers(ctx->device, &alloc_info, &command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to allocate command buffer for layout transition: %d", result);
+        return -1;
+    }
+    
+    // Begin command buffer
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    
+    result = vkBeginCommandBuffer(command_buffer, &begin_info);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to begin command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Set up barrier based on transition type
+    VkImageMemoryBarrier barrier = {0};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    
+    // Determine access masks and pipeline stages based on layouts
+    VkPipelineStageFlags source_stage;
+    VkPipelineStageFlags destination_stage;
+    
+    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && 
+        new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        // Before copy: prepare for transfer write
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
+               new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        // After copy: prepare for shader read
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Unsupported layout transition: %u -> %u", old_layout, new_layout);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Record pipeline barrier
+    vkCmdPipelineBarrier(
+        command_buffer,
+        source_stage, destination_stage,
+        0,  // dependency flags
+        0, NULL,  // memory barriers
+        0, NULL,  // buffer memory barriers
+        1, &barrier  // image memory barriers
+    );
+    
+    // End command buffer
+    result = vkEndCommandBuffer(command_buffer);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to end command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Submit command buffer
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    
+    result = vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Failed to submit command buffer: %d", result);
+        vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+        return -1;
+    }
+    
+    // Wait for completion
+    vkQueueWaitIdle(ctx->graphics_queue);
+    
+    // Free command buffer
+    vkFreeCommandBuffers(ctx->device, ctx->command_pool, 1, &command_buffer);
+    
+    return 0;
+#endif // HAVE_VULKAN_HEADERS
 }
 
 int vulkan_render(vulkan_context_t *ctx) {
@@ -1181,6 +1527,17 @@ void vulkan_cleanup(vulkan_context_t *ctx) {
     // Destroy swapchain
     if (ctx->swapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(ctx->device, ctx->swapchain, NULL);
+    }
+    
+    // Clean up staging buffer
+    if (ctx->staging_mapped && ctx->staging_memory != VK_NULL_HANDLE) {
+        vkUnmapMemory(ctx->device, ctx->staging_memory);
+    }
+    if (ctx->staging_buffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(ctx->device, ctx->staging_buffer, NULL);
+    }
+    if (ctx->staging_memory != VK_NULL_HANDLE) {
+        vkFreeMemory(ctx->device, ctx->staging_memory, NULL);
     }
     
     // Destroy device
