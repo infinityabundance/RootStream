@@ -2133,6 +2133,95 @@ const char* vulkan_get_backend_name(vulkan_context_t *ctx) {
     }
 }
 
+// Phase 31.5.1: Check if a present mode is supported
+static int is_present_mode_supported(vulkan_context_t *ctx, VkPresentModeKHR mode) {
+#ifdef HAVE_VULKAN
+    if (!ctx || !ctx->physical_device || ctx->surface == VK_NULL_HANDLE) {
+        return 0;
+    }
+    
+    // Query count of available present modes
+    uint32_t count = 0;
+    VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        ctx->physical_device, ctx->surface, &count, NULL);
+    
+    if (result != VK_SUCCESS || count == 0) {
+        return 0;
+    }
+    
+    // Allocate array for modes
+    VkPresentModeKHR *modes = (VkPresentModeKHR*)malloc(sizeof(VkPresentModeKHR) * count);
+    if (!modes) {
+        return 0;
+    }
+    
+    // Query actual modes
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        ctx->physical_device, ctx->surface, &count, modes);
+    
+    if (result != VK_SUCCESS) {
+        free(modes);
+        return 0;
+    }
+    
+    // Search for requested mode
+    int found = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        if (modes[i] == mode) {
+            found = 1;
+            break;
+        }
+    }
+    
+    free(modes);
+    return found;
+#else
+    (void)ctx;
+    (void)mode;
+    return 0;
+#endif
+}
+
+// Phase 31.5.2: Clean up swapchain-dependent resources
+static void cleanup_swapchain_resources(vulkan_context_t *ctx) {
+#ifdef HAVE_VULKAN
+    if (!ctx || !ctx->device) {
+        return;
+    }
+    
+    // Wait for device to finish all operations
+    vkDeviceWaitIdle(ctx->device);
+    
+    // Destroy framebuffers
+    if (ctx->framebuffers) {
+        for (uint32_t i = 0; i < ctx->swapchain_image_count; i++) {
+            if (ctx->framebuffers[i] != VK_NULL_HANDLE) {
+                vkDestroyFramebuffer(ctx->device, ctx->framebuffers[i], NULL);
+                ctx->framebuffers[i] = VK_NULL_HANDLE;
+            }
+        }
+    }
+    
+    // Destroy image views
+    if (ctx->swapchain_image_views) {
+        for (uint32_t i = 0; i < ctx->swapchain_image_count; i++) {
+            if (ctx->swapchain_image_views[i] != VK_NULL_HANDLE) {
+                vkDestroyImageView(ctx->device, ctx->swapchain_image_views[i], NULL);
+                ctx->swapchain_image_views[i] = VK_NULL_HANDLE;
+            }
+        }
+    }
+    
+    // Destroy swapchain
+    if (ctx->swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(ctx->device, ctx->swapchain, NULL);
+        ctx->swapchain = VK_NULL_HANDLE;
+    }
+#else
+    (void)ctx;
+#endif
+}
+
 void vulkan_cleanup(vulkan_context_t *ctx) {
     if (!ctx) {
         return;
