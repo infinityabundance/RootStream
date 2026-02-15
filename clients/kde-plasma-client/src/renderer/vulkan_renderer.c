@@ -1078,6 +1078,47 @@ static int validate_frame(const frame_t *frame) {
     return 0;
 }
 
+/**
+ * Copy frame data to staging buffer
+ * 
+ * Copies Y and UV planes from frame data to the persistently-mapped
+ * staging buffer. Y plane is copied first, followed by UV plane.
+ * 
+ * @param ctx Vulkan context
+ * @param frame Frame to copy
+ * @return 0 on success, -1 on failure
+ */
+static int copy_frame_to_staging(vulkan_context_t *ctx, const frame_t *frame) {
+    if (!ctx || !frame || !ctx->staging_mapped) {
+        return -1;
+    }
+    
+    // Calculate plane sizes
+    uint32_t y_size = frame->width * frame->height;
+    uint32_t uv_size = (frame->width / 2) * (frame->height / 2) * 2;  // Interleaved UV
+    uint32_t total_size = y_size + uv_size;
+    
+    // Check staging buffer has enough space
+    if (total_size > ctx->staging_size) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                "Frame size %u exceeds staging buffer size %zu",
+                total_size, ctx->staging_size);
+        return -1;
+    }
+    
+    // Get pointers
+    uint8_t *staging_ptr = (uint8_t *)ctx->staging_mapped;
+    const uint8_t *frame_data = frame->data;
+    
+    // Copy Y plane (offset 0)
+    memcpy(staging_ptr, frame_data, y_size);
+    
+    // Copy UV plane (offset y_size)
+    memcpy(staging_ptr + y_size, frame_data + y_size, uv_size);
+    
+    return 0;
+}
+
 int vulkan_render(vulkan_context_t *ctx) {
     if (!ctx) {
         return -1;
