@@ -489,11 +489,11 @@ All success criteria met:
 
 ## 🔗 Related Documentation
 
-- [Phase 27.1: MP4/MKV Container Support](../PHASE27.1_COMPLETION_SUMMARY.md)
-- [Phase 27.2: VP9 Encoder Integration](../PHASE27.2_COMPLETION_SUMMARY.md)
-- [Phase 27.3: Replay Buffer Polish](../PHASE27.3_COMPLETION_SUMMARY.md)
-- [RecordingManager API](../src/recording/recording_manager.h)
-- [Recording Types](../src/recording/recording_types.h)
+- [Phase 27.1: MP4/MKV Container Support](PHASE27.1_COMPLETION_SUMMARY.md)
+- [Phase 27.2: VP9 Encoder Integration](PHASE27.2_COMPLETION_SUMMARY.md)
+- [Phase 27.3: Replay Buffer Polish](PHASE27.3_COMPLETION_SUMMARY.md)
+- [RecordingManager API](../../src/recording/recording_manager.h)
+- [Recording Types](../../src/recording/recording_types.h)
 
 ---
 

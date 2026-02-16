@@ -318,7 +318,7 @@ This removes all AI logging code at compile time.
 
 ## See Also
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture overview
-- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) - Common issues and solutions
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - Development workflow
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture overview
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues and solutions
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development workflow
 - [docs/api.md](api.md) - C API reference

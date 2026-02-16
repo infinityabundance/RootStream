@@ -437,12 +437,12 @@ endif()
 
 ## 🔗 Related Documentation
 
-- [Phase 27.1 Completion Summary](../PHASE27.1_COMPLETION_SUMMARY.md)
-- [Recording System README](../src/recording/README.md)
-- [Recording Presets Configuration](../src/recording/recording_presets.h)
-- [VP9 Encoder Wrapper API](../src/recording/vp9_encoder_wrapper.h)
-- [H.264 Encoder Wrapper API](../src/recording/h264_encoder_wrapper.h)
-- [AV1 Encoder Wrapper API](../src/recording/av1_encoder_wrapper.h)
+- [Phase 27.1 Completion Summary](PHASE27.1_COMPLETION_SUMMARY.md)
+- [Recording System README](../../src/recording/README.md)
+- [Recording Presets Configuration](../../src/recording/recording_presets.h)
+- [VP9 Encoder Wrapper API](../../src/recording/vp9_encoder_wrapper.h)
+- [H.264 Encoder Wrapper API](../../src/recording/h264_encoder_wrapper.h)
+- [AV1 Encoder Wrapper API](../../src/recording/av1_encoder_wrapper.h)
 
 ---
 
