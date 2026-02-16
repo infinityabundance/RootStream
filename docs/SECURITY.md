@@ -12,7 +12,7 @@ RootStream implements comprehensive end-to-end encryption and security features:
 - ✅ **Attack Prevention**: Replay protection, brute force defense, rate limiting
 - ✅ **Security Audit**: Comprehensive event logging and audit trails
 
-See [PHASE21_SUMMARY.md](PHASE21_SUMMARY.md) for detailed security documentation.
+See [PHASE21_SUMMARY.md](planning/PHASE21_SUMMARY.md) for detailed security documentation.
 
 ## Supported versions
 

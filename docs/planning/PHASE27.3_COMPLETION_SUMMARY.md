@@ -392,11 +392,11 @@ int save_replay_buffer(const char *filename, uint32_t duration_sec, enum VideoCo
 
 ## 🔗 Related Documentation
 
-- [Phase 27.1 Completion Summary](../PHASE27.1_COMPLETION_SUMMARY.md)
-- [Phase 27.2 Completion Summary](../PHASE27.2_COMPLETION_SUMMARY.md)
-- [Replay Buffer API](../src/recording/replay_buffer.h)
-- [Recording Manager API](../src/recording/recording_manager.h)
-- [Recording Types](../src/recording/recording_types.h)
+- [Phase 27.1 Completion Summary](PHASE27.1_COMPLETION_SUMMARY.md)
+- [Phase 27.2 Completion Summary](PHASE27.2_COMPLETION_SUMMARY.md)
+- [Replay Buffer API](../../src/recording/replay_buffer.h)
+- [Recording Manager API](../../src/recording/recording_manager.h)
+- [Recording Types](../../src/recording/recording_types.h)
 
 ---
 

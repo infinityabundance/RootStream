@@ -60,6 +60,11 @@ infrastructure/docker/.env
 infrastructure/helm/**/charts/
 infrastructure/helm/**/*.tgz
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # Logs and temporary files
 infrastructure/**/*.log
 infrastructure/**/tmp/
