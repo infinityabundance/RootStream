@@ -5,7 +5,7 @@ latency-analyzer.py - RootStream Latency Analysis Tool
 Parses latency log files and generates performance reports.
 
 Usage:
-    python3 tools/latency-analyzer.py [OPTIONS] <logfile>
+    python3 scripts/latency-analyzer.py [OPTIONS] <logfile>
 
 Options:
     --json          Output as JSON
@@ -18,7 +18,7 @@ Log Format (from RootStream latency logging):
 
 Example:
     rootstream host --latency > latency.log
-    python3 tools/latency-analyzer.py latency.log
+    python3 scripts/latency-analyzer.py latency.log
 """
 
 import sys
