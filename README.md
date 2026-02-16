@@ -320,7 +320,7 @@ rootstream --replay-save last30s.mp4       # Save last 30 seconds
 - For dependency-only build troubleshooting, use `make HEADLESS=1 NO_CRYPTO=1 NO_QR=1 NO_DRM=1` (networking/crypto/QR/DRM disabled).
 
 **Troubleshooting**
-- See `TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
+- See `docs/TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
 
 **Identity Backup & Restore**
 RootStream stores identity keys in `~/.config/rootstream/`:
@@ -552,7 +552,7 @@ If you have hardware we haven't tested:
 1. Run `rootstream --diagnostics` and share output
 2. Enable AI logging mode (see below) and share relevant logs
 3. Report performance metrics (latency, CPU%, memory) via GitHub issues
-4. Help expand test coverage (see CONTRIBUTING.md)
+4. Help expand test coverage (see docs/CONTRIBUTING.md)
 
 ---
 
@@ -734,7 +734,7 @@ We welcome contributions! Areas needing help:
 5. **Cross-platform** - Windows/Mac clients
 6. **Mobile apps** - Android/iOS clients
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ---
 
