@@ -4,7 +4,32 @@
 
 This document details what is **actually implemented** vs. what is **claimed** in the README and issues.
 
-**Last Updated:** February 2026 (Post-Phase 8)
+> **Single source of truth for microtasks:** [`docs/microtasks.md`](microtasks.md)
+
+**Last Updated:** 2026 (Post-Phase 31 · Vulkan Renderer Complete)**
+
+### 📊 High-Level Phase Completion
+
+| Range | Phases | Status |
+|-------|--------|--------|
+| Core Infrastructure | 0–8 | ✅ Complete |
+| Protocol & Crypto | 9–11 | ✅ Complete |
+| KDE Client | 12–16 | ✅ Complete |
+| Platform & Recording | 17–19 | ✅ Complete |
+| Advanced Features | 20–23 | ✅ Complete |
+| VR / Proton | 24 | 🔄 In Progress (5/9 tasks) |
+| Security Hardening | 25 | ✅ Complete |
+| Network Optimization | 26 | ✅ Complete |
+| CI / Infrastructure | 27 | ✅ Complete |
+| Event Sourcing | 28 | ✅ Complete |
+| Mobile Full Client | 29 | 🔄 In Progress (3/8 tasks) |
+| Security Phase 2 | 30 | ✅ Complete |
+| Vulkan Renderer | 31 | ✅ Complete |
+| Backend Integration | 32 | 🔴 Not Started |
+| Code Standards | 33 | 🔴 Not Started |
+| Production Readiness | 34 | 🔴 Not Started |
+
+**Overall: 186 / 221 microtasks complete (84%)**
 
 ---
 
@@ -260,6 +285,107 @@ Test project /path/to/build
 
 Total Test time (real) =   0.15 sec
 ```
+
+---
+
+---
+
+## ✅ Phases 9–31 Summary
+
+### PHASE 9–11: Protocol, Crypto & Client Rendering
+- [x] Binary packet protocol with CRC-32, sequence numbers, version negotiation (Phase 9)
+- [x] Ed25519 identity keys, X25519 ephemeral DH, ChaCha20-Poly1305 encryption (Phase 10)
+- [x] FFmpeg H.264 decode + SDL2 rendering client (Phase 11)
+- **Status**: ✅ Complete
+
+### PHASE 12–16: KDE Plasma Client
+- [x] Qt6/QML/Kirigami application with stream view (Phase 12)
+- [x] Opus audio + PipeWire/PulseAudio/ALSA backends (Phase 13)
+- [x] Audio player with A/V sync (Phase 14)
+- [x] Input manager with gamepad support (Phase 15)
+- [x] KNotifications, shortcuts, accessibility, theme support (Phase 16)
+- **Status**: ✅ Complete
+
+### PHASE 17–19: Platform & Recording
+- [x] RecordingManager, ReplayBuffer, DiskManager (Phase 17)
+- [x] H.264/VP9/AV1 encoder wrappers with bitrate ladder (Phase 18)
+- [x] MKV/MP4 muxers, metadata embedding, thumbnail generation (Phase 19)
+- **Status**: ✅ Complete
+
+### PHASE 20–23: Advanced Features
+- [x] MetricsManager: CPU/GPU/memory/network monitors + HUD overlay (Phase 20)
+- [x] Embedded HTTP API server + WebSocket push + auth token (Phase 21)
+- [x] Android (MediaCodec) + iOS (VideoToolbox) native clients (Phase 22)
+- [x] SQLite DatabaseManager with migrations and schema (Phase 23)
+- **Status**: ✅ Complete
+
+### PHASE 24: VR / Proton *(In Progress)*
+- [x] OpenXR manager, head tracking, hand tracking, action mapping, VR UI (24.1–24.5)
+- [ ] Proton compatibility layer (24.6) — partially implemented
+- [ ] SteamVR bridge (24.7) — partially implemented
+- [ ] VR latency optimisation (24.8) — not started
+- [ ] VR integration tests (24.9) — not started
+- **Status**: 🔄 5/9 tasks complete
+
+### PHASE 25: Security Hardening
+- [x] SessionManager, AuditLog, SIGMA key exchange, attack prevention, user auth + 2FA (Phase 25)
+- **Status**: ✅ Complete
+
+### PHASE 26: Network Optimization
+- [x] BBR-like bandwidth estimator, ABR controller, QoS/DSCP, FEC, NACK, jitter buffer (Phase 26)
+- **Status**: ✅ Complete
+
+### PHASE 27: CI / Infrastructure
+- [x] Multi-stage Dockerfile, Docker Compose, Helm chart, Terraform modules (Phase 27)
+- [x] GitHub Actions CI + CD pipelines, SBOM, vulnerability scanning (Phase 27)
+- **Status**: ✅ Complete
+
+### PHASE 28: Event Sourcing / CQRS
+- [x] EventStore, domain event models, command handlers, projections, CQRS API (Phase 28)
+- **Status**: ✅ Complete
+
+### PHASE 29: Mobile Full Client *(In Progress)*
+- [x] Android full codec support (29.1), clipboard sync (29.2)
+- [ ] Android file transfer (29.3) — in progress
+- [ ] iOS full codec, clipboard, file transfer (29.4–29.6) — not started
+- [ ] Mobile HUD, push notifications (29.7–29.8) — not started
+- **Status**: 🔄 3/8 tasks complete
+
+### PHASE 30: Security Phase 2
+- [x] LibFuzzer packet/handshake fuzzing, rate limiting, SQL injection prevention, TLS (Phase 30)
+- **Status**: ✅ Complete
+
+### PHASE 31: Vulkan Renderer *(NEW — Just Completed)*
+- [x] Frame upload infrastructure — `VulkanFrameUploader.cpp` (702 LOC): staging buffer pool, VMA, timeline semaphores
+- [x] YUV→RGB shader system — `yuv_to_rgb.frag` (275 LOC): BT.709/601/2020, HDR tone mapping
+- [x] Graphics pipeline — render pass, framebuffers, descriptor sets, specialisation constants
+- [x] Swapchain presentation — mailbox/FIFO mode, acquire/present semaphores
+- [x] Dynamic resize — swapchain recreation without frame drops
+- [x] Resource cleanup — validation layers report zero errors
+- **Status**: ✅ Complete
+
+---
+
+## 🔭 What's Next
+
+### PHASE-32: Backend Integration *(Not Started)*
+Connect the Phase 31 Vulkan renderer to the actual streaming backend:
+- `StreamBackendConnector.cpp` — frame handoff from decode to Vulkan upload
+- Lock-free ring buffer between decode and render threads
+- X11 + Wayland `VkSurfaceKHR` platform backends
+- Integration and performance benchmark suites
+
+### PHASE-33: Code Standards & Quality *(Not Started)*
+- clang-format + clang-tidy with zero violations
+- ≥ 80% line coverage across all modules
+- ASan/UBSan/TSan clean passes
+- cppcheck static analysis
+
+### PHASE-34: Production Readiness *(Not Started)*
+- End-to-end Docker integration test
+- Performance benchmark suite (glass-to-glass latency)
+- AUR/deb/AppImage release packaging
+- Final documentation review
 
 ---
 
