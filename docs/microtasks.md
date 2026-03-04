@@ -72,8 +72,12 @@
 | PHASE-36 | Audio DSP Pipeline | 🟢 | 5 | 5 |
 | PHASE-37 | Multi-Client Fanout | 🟢 | 5 | 5 |
 | PHASE-38 | Collaboration & Annotation | 🟢 | 4 | 4 |
+| PHASE-39 | Stream Quality Intelligence | 🟢 | 5 | 5 |
+| PHASE-40 | Relay / TURN Infrastructure | 🟢 | 5 | 5 |
+| PHASE-41 | Session Persistence & Resumption | 🟢 | 4 | 4 |
+| PHASE-42 | Closed-Caption & Subtitle System | 🟢 | 4 | 4 |
 
-> **Overall**: 240 / 240 microtasks complete (**100%**)
+> **Overall**: 258 / 258 microtasks complete (**100%**)
 
 ---
 
@@ -661,6 +665,60 @@
 
 ---
 
+## PHASE-39: Stream Quality Intelligence
+
+> Per-frame PSNR/SSIM quality scoring, histogram-based scene-change detection, rolling quality monitor with alert thresholds, and JSON quality report generation.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 39.1 | Quality metrics (PSNR/SSIM) | 🟢 | P0 | 4h | 7 | `src/quality/quality_metrics.c` — stateless `quality_psnr()`, `quality_ssim()`, `quality_mse()` on 8-bit luma planes; PSNR sentinel 1000 for identical frames | `scripts/validate_traceability.sh` |
+| 39.2 | Scene-change detector | 🟢 | P0 | 4h | 8 | `src/quality/scene_detector.c` — normalised L1 luma histogram diff; configurable threshold + warmup; `scene_detector_push()` returns `scene_result_t` per frame | `scripts/validate_traceability.sh` |
+| 39.3 | Rolling quality monitor | 🟢 | P0 | 4h | 7 | `src/quality/quality_monitor.c` — sliding-window (up to 120 frames) average + min PSNR/SSIM; alert counter incremented when avg drops below threshold | `scripts/validate_traceability.sh` |
+| 39.4 | JSON quality reporter | 🟢 | P1 | 2h | 6 | `src/quality/quality_reporter.c` — `quality_report_json()` writes compact JSON into a caller-supplied buffer; returns -1 on overflow | `scripts/validate_traceability.sh` |
+| 39.5 | Quality unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_quality.c` — 17 tests: MSE/PSNR/SSIM identical/degraded/null, scene create/no-change/cut/reset, monitor good/bad/reset, reporter basic/overflow/null; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-40: Relay / TURN Infrastructure
+
+> Relay server session management for NAT traversal: wire protocol, server-side session table, client-side state machine, and HMAC-SHA256 auth token generation.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 40.1 | Relay wire protocol | 🟢 | P0 | 4h | 7 | `src/relay/relay_protocol.c` — 10-byte big-endian header (magic 0x5253, version, type, session ID, payload length); encode/decode + HELLO payload build/parse | `scripts/validate_traceability.sh` |
+| 40.2 | Relay session manager | 🟢 | P0 | 5h | 8 | `src/relay/relay_session.c` — 128-slot mutex-protected table; open (WAITING), pair on token match (PAIRED), close; bytes-relayed counter per session | `scripts/validate_traceability.sh` |
+| 40.3 | Relay client connector | 🟢 | P0 | 4h | 8 | `src/relay/relay_client.c` — I/O-callback state machine: DISCONNECTED→HELLO_SENT→READY; auto-PONG on PING; `relay_client_send_data()` wraps payload in DATA message | `scripts/validate_traceability.sh` |
+| 40.4 | HMAC auth token | 🟢 | P0 | 3h | 7 | `src/relay/relay_token.c` — portable HMAC-SHA256 over (peer_pubkey ‖ nonce); `relay_token_validate()` uses constant-time comparison; no external crypto dependency | `scripts/validate_traceability.sh` |
+| 40.5 | Relay unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_relay.c` — 14 tests: header round-trip, bad magic, HELLO round-trip, session open/close/pair/wrong-token/bytes, client connect/ACK/ping-pong, token determinism/diff-key/validate; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-41: Session Persistence & Resumption
+
+> Binary session-state serialisation, atomic checkpoint save/load with rotation, and a resume-protocol handshake (request/accepted/rejected) with server-side evaluation.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 41.1 | Session state serialisation | 🟢 | P0 | 4h | 7 | `src/session/session_state.c` — little-endian binary format; magic 0x52535353; all stream parameters + 32-byte stream key + peer address round-trip | `scripts/validate_traceability.sh` |
+| 41.2 | Checkpoint save/load | 🟢 | P0 | 5h | 8 | `src/session/session_checkpoint.c` — atomic rename write; filename `rootstream-ckpt-<id>-<seq>.bin`; `checkpoint_load` finds highest sequence; `checkpoint_delete` cleans up | `scripts/validate_traceability.sh` |
+| 41.3 | Resume-protocol negotiation | 🟢 | P0 | 4h | 8 | `src/session/session_resume.c` — RESQ/RESA/RESR tags; `resume_server_evaluate()` checks session ID, stream key, and frame gap; returns accepted/rejected struct | `scripts/validate_traceability.sh` |
+| 41.4 | Session persistence unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_session_persist.c` — 12 tests: state round-trip/bad-magic/null, checkpoint save-load-delete/nonexistent/null, resume request/accepted/rejected round-trip, server accept/reject-gap/reject-key; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-42: Closed-Caption & Subtitle System
+
+> Caption event wire format, PTS-sorted timing ring-buffer with expiry, and RGBA overlay compositor using a built-in 5×7 pixel bitmap font with Porter-Duff alpha blending.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 42.1 | Caption event format | 🟢 | P0 | 3h | 6 | `src/caption/caption_event.c` — magic 0x43415054 binary encoding; `caption_event_encode/decode` round-trip; `caption_event_is_active()` timing predicate | `scripts/validate_traceability.sh` |
+| 42.2 | Caption timing buffer | 🟢 | P0 | 4h | 7 | `src/caption/caption_buffer.c` — 64-slot PTS-sorted insertion; `caption_buffer_query()` returns active events; `caption_buffer_expire()` prunes ended events | `scripts/validate_traceability.sh` |
+| 42.3 | Caption overlay renderer | 🟢 | P0 | 6h | 8 | `src/caption/caption_renderer.c` — built-in 5×7 pixel font (ASCII 32–127); semi-transparent pill background; Porter-Duff src-over RGBA blending; row + top/bottom positioning | `scripts/validate_traceability.sh` |
+| 42.4 | Caption unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_caption.c` — 13 tests: event encode/decode/is_active/null, buffer create/push-query/expire/clear/sorted-insert, renderer create/draw-active/draw-inactive/null; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -691,4 +749,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 38 · Next: Phase 39 (to be defined)*
+*Last updated: 2026 · Post-Phase 42 · Next: Phase 43 (to be defined)*
