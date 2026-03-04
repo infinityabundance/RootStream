@@ -68,8 +68,12 @@
 | PHASE-32 | Backend Integration | 🟢 | 6 | 6 |
 | PHASE-33 | Code Standards & Quality | 🟢 | 4 | 4 |
 | PHASE-34 | Production Readiness | 🟢 | 4 | 4 |
+| PHASE-35 | Plugin & Extension System | 🟢 | 5 | 5 |
+| PHASE-36 | Audio DSP Pipeline | 🟢 | 5 | 5 |
+| PHASE-37 | Multi-Client Fanout | 🟢 | 5 | 5 |
+| PHASE-38 | Collaboration & Annotation | 🟢 | 4 | 4 |
 
-> **Overall**: 221 / 221 microtasks complete (**100%**)
+> **Overall**: 240 / 240 microtasks complete (**100%**)
 
 ---
 
@@ -587,6 +591,61 @@
 
 ---
 
+## PHASE-35: Plugin & Extension System
+
+> Runtime-loadable plugin ABI enabling third-party encoders, decoders, capture backends, filters, transports, and UI extensions.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 35.1 | Plugin ABI definition | 🟢 | P0 | 4h | 8 | `src/plugin/plugin_api.h` defines `plugin_descriptor_t`, `plugin_host_api_t`, `PLUGIN_API_MAGIC`, `RS_PLUGIN_DECLARE` macro; version-gated ABI | `scripts/validate_traceability.sh` |
+| 35.2 | Dynamic plugin loader | 🟢 | P0 | 5h | 7 | `src/plugin/plugin_loader.c` uses `dlopen`/`dlclose` (POSIX) or `LoadLibrary` (Win32); validates magic + version before calling `rs_plugin_init` | `scripts/validate_traceability.sh` |
+| 35.3 | Plugin registry | 🟢 | P0 | 4h | 7 | `src/plugin/plugin_registry.c` scans directories for `.so`/`.dll`; lookup by name and type; capacity `PLUGIN_REGISTRY_MAX` = 64 | `scripts/validate_traceability.sh` |
+| 35.4 | Plugin system unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_plugin_system.c` — 10 tests covering constants, type enum, registry lifecycle, NULL guards, capacity; all pass without real plugins | `scripts/validate_traceability.sh` |
+| 35.5 | Plugin developer guide | 🟢 | P1 | 2h | 6 | `docs/PLUGIN_API.md` — quick-start example, type table, ABI versioning, host API, search path, thread-safety, security notes | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-36: Audio DSP Pipeline
+
+> Composable per-frame DSP processing chain: noise gate, spectral subtraction, automatic gain control, and NLMS echo cancellation.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 36.1 | DSP pipeline framework | 🟢 | P0 | 4h | 7 | `src/audio/audio_pipeline.c` — linear chain of `audio_filter_node_t`; add/remove by name; enabled flag bypasses nodes; `audio_pipeline_process()` calls all enabled nodes in order | `scripts/validate_traceability.sh` |
+| 36.2 | Noise gate + spectral subtraction | 🟢 | P0 | 6h | 8 | `src/audio/noise_filter.c` — RMS noise gate with configurable threshold and release; single-band spectral subtraction with over-subtraction factor and noise floor history | `scripts/validate_traceability.sh` |
+| 36.3 | Automatic gain control | 🟢 | P0 | 4h | 7 | `src/audio/gain_control.c` — feed-forward AGC with configurable target dBFS, gain clamp, attack/release envelope, and hard clipper | `scripts/validate_traceability.sh` |
+| 36.4 | Acoustic echo cancellation | 🟢 | P0 | 6h | 9 | `src/audio/echo_cancel.c` — NLMS adaptive filter with configurable filter length and step size; `aec_set_reference()` for pipeline integration | `scripts/validate_traceability.sh` |
+| 36.5 | Audio DSP unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_audio_dsp.c` — 12 tests: pipeline lifecycle, passthrough, NULL guards, gate silence/pass, AGC convergence, AEC adaptation; all pass without audio hardware | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-37: Multi-Client Fanout
+
+> Fan out a single encoded stream to multiple simultaneous clients, with independent per-client adaptive bitrate and graceful congestion handling.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 37.1 | Fanout manager | 🟢 | P0 | 5h | 8 | `src/fanout/fanout_manager.c` — iterates active sessions via `session_table_foreach`; drops delta frames for congested clients (loss > 10% or RTT > 500 ms); thread-safe stats | `scripts/validate_traceability.sh` |
+| 37.2 | Session table | 🟢 | P0 | 4h | 7 | `src/fanout/session_table.c` — fixed-size (32-slot) table with mutex; add/remove/get/update-bitrate/update-stats; `session_table_foreach` skips removed slots | `scripts/validate_traceability.sh` |
+| 37.3 | Per-client ABR | 🟢 | P0 | 4h | 8 | `src/fanout/per_client_abr.c` — AIMD controller: +500 kbps additive increase after 2 stable intervals; ×0.7 decrease on > 5% loss or RTT > 250 ms; capped at negotiated max | `scripts/validate_traceability.sh` |
+| 37.4 | Fanout unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_fanout.c` — 13 tests: table lifecycle, add/remove, capacity, update, foreach, fanout create/deliver/stats-reset, ABR create/decrease/increase/max-cap/force-keyframe | `scripts/validate_traceability.sh` |
+| 37.5 | Multi-client integration test | 🟢 | P0 | 3h | 7 | `tests/integration/test_multi_client.c` — 5 integration tests: add-all, fanout stats, per-client heterogeneous ABR, remove mid-stream, congestion drop; CI passes without real network | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-38: Collaboration & Annotation
+
+> Real-time screen annotation layer: draw strokes, erase, place text, and sync remote cursor positions over the existing encrypted data channel.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 38.1 | Annotation wire protocol | 🟢 | P0 | 5h | 8 | `src/collab/annotation_protocol.c` — compact binary framing (16-byte header, 7 event types); `annotation_encode`/`annotation_decode` with magic/version validation; full round-trip for all event types | `scripts/validate_traceability.sh` |
+| 38.2 | Annotation renderer | 🟢 | P0 | 6h | 8 | `src/collab/annotation_renderer.c` — in-memory stroke/text layer; Bresenham circle-stamp thick lines; Porter-Duff src-over RGBA compositor; erase by proximity; up to 256 strokes × 1024 points | `scripts/validate_traceability.sh` |
+| 38.3 | Remote pointer sync | 🟢 | P0 | 3h | 7 | `src/collab/pointer_sync.c` — tracks up to 16 remote peer positions; idle timeout via `pointer_sync_expire()`; `pointer_sync_get_all()` returns only visible pointers | `scripts/validate_traceability.sh` |
+| 38.4 | Annotation unit tests | 🟢 | P0 | 3h | 7 | `tests/unit/test_annotation.c` — 15 tests: protocol round-trip for all event types, bad-magic/buffer-too-small guard, renderer lifecycle/strokes/erase/composite, pointer create/update/hide/expire/get-all | `scripts/validate_traceability.sh` |
+
+---
+
 ## 🔬 Quality Gates Reference
 
 | Gate Script | What It Validates |
@@ -632,4 +691,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 31 · Next: Phase 32 (Backend Integration)*
+*Last updated: 2026 · Post-Phase 38 · Next: Phase 39 (to be defined)*
