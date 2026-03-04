@@ -339,3 +339,46 @@ vainfo
 ```bash
 rootstream host
 ```
+
+## Running Benchmarks
+
+Benchmarks live in `benchmarks/` and measure encoder latency, network
+throughput, and Vulkan renderer performance.
+
+```bash
+# Build encode-latency benchmark
+gcc -O2 -o build/encode_latency_bench benchmarks/encode_latency_bench.c \
+    -Iinclude && ./build/encode_latency_bench
+
+# Build network-throughput benchmark
+gcc -O2 -o build/network_throughput_bench \
+    benchmarks/network_throughput_bench.c -lpthread && \
+    ./build/network_throughput_bench
+
+# Vulkan renderer benchmark (requires Vulkan SDK)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target vulkan_renderer_bench
+./build/benchmarks/vulkan_renderer_bench
+```
+
+See `benchmarks/README.md` for full documentation and performance targets.
+
+## Running E2E Tests
+
+End-to-end tests are in `tests/e2e/` and require Docker + docker-compose.
+
+```bash
+# Validate configuration without running Docker
+./tests/e2e/test_full_stream.sh --dry-run
+
+# Run the full streaming test (streams for 60 seconds)
+./tests/e2e/test_full_stream.sh
+```
+
+The test starts a server container (`--dummy-capture --raw-encoder`) and a
+client container, streams for 60 seconds, then validates that:
+- A connection was established
+- At least 1 frame was received
+- The dropped-frame rate is ≤ 1%
+
+Exit code 0 = PASS, 1 = FAIL.
