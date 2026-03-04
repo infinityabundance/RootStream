@@ -76,8 +76,12 @@
 | PHASE-40 | Relay / TURN Infrastructure | 🟢 | 5 | 5 |
 | PHASE-41 | Session Persistence & Resumption | 🟢 | 4 | 4 |
 | PHASE-42 | Closed-Caption & Subtitle System | 🟢 | 4 | 4 |
+| PHASE-43 | Stream Scheduler | 🟢 | 5 | 5 |
+| PHASE-44 | HLS Segment Output | 🟢 | 5 | 5 |
+| PHASE-45 | Viewer Analytics & Telemetry | 🟢 | 5 | 5 |
+| PHASE-46 | Perceptual Frame Hashing | 🟢 | 4 | 4 |
 
-> **Overall**: 258 / 258 microtasks complete (**100%**)
+> **Overall**: 277 / 277 microtasks complete (**100%**)
 
 ---
 
@@ -719,6 +723,61 @@
 
 ---
 
+## PHASE-43: Stream Scheduler
+
+> Schedule-based stream management: entry format serialisation, a sorted engine with repeating/one-shot entries, JSON-like binary persistence, and monotonic + wall-clock helpers.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 43.1 | Schedule entry format | 🟢 | P0 | 3h | 6 | `src/scheduler/schedule_entry.c` — little-endian binary format; magic 0x5343454E; all fields + UTF-8 title round-trip; `schedule_entry_is_enabled()` predicate | `scripts/validate_traceability.sh` |
+| 43.2 | Scheduler engine | 🟢 | P0 | 4h | 8 | `src/scheduler/scheduler.c` — mutex-protected 256-slot table; `scheduler_tick(now_us)` fires enabled entries; one-shot entries removed after fire; repeat entries advance by 24 h | `scripts/validate_traceability.sh` |
+| 43.3 | Schedule store (persistence) | 🟢 | P0 | 3h | 6 | `src/scheduler/schedule_store.c` — atomic rename write; 12-byte file header magic 0x52535348; entries length-prefixed; save/load round-trip | `scripts/validate_traceability.sh` |
+| 43.4 | Schedule clock helpers | 🟢 | P1 | 2h | 5 | `src/scheduler/schedule_clock.c` — `schedule_clock_now_us()` CLOCK_REALTIME; `schedule_clock_mono_us()` CLOCK_MONOTONIC; `schedule_clock_format()` YYYY-MM-DD HH:MM:SS | `scripts/validate_traceability.sh` |
+| 43.5 | Scheduler unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_scheduler.c` — 14 tests: entry round-trip/bad-magic/is_enabled/null, scheduler create/add-remove/tick-fires/disabled/clear/repeat, store save-load/missing, clock now/format; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-44: HLS Segment Output
+
+> Full HLS output pipeline: minimal MPEG-TS segment writer (PAT/PMT/PES), M3U8 manifest generator (live sliding-window + VOD + master), and a segment lifecycle manager with atomic manifest updates.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 44.1 | MPEG-TS segment writer | 🟢 | P0 | 5h | 8 | `src/hls/ts_writer.c` — 188-byte TS packets; PAT+PMT tables; PES framing with PTS; continuity counter; `ts_writer_bytes_written()` always multiple of 188 | `scripts/validate_traceability.sh` |
+| 44.2 | M3U8 manifest generator | 🟢 | P0 | 3h | 7 | `src/hls/m3u8_writer.c` — `m3u8_write_live()` sliding window; `m3u8_write_vod()` with ENDLIST; `m3u8_write_master()` multi-bitrate with BANDWIDTH/RESOLUTION; all write to caller buffer | `scripts/validate_traceability.sh` |
+| 44.3 | HLS segment lifecycle manager | 🟢 | P0 | 4h | 8 | `src/hls/hls_segmenter.c` — open/write/close segment lifecycle; atomic manifest rename; VOD mode; `hls_segmenter_segment_count()` tracks completed segments | `scripts/validate_traceability.sh` |
+| 44.4 | HLS configuration constants | 🟢 | P2 | 1h | 4 | `src/hls/hls_config.h` — TS packet size, sync byte, default target duration, window size, max variants, path limits | `scripts/validate_traceability.sh` |
+| 44.5 | HLS unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_hls.c` — 11 tests: ts_writer create/PAT-PMT/PES/null, m3u8 live/VOD/master/overflow, segmenter create/lifecycle/VOD; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-45: Viewer Analytics & Telemetry
+
+> Structured analytics event pipeline: binary-encoded event format (9 types), fixed-capacity ring buffer with overflow head-drop, Welford running-average statistics, and JSON/CSV export into caller buffers.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 45.1 | Analytics event format | 🟢 | P0 | 3h | 6 | `src/analytics/analytics_event.c` — magic 0x414E4C59; 9 typed events (viewer join/leave, bitrate, frame-drop, quality-alert, scene-change, stream start/stop, latency); encode/decode round-trip | `scripts/validate_traceability.sh` |
+| 45.2 | Event ring buffer | 🟢 | P0 | 3h | 7 | `src/analytics/event_ring.c` — 1024-slot ring; push/pop/peek/drain/clear; full-ring head-drop (overwrites oldest); drain returns up to @max events | `scripts/validate_traceability.sh` |
+| 45.3 | Aggregate statistics | 🟢 | P0 | 4h | 7 | `src/analytics/analytics_stats.c` — Welford running average for latency and bitrate; concurrent viewer counter + peak tracking; scene_changes reset on stream_start | `scripts/validate_traceability.sh` |
+| 45.4 | Analytics exporter | 🟢 | P0 | 3h | 6 | `src/analytics/analytics_export.c` — `analytics_export_stats_json()` compact JSON; `analytics_export_events_json()` JSON array; `analytics_export_events_csv()` with header row; all write to caller buffer | `scripts/validate_traceability.sh` |
+| 45.5 | Analytics unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_analytics.c` — 14 tests: event round-trip/bad-magic/type-name/null, ring create/push-pop/overflow/drain, stats viewer-counts/latency-avg/stream-events, export stats-JSON/events-JSON/CSV; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-46: Perceptual Frame Hashing
+
+> DCT-based 64-bit perceptual hash (pHash): bilinear resize to 32×32, separable 2D DCT-II, 8×8 feature extraction; Hamming-distance index for nearest-neighbour lookup; streaming near-duplicate frame detector.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 46.1 | pHash computation | 🟢 | P0 | 4h | 7 | `src/phash/phash.c` — bilinear resize 32×32; separable DCT-II; 64-bit hash from 8×8 top-left DCT block vs mean; `phash_hamming()` popcount; `phash_similar()` threshold predicate | `scripts/validate_traceability.sh` |
+| 46.2 | pHash index | 🟢 | P0 | 4h | 7 | `src/phash/phash_index.c` — linear-scan 65536-slot index; `phash_index_nearest()` min-distance search; `phash_index_range_query()` all within max_dist; `phash_index_remove()` by id | `scripts/validate_traceability.sh` |
+| 46.3 | Near-duplicate detector | 🟢 | P0 | 3h | 7 | `src/phash/phash_dedup.c` — `phash_dedup_push()` checks index before inserting; returns true + match-id for duplicates; `phash_dedup_reset()` clears index for scene cut | `scripts/validate_traceability.sh` |
+| 46.4 | pHash unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_phash.c` — 11 tests: hash deterministic/identical/different/hamming/null, index insert-nearest/range-query/remove, dedup unique/duplicate/reset; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -749,4 +808,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 42 · Next: Phase 43 (to be defined)*
+*Last updated: 2026 · Post-Phase 46 · Next: Phase 47 (to be defined)*
