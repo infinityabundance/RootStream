@@ -84,8 +84,12 @@
 | PHASE-48 | Adaptive Bitrate Controller | 🟢 | 5 | 5 |
 | PHASE-49 | Content Metadata Pipeline | 🟢 | 4 | 4 |
 | PHASE-50 | Low-Latency Jitter Buffer | 🟢 | 4 | 4 |
+| PHASE-51 | Packet Loss Concealment | 🟢 | 5 | 5 |
+| PHASE-52 | Token Bucket Rate Limiter | 🟢 | 4 | 4 |
+| PHASE-53 | Frame Rate Controller | 🟢 | 4 | 4 |
+| PHASE-54 | Stream Config Serialiser | 🟢 | 4 | 4 |
 
-> **Overall**: 295 / 295 microtasks complete (**100%**)
+> **Overall**: 312 / 312 microtasks complete (**100%**)
 
 ---
 
@@ -836,6 +840,59 @@
 
 ---
 
+## PHASE-51: Packet Loss Concealment
+
+> Audio PLC subsystem: PCM frame wire format (magic 0x504C4346), ring buffer of recent good frames (depth 8), three concealment strategies (zero/repeat/fade-out with per-step amplitude decay), and a sliding-window loss-rate estimator.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 51.1 | PCM frame format | 🟢 | P0 | 2h | 5 | `src/plc/plc_frame.c` — magic 0x504C4346; encode/decode; `plc_frame_is_silent()` zero-check; `plc_frame_byte_size()` | `scripts/validate_traceability.sh` |
+| 51.2 | Frame history ring buffer | 🟢 | P0 | 2h | 5 | `src/plc/plc_history.c` — 8-slot ring; `push()` wraps on overflow; `get(age)` age-indexed access (0=newest); `clear()` | `scripts/validate_traceability.sh` |
+| 51.3 | Concealment engine | 🟢 | P0 | 3h | 7 | `src/plc/plc_conceal.c` — ZERO fills silence; REPEAT copies last frame; FADE_OUT applies `fade_factor^consecutive_losses` amplitude decay; null-safe | `scripts/validate_traceability.sh` |
+| 51.4 | PLC statistics | 🟢 | P1 | 2h | 5 | `src/plc/plc_stats.c` — sliding window (64 events) loss rate; concealment burst counter; max consecutive loss tracking; `reset()` | `scripts/validate_traceability.sh` |
+| 51.5 | PLC unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_plc.c` — 13 tests: frame round-trip/bad-magic/is_silent/null, history push-get/wrap-around, conceal zero/repeat/fade-out/null/names, stats basic/loss-rate; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-52: Token Bucket Rate Limiter
+
+> Per-viewer bandwidth shaping: token bucket with caller-supplied time for testability, per-viewer registry mapping viewer_id → bucket, and per-registry throttle statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 52.1 | Token bucket | 🟢 | P0 | 3h | 7 | `src/ratelimit/token_bucket.c` — caller-supplied µs time; refill = rate_per_us × elapsed; burst cap; `consume()` / `available()` / `reset()` / `set_rate()` | `scripts/validate_traceability.sh` |
+| 52.2 | Per-viewer rate limiter | 🟢 | P0 | 3h | 6 | `src/ratelimit/rate_limiter.c` — 256-slot registry; `add_viewer()` upsert-safe; `remove_viewer()`; `consume()` delegates to per-viewer bucket; independent buckets | `scripts/validate_traceability.sh` |
+| 52.3 | Rate limiter statistics | 🟢 | P1 | 2h | 5 | `src/ratelimit/ratelimit_stats.c` — packets allowed/throttled; bytes_consumed; throttle_rate = throttled / (allowed+throttled) | `scripts/validate_traceability.sh` |
+| 52.4 | Rate limiter unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_ratelimit.c` — 8 tests: bucket create/consume-refill/reset/set-rate, rl create/add-remove/per-viewer, stats record; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-53: Frame Rate Controller
+
+> Token-accumulator frame pacer with injectable monotonic clock for tests; presents/drops/duplicates frames to match target FPS; EWMA actual-FPS estimator.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 53.1 | Monotonic clock abstraction | 🟢 | P0 | 1h | 4 | `src/frc/frc_clock.c` — CLOCK_MONOTONIC wrapper; stub-mode for tests (`set_stub_ns` / `clear_stub`); `ns_to_us()` / `ns_to_ms()` inline helpers | `scripts/validate_traceability.sh` |
+| 53.2 | Frame pacer | 🟢 | P0 | 4h | 7 | `src/frc/frc_pacer.c` — token accumulator; tokens += elapsed/interval; ≥1→PRESENT; <0→DUPLICATE; else→DROP; cap at 2 tokens; `set_fps()` live update | `scripts/validate_traceability.sh` |
+| 53.3 | FRC statistics | 🟢 | P1 | 2h | 5 | `src/frc/frc_stats.c` — presented/dropped/duplicated counters; EWMA actual_fps updated once per 1-second window | `scripts/validate_traceability.sh` |
+| 53.4 | FRC unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_frc.c` — 9 tests: clock stub/conversions, pacer create/present/drop/set_fps/names, stats basic/fps-estimation; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-54: Stream Config Serialiser
+
+> Fixed-size binary stream configuration record (32 bytes, magic 0x53434647) with versioned envelope (magic 0x53455256, major version check) and full JSON export.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 54.1 | Stream config record | 🟢 | P0 | 2h | 5 | `src/stream_config/stream_config.c` — magic 0x53434647; 32-byte fixed header; `encode()` / `decode()` / `equals()` / `default()` (1280×720 H.264 Opus UDP:5900) | `scripts/validate_traceability.sh` |
+| 54.2 | Versioned config serialiser | 🟢 | P0 | 2h | 6 | `src/stream_config/config_serialiser.c` — 8-byte envelope (magic 0x53455256, version, payload_len); major-version check → CSER_ERR_VERSION; wraps stream_config encode/decode | `scripts/validate_traceability.sh` |
+| 54.3 | Config JSON exporter | 🟢 | P0 | 2h | 5 | `src/stream_config/config_export.c` — full JSON with all fields; `config_vcodec_name()` / `config_acodec_name()` / `config_proto_name()` string helpers | `scripts/validate_traceability.sh` |
+| 54.4 | Config unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_stream_config.c` — 10 tests: config round-trip/bad-magic/equals/default, serialiser round-trip/bad-magic/version/null, export JSON/names; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -866,4 +923,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 50 · Next: Phase 51 (to be defined)*
+*Last updated: 2026 · Post-Phase 54 · Next: Phase 55 (to be defined)*
