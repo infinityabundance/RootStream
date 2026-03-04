@@ -88,8 +88,12 @@
 | PHASE-52 | Token Bucket Rate Limiter | 🟢 | 4 | 4 |
 | PHASE-53 | Frame Rate Controller | 🟢 | 4 | 4 |
 | PHASE-54 | Stream Config Serialiser | 🟢 | 4 | 4 |
+| PHASE-55 | Session Handshake Protocol | 🟢 | 5 | 5 |
+| PHASE-56 | Network Congestion Detector | 🟢 | 4 | 4 |
+| PHASE-57 | IDR / Keyframe Request Handler | 🟢 | 4 | 4 |
+| PHASE-58 | Circular Event Log | 🟢 | 4 | 4 |
 
-> **Overall**: 312 / 312 microtasks complete (**100%**)
+> **Overall**: 329 / 329 microtasks complete (**100%**)
 
 ---
 
@@ -893,6 +897,59 @@
 
 ---
 
+## PHASE-55: Session Handshake Protocol
+
+> Client/server FSM (INIT→HELLO→AUTH→CONFIG→READY) over a CRC-checked PDU (magic 0x48534D47); 128-bit FNV-mixed session tokens; handshake latency and attempt/success/failure/timeout counters.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 55.1 | Handshake PDU | 🟢 | P0 | 3h | 6 | `src/session_hs/hs_message.c` — magic 0x48534D47; CRC-32 (Ethernet poly, reflected) over header[0-11]+payload; 8 message types; type_name() helper | `scripts/validate_traceability.sh` |
+| 55.2 | Handshake FSM | 🟢 | P0 | 4h | 7 | `src/session_hs/hs_state.c` — 12 states (INIT→READY→CLOSED/ERROR); separate client and server role paths; process(msg) advances state or returns -1 on bad transition; set_error()/close() | `scripts/validate_traceability.sh` |
+| 55.3 | Session token | 🟢 | P0 | 2h | 5 | `src/session_hs/hs_token.c` — 128-bit token; FNV-1a seed mix; constant-time equal(); zero(); hex round-trip (to_hex/from_hex) | `scripts/validate_traceability.sh` |
+| 55.4 | Handshake stats | 🟢 | P1 | 2h | 5 | `src/session_hs/hs_stats.c` — attempts/successes/failures/timeouts; RTT (begin_us→complete_us); min/max/avg RTT; reset() | `scripts/validate_traceability.sh` |
+| 55.5 | Session HS unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_session_hs.c` — 12 tests: msg round-trip/CRC-tamper/bad-magic/names, FSM client/server/error-bye/state-names, token from-seed/hex-roundtrip/zero, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-56: Network Congestion Detector
+
+> RFC 6298 SRTT/RTTVAR/RTO estimator (α=1/8, β=1/4) plus circular-bitset sliding-window loss detector with configurable threshold; congestion event and recovery counters in composite aggregator.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 56.1 | RTT estimator | 🟢 | P0 | 3h | 7 | `src/congestion/rtt_estimator.c` — RFC 6298 §2.2 first-sample init; α=1/8 SRTT, β=1/4 RTTVAR; RTO = SRTT + max(G, 4·RTTVAR); min/max tracking; reset() | `scripts/validate_traceability.sh` |
+| 56.2 | Loss detector | 🟢 | P0 | 3h | 6 | `src/congestion/loss_detector.c` — 128-slot circular bitset; evicts oldest on overflow; configurable threshold; CONGESTED signal when fraction > threshold; set_threshold(); reset() | `scripts/validate_traceability.sh` |
+| 56.3 | Congestion stats | 🟢 | P1 | 2h | 5 | `src/congestion/congestion_stats.c` — aggregates rtt_estimator + loss_detector; congestion_events / recovery_events on onset/clear transitions; snapshot() | `scripts/validate_traceability.sh` |
+| 56.4 | Congestion unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_congestion.c` — 7 tests: RTT first-sample/convergence/null, loss no-loss/trigger/set-threshold, stats integrated; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-57: IDR / Keyframe Request Handler
+
+> PLI/FIR wire format (magic 0x4B465251, 24 bytes); per-SSRC cooldown deduplicator (250 ms default); urgent flag bypasses cooldown; forwarded/suppressed/urgent counters.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 57.1 | KFR message | 🟢 | P0 | 2h | 5 | `src/keyframe/kfr_message.c` — magic 0x4B465251; PLI/FIR types; priority field; SSRC + timestamp; type_name() | `scripts/validate_traceability.sh` |
+| 57.2 | KFR handler | 🟢 | P0 | 3h | 7 | `src/keyframe/kfr_handler.c` — 64-slot per-SSRC registry; has_forwarded flag prevents immediate duplicate; cooldown window; urgent priority bypasses cooldown; flush_ssrc() reset; set_cooldown() | `scripts/validate_traceability.sh` |
+| 57.3 | KFR statistics | 🟢 | P1 | 2h | 5 | `src/keyframe/kfr_stats.c` — received/forwarded/suppressed/urgent counters; suppression_rate = suppressed/received | `scripts/validate_traceability.sh` |
+| 57.4 | KFR unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_keyframe.c` — 9 tests: msg PLI/FIR round-trip/bad-magic/names, handler forward/suppress/cooldown/urgent/flush/multi-ssrc, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-58: Circular Event Log
+
+> Timestamped event entries (level DEBUG/INFO/WARN/ERROR, event_type uint16, NUL-terminated message); 256-slot overwriting ring with age-indexed access; JSON array and plain-text export.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 58.1 | Event entry | 🟢 | P0 | 2h | 5 | `src/eventlog/event_entry.c` — 16-byte header + variable NUL-terminated msg; encode()/decode(); level_name() | `scripts/validate_traceability.sh` |
+| 58.2 | Event ring | 🟢 | P0 | 2h | 6 | `src/eventlog/event_ring.c` — 256-slot overwriting ring; push()/get(age)/count()/clear(); find_level() iterates newest-first returning matching age indices | `scripts/validate_traceability.sh` |
+| 58.3 | Event export | 🟢 | P0 | 2h | 5 | `src/eventlog/event_export.c` — export_json() renders ring as JSON array; export_text() renders as `[LEVEL] ts_us (type=N) msg\n` lines; buffer-too-small returns -1 | `scripts/validate_traceability.sh` |
+| 58.4 | Event log unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_eventlog.c` — 7 tests: entry round-trip/level-names, ring push-get/wrap-around/find-level, export JSON/text; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -923,4 +980,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 54 · Next: Phase 55 (to be defined)*
+*Last updated: 2026 · Post-Phase 58 · Next: Phase 59 (to be defined)*
