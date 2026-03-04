@@ -80,8 +80,12 @@
 | PHASE-44 | HLS Segment Output | 🟢 | 5 | 5 |
 | PHASE-45 | Viewer Analytics & Telemetry | 🟢 | 5 | 5 |
 | PHASE-46 | Perceptual Frame Hashing | 🟢 | 4 | 4 |
+| PHASE-47 | Stream Watermarking | 🟢 | 5 | 5 |
+| PHASE-48 | Adaptive Bitrate Controller | 🟢 | 5 | 5 |
+| PHASE-49 | Content Metadata Pipeline | 🟢 | 4 | 4 |
+| PHASE-50 | Low-Latency Jitter Buffer | 🟢 | 4 | 4 |
 
-> **Overall**: 277 / 277 microtasks complete (**100%**)
+> **Overall**: 295 / 295 microtasks complete (**100%**)
 
 ---
 
@@ -778,6 +782,60 @@
 
 ---
 
+## PHASE-47: Stream Watermarking
+
+> Per-viewer invisible forensic watermarking: binary payload format with 64-bit viewer ID and session ID, spatial LSB embedding with PRNG-scattered pixel selection, DCT-domain sign-substitution embedding (robust to IDCT→integer-round→re-DCT), and adaptive strength selection (LSB for high-quality, DCT-QIM for compressed output).
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 47.1 | Watermark payload format | 🟢 | P0 | 2h | 5 | `src/watermark/watermark_payload.c` — magic 0x574D4B50; encode/decode; `watermark_payload_to_bits()` / `from_bits()` 64-bit round-trip | `scripts/validate_traceability.sh` |
+| 47.2 | DCT-domain embedder | 🟢 | P0 | 5h | 8 | `src/watermark/watermark_dct.c` — 8×8 forward/inverse DCT; sign-substitution at coefficient (3,4); delta=32; `watermark_dct_embed()` + `watermark_dct_extract()` | `scripts/validate_traceability.sh` |
+| 47.3 | Spatial LSB embedder | 🟢 | P0 | 3h | 6 | `src/watermark/watermark_lsb.c` — xorshift64 PRNG seeded from viewer_id; scatter 64 bits across frame pixels; max pixel change ≤ 1; extract reads same PRNG sequence | `scripts/validate_traceability.sh` |
+| 47.4 | Adaptive strength control | 🟢 | P1 | 2h | 5 | `src/watermark/watermark_strength.c` — quality_hint≥70 → LSB; 30–69 → DCT delta=32; <30 → DCT delta=64; DCT skipped on non-keyframes | `scripts/validate_traceability.sh` |
+| 47.5 | Watermark unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_watermark.c` — 14 tests: payload round-trip/bad-magic/bits/null, lsb embed-extract/invisibility/null, dct embed-extract/null, strength high/low/non-keyframe/names/null; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-48: Adaptive Bitrate Controller
+
+> EWMA bandwidth estimator + static quality-level ladder + conservative ABR decision engine with upgrade hysteresis + per-session quality statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 48.1 | EWMA bandwidth estimator | 🟢 | P0 | 2h | 6 | `src/abr/abr_estimator.c` — configurable α; first sample initialises EWMA; `is_ready()` after MIN_SAMPLES=3; `reset()` clears state | `scripts/validate_traceability.sh` |
+| 48.2 | Bitrate ladder | 🟢 | P0 | 2h | 5 | `src/abr/abr_ladder.c` — up to 8 quality levels; `qsort` by bitrate_bps; `abr_ladder_select()` picks highest level within budget; clamped to level 0 if below minimum | `scripts/validate_traceability.sh` |
+| 48.3 | ABR controller | 🟢 | P0 | 4h | 8 | `src/abr/abr_controller.c` — safety margin 0.85×; immediate downgrade; upgrade hold ABR_UPGRADE_HOLD_TICKS=3 ticks at target; one-step-at-a-time upgrade; `force_level()` override | `scripts/validate_traceability.sh` |
+| 48.4 | ABR statistics | 🟢 | P1 | 2h | 5 | `src/abr/abr_stats.c` — Welford running avg_level; upgrade/downgrade counts; stall_ticks; ticks_per_level histogram | `scripts/validate_traceability.sh` |
+| 48.5 | ABR unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_abr.c` — 12 tests: estimator create/EWMA/ready, ladder create-sort/select/null, controller create/downgrade/upgrade-hold/force, stats record/avg-level; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-49: Content Metadata Pipeline
+
+> Binary-encoded stream metadata record (title, tags, codec info) + in-memory KV store with iterator + JSON export for both structured metadata and KV pairs.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 49.1 | Stream metadata record | 🟢 | P0 | 3h | 6 | `src/metadata/stream_metadata.c` — magic 0x4D455441; variable-length title/description/tags with 2-byte length prefix; `stream_metadata_is_live()` flag check | `scripts/validate_traceability.sh` |
+| 49.2 | KV metadata store | 🟢 | P0 | 3h | 6 | `src/metadata/metadata_store.c` — 128-slot linear-scan array; `set()` upserts; `get()` / `has()` / `delete()` / `clear()`; `foreach()` iterator callback | `scripts/validate_traceability.sh` |
+| 49.3 | Metadata JSON exporter | 🟢 | P0 | 2h | 5 | `src/metadata/metadata_export.c` — `metadata_export_json()` renders stream_metadata_t; `metadata_store_export_json()` uses foreach iterator to emit {"key":"value",...} | `scripts/validate_traceability.sh` |
+| 49.4 | Metadata unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_metadata.c` — 9 tests: metadata round-trip/bad-magic/is_live, store set-get/delete/clear/foreach, export metadata-JSON/store-JSON; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-50: Low-Latency Jitter Buffer
+
+> RTP-style sequence-numbered packet format with wrap-around ordering, sorted-insertion reorder buffer with configurable playout delay, and RFC 3550 inter-arrival jitter estimator with min/max/avg delay tracking.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 50.1 | Jitter packet format | 🟢 | P0 | 2h | 5 | `src/jitter/jitter_packet.c` — magic 0x4A504B54; 32-bit seq_num + RTP timestamp + capture_us; `jitter_packet_before()` RFC 3550 half-window modular comparison (strict, excludes equal) | `scripts/validate_traceability.sh` |
+| 50.2 | Jitter reorder buffer | 🟢 | P0 | 4h | 7 | `src/jitter/jitter_buffer.c` — 256-slot sorted-insertion array; `push()` tail-drops oldest when full; `pop(now_us)` releases packet when now ≥ capture + delay; JITTER_FLAG_LATE set for significantly-late packets | `scripts/validate_traceability.sh` |
+| 50.3 | Jitter statistics | 🟢 | P0 | 3h | 6 | `src/jitter/jitter_stats.c` — RFC 3550 §A.8 EWMA jitter ÷16 update; Welford avg_delay_us; min/max delay; late/dropped counters; `reset()` reinitialises min to DBL_MAX | `scripts/validate_traceability.sh` |
+| 50.4 | Jitter buffer unit tests | 🟢 | P0 | 3h | 6 | `tests/unit/test_jitter.c` — 11 tests: packet round-trip/bad-magic/ordering/null, buffer create/ordering/playout-delay/flush, stats basic/RFC-3550-jitter/reset; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -808,4 +866,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 46 · Next: Phase 47 (to be defined)*
+*Last updated: 2026 · Post-Phase 50 · Next: Phase 51 (to be defined)*
