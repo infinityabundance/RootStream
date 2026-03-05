@@ -92,8 +92,12 @@
 | PHASE-56 | Network Congestion Detector | 🟢 | 4 | 4 |
 | PHASE-57 | IDR / Keyframe Request Handler | 🟢 | 4 | 4 |
 | PHASE-58 | Circular Event Log | 🟢 | 4 | 4 |
+| PHASE-59 | Multi-Stream Mixer | 🟢 | 4 | 4 |
+| PHASE-60 | Bandwidth Probe | 🟢 | 4 | 4 |
+| PHASE-61 | Packet Reorder Buffer | 🟢 | 4 | 4 |
+| PHASE-62 | Adaptive GOP Controller | 🟢 | 4 | 4 |
 
-> **Overall**: 329 / 329 microtasks complete (**100%**)
+> **Overall**: 345 / 345 microtasks complete (**100%**)
 
 ---
 
@@ -950,6 +954,58 @@
 
 ---
 
+## PHASE-59: Multi-Stream Mixer
+
+> Weighted signed-16 PCM blending engine with per-source gain (linear, 0–4×), mute flag, hard-clip to ±32767, and silence fill; statistics track active/muted source events, underruns and mix latency.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 59.1 | Mix source | 🟢 | P0 | 2h | 5 | `src/mixer/mix_source.c` — source descriptor (id, type, weight, muted, name); `init()` clamps weight to [0, 4]; `set_weight()`/`set_muted()`; 4 type names | `scripts/validate_traceability.sh` |
+| 59.2 | Mix engine | 🟢 | P0 | 3h | 7 | `src/mixer/mix_engine.c` — 16-slot registry; `add()`/`remove()`/`update()` with duplicate-ID guard; `mix()` with per-source weight scaling, mute skip, and hard-clip; `silence()` | `scripts/validate_traceability.sh` |
+| 59.3 | Mix statistics | 🟢 | P1 | 2h | 5 | `src/mixer/mix_stats.c` — mix_calls/active_sources/muted_sources/underruns; avg/min/max latency; `reset()` | `scripts/validate_traceability.sh` |
+| 59.4 | Mixer unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_mixer.c` — 8 tests: source init/mutate/names, engine add-remove/basic-sum/hard-clip/mute/silence, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-60: Bandwidth Probe
+
+> Fixed 32-byte probe PDU (magic 0x50524F42); burst-driven send scheduler with configurable interval and burst size; EWMA one-way delay and inter-arrival bandwidth estimator.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 60.1 | Probe packet | 🟢 | P0 | 2h | 5 | `src/bwprobe/probe_packet.c` — magic 0x50524F42; 32-byte fixed record; seq, size_hint, send_ts_us, burst_id, burst_seq; encode/decode | `scripts/validate_traceability.sh` |
+| 60.2 | Probe scheduler | 🟢 | P0 | 3h | 6 | `src/bwprobe/probe_scheduler.c` — burst-based scheduler; first tick always sends; `last_burst_start_us` enables correct `set_interval()` deadline recalculation; burst/packet counters | `scripts/validate_traceability.sh` |
+| 60.3 | Probe estimator | 🟢 | P0 | 3h | 7 | `src/bwprobe/probe_estimator.c` — EWMA OWD (α=1/8); inter-arrival bandwidth estimate (bits/gap_us); min/max OWD; `reset()` | `scripts/validate_traceability.sh` |
+| 60.4 | Bwprobe unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_bwprobe.c` — 8 tests: packet round-trip/bad-magic, sched first-tick/burst/set-interval, estimator OWD/bandwidth/null-guard; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-61: Packet Reorder Buffer
+
+> Seq-ordered reorder buffer with 64-slot circular index (seq % 64), RFC 1982 serial comparison, timeout-flush for gap recovery, and per-buffer delivery callback.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 61.1 | Reorder slot | 🟢 | P0 | 1h | 4 | `src/reorder/reorder_slot.c` — slot (seq, arrival_us, payload up to 2048 bytes, occupied flag); `fill()`/`clear()` | `scripts/validate_traceability.sh` |
+| 61.2 | Reorder buffer | 🟢 | P0 | 4h | 8 | `src/reorder/reorder_buffer.c` — 64-slot circular index; `next_seq` starts at 0; consecutive in-order delivery; timeout flush advances `next_seq` to oldest timed-out slot; `set_timeout()` | `scripts/validate_traceability.sh` |
+| 61.3 | Reorder statistics | 🟢 | P1 | 2h | 5 | `src/reorder/reorder_stats.c` — packets_inserted/delivered/late_flushes/discards; max_depth; `reset()` | `scripts/validate_traceability.sh` |
+| 61.4 | Reorder unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_reorder.c` — 7 tests: slot fill/clear, buffer in-order/out-of-order/timeout-flush/dup-guard/set-timeout, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-62: Adaptive GOP Controller
+
+> Policy-driven IDR decision engine: natural (max_gop), scene-change score threshold, loss-recovery (suppressed when RTT > threshold), min-GOP cooldown. Statistics track IDRs by reason and average GOP length.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 62.1 | GOP policy | 🟢 | P0 | 1h | 4 | `src/gop/gop_policy.c` — min/max GOP frames, scene-change threshold, RTT threshold, loss threshold; `default()`; `validate()` (min ≤ max, thresholds in [0,1]) | `scripts/validate_traceability.sh` |
+| 62.2 | GOP controller | 🟢 | P0 | 4h | 8 | `src/gop/gop_controller.c` — 4-rule decision (natural/scene/loss/cooldown); `next_frame()` returns decision + reason; `force_idr()` resets counter; `update_policy()` | `scripts/validate_traceability.sh` |
+| 62.3 | GOP statistics | 🟢 | P1 | 2h | 5 | `src/gop/gop_stats.c` — total_frames; idr_natural/scene_change/loss_recovery; avg_gop_length via length accumulator; `reset()` | `scripts/validate_traceability.sh` |
+| 62.4 | GOP unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_gop.c` — 9 tests: policy default/validate, controller natural/scene/loss/high-rtt/cooldown/force-idr/names, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -980,4 +1036,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 58 · Next: Phase 59 (to be defined)*
+*Last updated: 2026 · Post-Phase 62 · Next: Phase 63 (to be defined)*
