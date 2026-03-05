@@ -76,6 +76,23 @@ include_directories(${CMAKE_SOURCE_DIR}/../../include)
 include_directories(${CMAKE_SOURCE_DIR}/../../src)
 include_directories(${CMAKE_SOURCE_DIR}/../../src/recording)
 
+# =============================================================================
+# PHASE-93.2 / PHASE-95.4: Link rootstream_core and add new sources
+#
+# Add the root project as a subdirectory so rootstream_core is available.
+# This gives rootstream-kde-client access to:
+#   - All protocol/crypto/network/decode logic (no duplication)
+#   - include/rootstream.h and include/rootstream_client_session.h
+#   - The correct PUBLIC include paths without additional target_include_directories
+#
+# WHY add_subdirectory INSTEAD OF find_package?
+#   add_subdirectory is simpler for an in-tree build (both projects live in
+#   the same repository).  find_package would require rootstream_core to be
+#   installed first, adding a manual cmake --install step that breaks CI.
+#   We can migrate to find_package later when/if the projects are separated.
+# =============================================================================
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../.. rootstream_build)
+
 # Sources
 set(SOURCES
     src/main.cpp
@@ -89,6 +106,9 @@ set(SOURCES
     src/connectiondialog.cpp
     src/mainwindow.cpp
     src/recording_manager_wrapper.cpp
+    # PHASE-95.3: Backend connector — bridges rs_client_session callbacks to
+    # VideoRenderer::submitFrame and the Qt audio pipeline
+    src/stream_backend_connector.cpp
     # Recording system sources
     ${CMAKE_SOURCE_DIR}/../../src/recording/recording_manager.cpp
     ${CMAKE_SOURCE_DIR}/../../src/recording/disk_manager.cpp
@@ -172,6 +192,8 @@ set(HEADERS
     src/logmanager.h
     src/connectiondialog.h
     src/mainwindow.h
+    # PHASE-96: StreamBackendConnector is a QObject so MOC must process it
+    src/stream_backend_connector.h
 )
 
 # QML resources
@@ -184,6 +206,12 @@ add_executable(rootstream-kde-client
 )
 
 target_link_libraries(rootstream-kde-client PRIVATE
+    # PHASE-93.2: Link the real backend — all protocol/crypto/decode logic.
+    # This replaces every stub, duplicate struct, and re-implementation that
+    # previously existed in the KDE client.  rootstream_core's PUBLIC
+    # include_directories automatically gives rootstream-kde-client access to
+    # include/rootstream.h and include/rootstream_client_session.h.
+    rootstream_core
     Qt6::Core
     Qt6::Gui
     Qt6::Qml

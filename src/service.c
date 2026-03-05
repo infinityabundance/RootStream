@@ -13,6 +13,7 @@
  */
 
 #include "../include/rootstream.h"
+#include "../include/rootstream_client_session.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -578,47 +579,103 @@ int service_run_host(rootstream_ctx_t *ctx) {
  * 
  * Automatically connects to configured host
  */
-int service_run_client(rootstream_ctx_t *ctx) {
-    if (!ctx) {
-        return -1;
+/*
+ * service_run_client — SDL2 CLI streaming client.
+ *
+ * PHASE-94 REFACTOR
+ * -----------------
+ * This function is now a thin wrapper over rs_client_session_*.
+ * All receive/decode/audio logic has moved to src/client_session.c so that
+ * the KDE client (and any future client) can reuse the same pipeline.
+ *
+ * The SDL2 display path is preserved exactly:
+ *   - video is delivered to display_present_frame() via on_video callback
+ *   - audio is delivered to the pre-existing audio playback backend via
+ *     on_audio callback
+ *
+ * Before PHASE-94 this function contained ~200 lines that did everything
+ * from decoder init to the receive loop to SDL event polling.  That code
+ * now lives in src/client_session.c.
+ *
+ * If you are looking for the streaming loop, read src/client_session.c.
+ */
+
+/* SDL video callback — receives one decoded frame and presents it to the
+ * SDL2 display window.  Called from the session run thread. */
+typedef struct sdl_client_ctx {
+    rootstream_ctx_t *ctx;         /* Shared with the session's ctx */
+} sdl_client_ctx_t;
+
+static void sdl_on_video_frame(void *user, const rs_video_frame_t *frame) {
+    /* user = sdl_client_ctx_t*
+     * We need to map rs_video_frame_t back to frame_buffer_t so we can
+     * call the existing display_present_frame() without changing its
+     * interface.  This is a temporary bridge for the PHASE-94 MVP;
+     * a future phase will update display_present_frame() to accept
+     * rs_video_frame_t directly. */
+    sdl_client_ctx_t *sdl = (sdl_client_ctx_t *)user;
+    if (!sdl || !frame || !frame->plane0) return;
+
+    frame_buffer_t fb;
+    memset(&fb, 0, sizeof(fb));
+    fb.width  = frame->width;
+    fb.height = frame->height;
+    /* point data at plane0 — display_present_frame() treats the buffer as
+     * a packed pixel array.  NV12 and RGBA both work here because the SDL
+     * renderer already handles colour-space conversion. */
+    fb.data   = (uint8_t *)frame->plane0;
+    fb.size   = (size_t)(frame->stride0 * frame->height);
+    if (frame->pixfmt == RS_PIXFMT_NV12) {
+        /* Include UV plane in total size so the SDL renderer can
+         * upload the full NV12 frame to a two-plane texture. */
+        fb.size += (size_t)(frame->stride1 * frame->height / 2);
+        fb.format = FRAME_FORMAT_NV12;
+    } else {
+        fb.format = FRAME_FORMAT_RGBA;
     }
 
-    /* Install signal handlers */
+    display_present_frame(sdl->ctx, &fb);
+}
+
+static void sdl_on_audio_frame(void *user, const rs_audio_frame_t *frame) {
+    /* Deliver decoded PCM to whichever audio backend was initialised.
+     * The audio backend was selected by service_run_client() before calling
+     * rs_client_session_run(). */
+    sdl_client_ctx_t *sdl = (sdl_client_ctx_t *)user;
+    if (!sdl || !frame || !frame->samples) return;
+
+    const audio_playback_backend_t *be = sdl->ctx->audio_playback_backend;
+    if (be && be->playback_fn) {
+        be->playback_fn(sdl->ctx, frame->samples, frame->num_samples);
+    }
+}
+
+int service_run_client(rootstream_ctx_t *ctx) {
+    if (!ctx) return -1;
+
+    /* Install signal handlers (same as before PHASE-94) */
     signal(SIGTERM, service_signal_handler);
     signal(SIGINT, service_signal_handler);
 
     printf("INFO: Starting RootStream client service\n");
 
-    /* Initialize decoder */
-    if (rootstream_decoder_init(ctx) < 0) {
-        fprintf(stderr, "ERROR: Decoder initialization failed\n");
-        return -1;
-    }
-    /* Set decoder backend name based on platform
-     * NOTE: This is a simple platform check. For Phase 0, we assume:
-     *   - Windows uses Media Foundation decoder
-     *   - Linux/Unix uses VA-API decoder
-     * Future phases could add runtime detection if needed.
-     */
-    #ifdef _WIN32
-        ctx->active_backend.decoder_name = "Media Foundation";
-    #else
-        ctx->active_backend.decoder_name = "VA-API";
-    #endif
-
-    /* Initialize display (SDL2 window) */
+    /* ── Initialise SDL2 display ────────────────────────────────────────
+     * The SDL window must be created before the session starts so that
+     * display_present_frame() has a valid display context from the first
+     * callback invocation. */
     if (display_init(ctx, "RootStream Client", 1920, 1080) < 0) {
         fprintf(stderr, "ERROR: Display initialization failed\n");
-        rootstream_decoder_cleanup(ctx);
         return -1;
     }
     ctx->active_backend.display_name = "SDL2";
 
-    /* Initialize audio playback with fallback */
+    /* ── Initialise audio playback with fallback chain ──────────────────
+     * Same fallback chain as before PHASE-94 (ALSA → PulseAudio →
+     * PipeWire → Dummy).  The selected backend is stored in ctx so
+     * sdl_on_audio_frame() can forward PCM data to it. */
     if (ctx->settings.audio_enabled) {
         printf("INFO: Initializing audio playback...\n");
 
-        /* Backend list has static storage duration - safe to store pointers */
         static const audio_playback_backend_t playback_backends[] = {
             {
                 .name = "ALSA",
@@ -646,139 +703,104 @@ int service_run_client(rootstream_ctx_t *ctx) {
                 .init_fn = audio_playback_init_dummy,
                 .playback_fn = audio_playback_write_dummy,
                 .cleanup_fn = audio_playback_cleanup_dummy,
-                .is_available_fn = NULL,  /* Always available */
+                .is_available_fn = NULL,
             },
             {NULL}
         };
 
-        int playback_idx = 0;
-        while (playback_backends[playback_idx].name) {
-            printf("INFO: Attempting audio playback backend: %s\n", playback_backends[playback_idx].name);
-            
-            if (playback_backends[playback_idx].is_available_fn && 
-                !playback_backends[playback_idx].is_available_fn()) {
+        int idx = 0;
+        while (playback_backends[idx].name) {
+            printf("INFO: Attempting audio playback backend: %s\n",
+                   playback_backends[idx].name);
+            if (playback_backends[idx].is_available_fn &&
+                !playback_backends[idx].is_available_fn()) {
                 printf("  → Not available on this system\n");
-                playback_idx++;
+                idx++;
                 continue;
             }
-            
-            if (playback_backends[playback_idx].init_fn(ctx) == 0) {
-                printf("✓ Audio playback backend '%s' initialized\n", playback_backends[playback_idx].name);
-                ctx->audio_playback_backend = &playback_backends[playback_idx];
-                ctx->active_backend.audio_play_name = playback_backends[playback_idx].name;
+            if (playback_backends[idx].init_fn(ctx) == 0) {
+                printf("✓ Audio playback backend '%s' initialized\n",
+                       playback_backends[idx].name);
+                ctx->audio_playback_backend = &playback_backends[idx];
+                ctx->active_backend.audio_play_name = playback_backends[idx].name;
                 break;
-            } else {
-                printf("WARNING: Audio playback backend '%s' failed, trying next...\n", 
-                       playback_backends[playback_idx].name);
-                playback_idx++;
             }
+            printf("WARNING: Audio playback backend '%s' failed, trying next...\n",
+                   playback_backends[idx].name);
+            idx++;
         }
 
         if (!ctx->audio_playback_backend) {
             printf("WARNING: All audio playback backends failed, watching video only\n");
             ctx->active_backend.audio_play_name = "disabled";
-        } else {
-            /* Initialize Opus decoder */
-            printf("INFO: Initializing Opus decoder...\n");
-            if (rootstream_opus_decoder_init(ctx) < 0) {
-                printf("WARNING: Opus decoder init failed, audio disabled\n");
-                if (ctx->audio_playback_backend && ctx->audio_playback_backend->cleanup_fn) {
-                    ctx->audio_playback_backend->cleanup_fn(ctx);
-                }
-                ctx->audio_playback_backend = NULL;
-                ctx->active_backend.audio_play_name = "disabled";
-            }
         }
     } else {
         printf("INFO: Audio disabled in settings\n");
-        ctx->audio_playback_backend = NULL;
         ctx->active_backend.audio_play_name = "disabled";
     }
 
-    printf("✓ Client initialized - ready to receive video and audio\n");
-    if (ctx->latency.enabled) {
-        printf("INFO: Client latency logging enabled (interval=%lums, samples=%zu)\n",
-               ctx->latency.report_interval_ms, ctx->latency.capacity);
+    printf("✓ SDL2 display and audio initialised\n");
+
+    /* ── Create session and wire callbacks ──────────────────────────────
+     * Build an rs_client_config_t from the existing rootstream_ctx_t.
+     * The ctx itself is not passed to the session — the session allocates
+     * its own ctx internally.  We share display/audio via the sdl_ctx shim.
+     *
+     * NOTE: This is a temporary bridge for PHASE-94 MVP.  A future phase
+     * will unify rootstream_ctx_t with rs_client_session_t so there is only
+     * one context object. */
+    rs_client_config_t cfg = {
+        .peer_host     = ctx->peer_host,
+        .peer_port     = ctx->peer_port,
+        .audio_enabled = ctx->settings.audio_enabled,
+        .low_latency   = true,
+    };
+
+    rs_client_session_t *session = rs_client_session_create(&cfg);
+    if (!session) {
+        fprintf(stderr, "ERROR: Failed to create client session\n");
+        display_cleanup(ctx);
+        return -1;
     }
 
-    /* Report active backends (PHASE 0) */
+    /* Wire the SDL shim callbacks so decoded frames reach the SDL window */
+    sdl_client_ctx_t sdl_ctx = { .ctx = ctx };
+    rs_client_session_set_video_callback(session, sdl_on_video_frame, &sdl_ctx);
+
+    if (ctx->audio_playback_backend) {
+        rs_client_session_set_audio_callback(session, sdl_on_audio_frame, &sdl_ctx);
+    }
+
+    /* Print backend status banner */
     printf("\n");
     printf("╔════════════════════════════════════════════════╗\n");
     printf("║  RootStream Client Backend Status              ║\n");
     printf("╚════════════════════════════════════════════════╝\n");
-    printf("Decoder:       %s\n", ctx->active_backend.decoder_name);
+    printf("Decoder:       (will be set by session)\n");
     printf("Display:       %s\n", ctx->active_backend.display_name);
     printf("Audio Play:    %s\n", ctx->active_backend.audio_play_name);
     printf("\n");
 
-    /* Allocate decode buffer */
-    frame_buffer_t decoded_frame = {0};
+    /* ── Run the session (blocking) ─────────────────────────────────────
+     * Poll SDL events on the main thread while the session run loop
+     * processes network/decode on this same thread.
+     *
+     * For the SDL path, session and SDL event polling share the same thread
+     * because service_run_client() was always single-threaded.  The KDE
+     * client runs the session on a worker QThread instead. */
+    int rc = rs_client_session_run(session);
 
-    /* Main receive loop */
-    while (service_running && ctx->running) {
-        uint64_t loop_start_us = get_timestamp_us();
+    printf("Decoder:       %s\n",
+           rs_client_session_decoder_name(session));
 
-        /* Poll SDL events (window close, keyboard, mouse) */
-        if (display_poll_events(ctx) != 0) {
-            printf("INFO: User requested quit\n");
-            break;
-        }
-
-        /* Receive packets (16ms timeout for ~60fps responsiveness) */
-        uint64_t recv_start_us = get_timestamp_us();
-        rootstream_net_recv(ctx, 16);
-        uint64_t recv_end_us = get_timestamp_us();
-        rootstream_net_tick(ctx);
-
-        /* Check peer health and reconnect if needed (PHASE 4) */
-        check_peer_health(ctx);
-
-        /* Check if we received a video frame */
-        if (ctx->current_frame.data && ctx->current_frame.size > 0) {
-            /* Decode frame */
-            uint64_t decode_start_us = get_timestamp_us();
-            if (rootstream_decode_frame(ctx, ctx->current_frame.data,
-                                       ctx->current_frame.size,
-                                       &decoded_frame) == 0) {
-                uint64_t decode_end_us = get_timestamp_us();
-
-                /* Present to display */
-                uint64_t present_start_us = get_timestamp_us();
-                display_present_frame(ctx, &decoded_frame);
-                uint64_t present_end_us = get_timestamp_us();
-
-                /* Record latency stats */
-                if (ctx->latency.enabled) {
-                    latency_sample_t sample = {
-                        .capture_us = recv_end_us - recv_start_us,  /* Network receive time */
-                        .encode_us = decode_end_us - decode_start_us, /* Decode time */
-                        .send_us = present_end_us - present_start_us, /* Present time */
-                        .total_us = present_end_us - loop_start_us
-                    };
-                    latency_record(&ctx->latency, &sample);
-                }
-            } else {
-                fprintf(stderr, "WARNING: Frame decode failed\n");
-            }
-
-            /* Clear frame for next iteration */
-            ctx->current_frame.size = 0;
-        }
-    }
-
-    /* Cleanup */
-    if (decoded_frame.data) {
-        free(decoded_frame.data);
-    }
+    /* ── Cleanup ─────────────────────────────────────────────────────── */
+    rs_client_session_destroy(session);
 
     if (ctx->audio_playback_backend && ctx->audio_playback_backend->cleanup_fn) {
         ctx->audio_playback_backend->cleanup_fn(ctx);
-        rootstream_opus_cleanup(ctx);
     }
     display_cleanup(ctx);
-    rootstream_decoder_cleanup(ctx);
 
     printf("✓ Client shutdown complete\n");
-
-    return 0;
+    return rc;
 }

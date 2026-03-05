@@ -2,19 +2,59 @@
 //  VideoDecoder.swift
 //  RootStream iOS
 //
-//  Hardware video decoding using VideoToolbox (H.264/H.265/VP9)
+//  Hardware video decoding using VideoToolbox (H.264/H.265).
+//  Software decode path via LibvpxDecoder stub for VP9/AV1.
 //
 
 import Foundation
 import VideoToolbox
 import CoreVideo
 
+// MARK: - Software VP9/AV1 decoder stub (libvpx bridge placeholder)
+
+/// Minimal software VP9/AV1 decoder stub.
+/// Allocates a CVPixelBuffer with the requested dimensions so the rest of the
+/// pipeline receives a valid (though blank) buffer until a full libvpx
+/// binding is integrated.
+private class LibvpxDecoder {
+    enum Codec { case vp9, av1 }
+
+    let codec: Codec
+
+    init(codec: Codec) { self.codec = codec }
+
+    func decode(_ data: Data, width: Int, height: Int) -> CVPixelBuffer? {
+        var pixelBuffer: CVPixelBuffer?
+        let attrs: [CFString: Any] = [
+            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey:           width,
+            kCVPixelBufferHeightKey:          height,
+            kCVPixelBufferMetalCompatibilityKey: true
+        ]
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width, height,
+            kCVPixelFormatType_32BGRA,
+            attrs as CFDictionary,
+            &pixelBuffer
+        )
+        guard status == kCVReturnSuccess else {
+            print("LibvpxDecoder: CVPixelBufferCreate failed \(status)")
+            return nil
+        }
+        return pixelBuffer
+    }
+}
+
 class VideoDecoder {
     private var decompressSession: VTDecompressionSession?
     private var formatDescription: CMFormatDescription?
     private var callback: ((CVPixelBuffer?) -> Void)?
-    
+
     private var codecType: CMVideoCodecType = kCMVideoCodecType_H264
+
+    // Software decoder for VP9/AV1 (used when VideoToolbox path is unavailable)
+    private var softwareDecoder: LibvpxDecoder?
     
     init() {
         setupDecompressionSession()
@@ -45,6 +85,19 @@ class VideoDecoder {
         
         // Determine codec type
         codecType = codecTypeFromByte(codecByte)
+
+        // VP9 (byte 2) and AV1 (byte 3) use the software decode path
+        if codecByte == 2 || codecByte == 3 {
+            let vpxCodec: LibvpxDecoder.Codec = (codecByte == 3) ? .av1 : .vp9
+            if softwareDecoder == nil {
+                softwareDecoder = LibvpxDecoder(codec: vpxCodec)
+            }
+            let pixelBuffer = softwareDecoder?.decode(Data(frameData),
+                                                      width: Int(width),
+                                                      height: Int(height))
+            vpxDecodedCallback(pixelBuffer)
+            return
+        }
         
         // Create or recreate decompression session if needed
         if decompressSession == nil || needsRecreateSession(width: Int(width), height: Int(height)) {
@@ -177,11 +230,16 @@ class VideoDecoder {
         return sampleBuffer
     }
     
+    private func vpxDecodedCallback(_ pixelBuffer: CVPixelBuffer?) {
+        callback?(pixelBuffer)
+    }
+
     private func codecTypeFromByte(_ byte: UInt8) -> CMVideoCodecType {
         switch byte {
-        case 0x01: return kCMVideoCodecType_H264
-        case 0x02: return kCMVideoCodecType_HEVC
-        case 0x03: return kCMVideoCodecType_VP9
+        case 0: return kCMVideoCodecType_H264
+        case 1: return kCMVideoCodecType_HEVC
+        case 2: return kCMVideoCodecType_H264  // VP9 — handled via software path
+        case 3: return kCMVideoCodecType_H264  // AV1 — handled via software path
         default: return kCMVideoCodecType_H264
         }
     }
