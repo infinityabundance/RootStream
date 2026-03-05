@@ -112,8 +112,12 @@
 | PHASE-76 | Chunk Splitter | 🟢 | 4 | 4 |
 | PHASE-77 | Priority Queue | 🟢 | 4 | 4 |
 | PHASE-78 | Retry Manager | 🟢 | 4 | 4 |
+| PHASE-79 | Flow Controller | 🟢 | 4 | 4 |
+| PHASE-80 | Metrics Exporter | 🟢 | 4 | 4 |
+| PHASE-81 | Signal Router | 🟢 | 4 | 4 |
+| PHASE-82 | Drain Queue | 🟢 | 4 | 4 |
 
-> **Overall**: 409 / 409 microtasks complete (**100%**)
+> **Overall**: 425 / 425 microtasks complete (**100%**)
 
 ---
 
@@ -1230,6 +1234,58 @@
 
 ---
 
+## PHASE-79: Flow Controller
+
+> Token-bucket single-channel flow controller; parameter block (window/budget/recv-window/credit-step); consume/replenish with credit-step floor and window cap; per-flow sent/dropped/stall/replenish statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 79.1 | FC parameter block | 🟢 | P0 | 0.5h | 2 | `src/flowctl/fc_params.c` — window_bytes/send_budget/recv_window/credit_step; `fc_params_init()` rejects any zero field | `scripts/validate_traceability.sh` |
+| 79.2 | FC engine | 🟢 | P0 | 3h | 7 | `src/flowctl/fc_engine.c` — token-bucket; `consume(bytes)` deducts credit, returns -1 on insufficient; `can_send(bytes)` non-destructive; `replenish(bytes)` adds max(bytes, credit_step), caps at window_bytes; `reset()` restores send_budget | `scripts/validate_traceability.sh` |
+| 79.3 | FC stats | 🟢 | P1 | 1h | 4 | `src/flowctl/fc_stats.c` — bytes_sent/bytes_dropped/stalls/replenish_count; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 79.4 | Flow controller unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_flowctl.c` — 3 tests: params init/invalid, engine consume/replenish/cap/reset, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-80: Metrics Exporter
+
+> Named int64 gauges with set/add/get/reset; 64-gauge registry with duplicate-rejection and snapshot_all; timestamped snapshot with bounded dump to caller buffer.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 80.1 | Gauge | 🟢 | P0 | 1h | 3 | `src/metrics/mx_gauge.c` — int64 value + name[48]; `init(name)` rejects empty; `set/add/get/reset`; get(NULL) = 0 | `scripts/validate_traceability.sh` |
+| 80.2 | Registry | 🟢 | P0 | 2h | 6 | `src/metrics/mx_registry.c` — 64-slot array; `register(name)` rejects duplicates and returns owned pointer; `lookup(name)`; `snapshot_all(out, max)` copies all active gauges | `scripts/validate_traceability.sh` |
+| 80.3 | Snapshot | 🟢 | P1 | 1h | 4 | `src/metrics/mx_snapshot.c` — `mx_snapshot_t` holds timestamp_us + gauge array + count; `init()` zeros; `dump(out, max_out)` copies min(count, max_out) gauges; returns -1 on NULL | `scripts/validate_traceability.sh` |
+| 80.4 | Metrics unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_metrics.c` — 3 tests: gauge operations, registry register/lookup/duplicate/snapshot_all, snapshot init/dump/truncation; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-81: Signal Router
+
+> Per-signal descriptor (id/level/source_id/timestamp_us); 32-route table with bitmask matching and optional filter predicate; per-route delivery callback; routed/filtered/dropped statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 81.1 | Signal descriptor | 🟢 | P0 | 0.5h | 2 | `src/sigroute/sr_signal.c` — signal_id/level/source_id/timestamp_us; `sr_signal_init()` rejects NULL | `scripts/validate_traceability.sh` |
+| 81.2 | Signal router | 🟢 | P0 | 3h | 7 | `src/sigroute/sr_route.c` — 32-slot table; `add_route(src_mask, match_id, filter_fn, deliver, user)` → handle; matching: `(signal_id & src_mask) == match_id` AND `filter_fn` returns true; `remove_route(handle)`; `route(signal)` returns invocation count | `scripts/validate_traceability.sh` |
+| 81.3 | Router stats | 🟢 | P1 | 1h | 4 | `src/sigroute/sr_stats.c` — routed/filtered/dropped; `record_route(delivered, filtered_n)` increments dropped when both are 0; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 81.4 | Signal router unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_sigroute.c` — 4 tests: signal init, route add/match/remove/no-match, filter predicate, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-82: Drain Queue
+
+> 128-slot circular FIFO with monotonically increasing sequence numbers; enqueue/dequeue/drain_all (callback); clear; DQ_FLAG_HIGH_PRIORITY and DQ_FLAG_FLUSH entry flags; enqueued/drained/dropped/peak statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 82.1 | Queue entry | 🟢 | P0 | 0.5h | 2 | `src/drainq/dq_entry.h` — header-only: seq/data ptr/data_len/flags; DQ_FLAG_HIGH_PRIORITY + DQ_FLAG_FLUSH | `scripts/validate_traceability.sh` |
+| 82.2 | Drain queue | 🟢 | P0 | 3h | 7 | `src/drainq/dq_queue.c` — 128-slot circular FIFO; `enqueue()` assigns next_seq, returns -1 when full; `dequeue()` FIFO order; `drain_all(cb, user)` drains entire queue; `clear()` without callbacks; `count()` | `scripts/validate_traceability.sh` |
+| 82.3 | Queue stats | 🟢 | P1 | 1h | 4 | `src/drainq/dq_stats.c` — enqueued/drained/dropped/peak; `record_enqueue(cur_depth)` updates peak; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 82.4 | Drain queue unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_drainq.c` — 5 tests: enqueue/dequeue/seq/FIFO, drain_all callback, clear, capacity enforcement, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -1260,4 +1316,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 78 · Next: Phase 79 (to be defined)*
+*Last updated: 2026 · Post-Phase 82 · Next: Phase 83 (to be defined)*
