@@ -108,8 +108,12 @@
 | PHASE-72 | Session Limiter | 🟢 | 4 | 4 |
 | PHASE-73 | Stream Tag Store | 🟢 | 4 | 4 |
 | PHASE-74 | Buffer Pool | 🟢 | 4 | 4 |
+| PHASE-75 | Event Bus | 🟢 | 4 | 4 |
+| PHASE-76 | Chunk Splitter | 🟢 | 4 | 4 |
+| PHASE-77 | Priority Queue | 🟢 | 4 | 4 |
+| PHASE-78 | Retry Manager | 🟢 | 4 | 4 |
 
-> **Overall**: 393 / 393 microtasks complete (**100%**)
+> **Overall**: 409 / 409 microtasks complete (**100%**)
 
 ---
 
@@ -1174,6 +1178,58 @@
 
 ---
 
+## PHASE-75: Event Bus
+
+> 16-subscriber synchronous pub/sub dispatcher; EB_TYPE_ANY wildcard subscription; subscriber cap enforcement; per-publish dispatch/drop statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 75.1 | Event descriptor | 🟢 | P0 | 1h | 3 | `src/eventbus/eb_event.c` — type_id/payload ptr/payload_len/timestamp_us; `eb_event_init()` | `scripts/validate_traceability.sh` |
+| 75.2 | Event bus | 🟢 | P0 | 3h | 7 | `src/eventbus/eb_bus.c` — 16-slot subscription table; `subscribe(type_id, cb, user)` → handle; `unsubscribe(handle)`; `publish()` dispatches to matching type_id or EB_TYPE_ANY; returns count of invocations | `scripts/validate_traceability.sh` |
+| 75.3 | Bus stats | 🟢 | P1 | 1h | 4 | `src/eventbus/eb_stats.c` — published_count/dispatch_count/dropped_count; `record_publish(n)` increments dropped when n=0; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 75.4 | Event bus unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_eventbus.c` — 5 tests: event init, subscribe/publish/unsubscribe, wildcard, cap enforcement, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-76: Chunk Splitter
+
+> 16-byte chunk header (stream_id/frame_seq/chunk_idx/chunk_count); zero-copy MTU splitter with LAST-flag; 8-slot bitmask reassembly supporting out-of-order chunk arrival.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 76.1 | Chunk header | 🟢 | P0 | 1h | 3 | `src/chunk/chunk_hdr.c` — stream_id/frame_seq/chunk_idx/chunk_count/data_len/flags; `chunk_hdr_init()` validates idx<count and count>0; CHUNK_FLAG_KEYFRAME + CHUNK_FLAG_LAST | `scripts/validate_traceability.sh` |
+| 76.2 | Chunk splitter | 🟢 | P0 | 2h | 6 | `src/chunk/chunk_split.c` — zero-copy: output `chunk_t` holds header + pointer into source buffer; sets CHUNK_FLAG_LAST on final chunk; returns chunk count or -1 on invalid | `scripts/validate_traceability.sh` |
+| 76.3 | Chunk reassembler | 🟢 | P0 | 3h | 7 | `src/chunk/chunk_reassemble.c` — 8-slot context; `receive(ctx, hdr)` opens slot on new frame_seq; sets bit chunk_idx in received_mask; marks slot complete when mask == (1<<chunk_count)-1; `release()` clears slot | `scripts/validate_traceability.sh` |
+| 76.4 | Chunk unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_chunk.c` — 5 tests: hdr init/invalid, split single, split multi/ptr/last-flag, reassemble single, reassemble multi out-of-order; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-77: Priority Queue
+
+> 64-slot array-backed binary min-heap; push/pop/peek/count/clear; overflow tracking; push/pop/peak/overflow statistics for scheduler integration.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 77.1 | Queue entry | 🟢 | P0 | 0.5h | 2 | `src/pqueue/pq_entry.h` — key (uint64 deadline_us) / data ptr / id; header-only value type | `scripts/validate_traceability.sh` |
+| 77.2 | Min-heap | 🟢 | P0 | 3h | 8 | `src/pqueue/pq_heap.c` — 64-slot array-backed heap; `push()` sift-up; `pop()` extract-min + sift-down; `peek()` returns minimum without removal; `clear()`; returns -1 on empty/full | `scripts/validate_traceability.sh` |
+| 77.3 | Queue stats | 🟢 | P1 | 1h | 4 | `src/pqueue/pq_stats.c` — push_count/pop_count/peak_size/overflow_count; `record_push(cur_size)` updates peak; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 77.4 | Priority queue unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_pqueue.c` — 5 tests: create/empty-guard, ascending pop order, clear, capacity enforcement, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-78: Retry Manager
+
+> Per-request exponential back-off entry; 32-slot retry table with tick-based dispatch and auto-eviction on budget exhaustion; attempt/success/expire statistics.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 78.1 | Retry entry | 🟢 | P0 | 2h | 5 | `src/retry_mgr/rm_entry.c` — request_id/attempt_count/max_attempts/base_delay_us/next_retry_us; `init(now_us, base_delay_us, max)` sets next_retry_us=now+base; `advance(now)` computes next delay via 2^attempt×base (RM_MAX_BACKOFF_US cap); `is_due(now)` | `scripts/validate_traceability.sh` |
+| 78.2 | Retry table | 🟢 | P0 | 3h | 7 | `src/retry_mgr/rm_table.c` — 32-slot table; `add()`/`remove()`/`get()`; `tick(now_us, cb, user)` fires callback for due entries; calls `rm_entry_advance()`; auto-evicts when advance returns false (budget exhausted) | `scripts/validate_traceability.sh` |
+| 78.3 | Retry stats | 🟢 | P1 | 1h | 4 | `src/retry_mgr/rm_stats.c` — total_attempts/total_succeeded/total_expired/max_attempts_seen; `record_attempt(count)` updates max; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 78.4 | Retry unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_retry.c` — 5 tests: entry init/null-guard, advance/backoff/due, table add/remove/get, tick/auto-evict, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -1204,4 +1260,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 74 · Next: Phase 75 (to be defined)*
+*Last updated: 2026 · Post-Phase 78 · Next: Phase 79 (to be defined)*
