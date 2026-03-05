@@ -104,8 +104,12 @@
 | PHASE-68 | Output Target Registry | 🟢 | 4 | 4 |
 | PHASE-69 | Bitrate Ladder Builder | 🟢 | 4 | 4 |
 | PHASE-70 | Packet Loss Estimator | 🟢 | 4 | 4 |
+| PHASE-71 | Timestamp Synchronizer | 🟢 | 4 | 4 |
+| PHASE-72 | Session Limiter | 🟢 | 4 | 4 |
+| PHASE-73 | Stream Tag Store | 🟢 | 4 | 4 |
+| PHASE-74 | Buffer Pool | 🟢 | 4 | 4 |
 
-> **Overall**: 377 / 377 microtasks complete (**100%**)
+> **Overall**: 393 / 393 microtasks complete (**100%**)
 
 ---
 
@@ -1118,6 +1122,58 @@
 
 ---
 
+## PHASE-71: Timestamp Synchronizer
+
+> Linear PTS ↔ wall-clock mapper with configurable timebase; EWMA drift estimator that quantifies stream clock vs. wall-clock divergence; statistics for sample count, peak drift, and cumulative correction.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 71.1 | PTS mapper | 🟢 | P0 | 2h | 5 | `src/timestamp/ts_map.c` — `ts_map_init(num, den)` sets us_per_tick = num/den × 1e6; `set_anchor(pts, wall_us)`; `pts_to_us()` and `us_to_pts()` using anchor + slope; returns 0 when uninitialised | `scripts/validate_traceability.sh` |
+| 71.2 | Drift estimator | 🟢 | P0 | 2h | 5 | `src/timestamp/ts_drift.c` — EWMA (α=0.1) of (observed_us − expected_us); `drift_us_per_sec = ewma_error / elapsed_s`; `update(obs, exp)`; `reset()` | `scripts/validate_traceability.sh` |
+| 71.3 | Timestamp stats | 🟢 | P1 | 1h | 4 | `src/timestamp/ts_stats.c` — sample_count/max_drift_us/total_correction_us; records |error_us| per measurement; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 71.4 | Timestamp unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_timestamp.c` — 4 tests: map init/us_per_tick, pts↔us round-trip, drift ewma/reset, stats max/total/reset; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-72: Session Limiter
+
+> Single session entry descriptor (ID/IP/state); 32-slot session table with configurable max-sessions cap; admission/rejection/peak/eviction statistics for monitoring.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 72.1 | Session entry | 🟢 | P0 | 1h | 4 | `src/session_limit/sl_entry.c` — session_id/remote_ip/start_us/state (CONNECTING/ACTIVE/CLOSING)/in_use; `sl_entry_init()`; `sl_state_name()` | `scripts/validate_traceability.sh` |
+| 72.2 | Session table | 🟢 | P0 | 3h | 7 | `src/session_limit/sl_table.c` — 32-slot table; `create(max_sessions)`; `add()` enforces cap; `remove()`/`get()` by session_id; `count()`; `foreach()` | `scripts/validate_traceability.sh` |
+| 72.3 | Session stats | 🟢 | P1 | 2h | 5 | `src/session_limit/sl_stats.c` — total_admitted/total_rejected/peak_count/eviction_count; `record_admit(current)`; `record_reject()`; `record_eviction()`; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 72.4 | Session unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_session_limit.c` — 5 tests: entry init/states, table add/remove/get, cap enforcement, foreach, stats admit/reject/evict/peak; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-73: Stream Tag Store
+
+> Key=value tag entry (32B key, 128B value); 32-slot store with set/get/overwrite/remove/clear/foreach; text serialiser/parser in `key=value\n` format for persistence.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 73.1 | Tag entry | 🟢 | P0 | 1h | 3 | `src/tagging/tag_entry.c` — key[TAG_KEY_MAX=32]/value[TAG_VAL_MAX=128]/in_use; `tag_entry_init()` rejects empty/NULL key | `scripts/validate_traceability.sh` |
+| 73.2 | Tag store | 🟢 | P0 | 2h | 6 | `src/tagging/tag_store.c` — 32-slot flat store; `set()` upserts; `get()` returns value ptr; `remove()`; `clear()`; `count()`; `foreach()` | `scripts/validate_traceability.sh` |
+| 73.3 | Tag serialiser | 🟢 | P1 | 2h | 5 | `src/tagging/tag_serial.c` — `tag_serial_write()` → `key=value\n` text; `tag_serial_read()` parses back (skips lines without '=' or with empty key) | `scripts/validate_traceability.sh` |
+| 73.4 | Tagging unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_tagging.c` — 5 tests: entry init/null-guard, store set/get/overwrite/remove, clear, foreach, serial round-trip; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-74: Buffer Pool
+
+> Contiguous backing-store pre-allocation; N-block acquire/release pool with high-water mark; statistics for allocation counts, failures, and peak usage.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 74.1 | Buffer block | 🟢 | P0 | 1h | 3 | `src/bufpool/bp_block.h` — value type: data ptr + size + in_use flag; no standalone functions; pool owns all instances | `scripts/validate_traceability.sh` |
+| 74.2 | Buffer pool | 🟢 | P0 | 3h | 7 | `src/bufpool/bp_pool.c` — single calloc backing store; `create(n, size)`; `acquire()` O(N) scan → sets in_use, updates peak; `release()` validates block ownership; `in_use()`/`peak()`/`capacity()` | `scripts/validate_traceability.sh` |
+| 74.3 | Pool stats | 🟢 | P1 | 1h | 4 | `src/bufpool/bp_stats.c` — alloc_count/free_count/peak_in_use/fail_count; `record_alloc(in_use)`; `record_free()`; `record_fail()`; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 74.4 | Buffer pool unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_bufpool.c` — 3 tests: pool create/invalid-params, acquire/release/exhaust/peak/double-release, stats alloc/free/fail/peak; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -1148,4 +1204,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 70 · Next: Phase 71 (to be defined)*
+*Last updated: 2026 · Post-Phase 74 · Next: Phase 75 (to be defined)*
