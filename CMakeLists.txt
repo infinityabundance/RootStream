@@ -303,191 +303,210 @@ set(WINDOWS_SOURCES
 )
 
 # =============================================================================
+# PHASE-93: rootstream_core — Linkable Static Library
+#
+# ALL protocol/crypto/decode/encode/network/audio logic lives here.
+# Executables (rootstream, rstr-player, rootstream-client) and the KDE client
+# link this single library instead of re-compiling the same sources N times.
+#
+# WHY A LIBRARY?
+# --------------
+# Before PHASE-93, each executable compiled every source file independently.
+# That meant:
+#   1. Duplicate compilation = longer build times.
+#   2. The KDE client could not link the real backend — it had no library to
+#      link against, forcing it to stub or duplicate all protocol logic.
+#   3. Adding src/client_session.c (PHASE-94) would have to be added to every
+#      executable's source list separately.
+#
+# With rootstream_core STATIC:
+#   - One authoritative compiled object for all streaming logic.
+#   - KDE client links it via add_subdirectory (see clients/kde-plasma-client).
+#   - Tests can link specific subsets without re-compiling the world.
+#   - PUBLIC include/ means any downstream target automatically gets the
+#     correct include paths with no extra configuration.
+# =============================================================================
+
+# =============================================================================
 # Targets
 # =============================================================================
 
 if(UNIX AND NOT APPLE)
-    # Linux: Full host + client
-    add_executable(rootstream
-        src/main.c
+    # ── rootstream_core: the shared backend library ────────────────────────
+    #
+    # Contains everything EXCEPT:
+    #   - src/main.c              (CLI entry point — stays in rootstream exe)
+    #   - tools/rstr-player.c     (player tool entry point)
+    #   - src/tray*.c             (tray UI — only needed by the host executable)
+    #
+    # display_sdl2.c is included because service_run_client() (which is in
+    # service.c → rootstream_core) still calls display_init() for the SDL
+    # fallback path.  Once PHASE-94 is complete, service_run_client() becomes
+    # a thin wrapper and display_sdl2.c can be moved to the executable.
+    add_library(rootstream_core STATIC
         ${COMMON_SOURCES}
         ${LINUX_SOURCES}
         ${PLATFORM_SOURCES}
+        src/client_session.c
     )
 
-    target_include_directories(rootstream PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-        ${SDL2_INCLUDE_DIRS}
-        ${DRM_INCLUDE_DIRS}
-        ${GTK3_INCLUDE_DIRS}
+    # PUBLIC include dir: any target that links rootstream_core automatically
+    # receives the correct include path for rootstream.h and
+    # rootstream_client_session.h without needing a separate
+    # target_include_directories call.
+    target_include_directories(rootstream_core
+        PUBLIC
+            ${CMAKE_SOURCE_DIR}/include
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${SDL2_INCLUDE_DIRS}
+            ${DRM_INCLUDE_DIRS}
+            ${GTK3_INCLUDE_DIRS}
     )
 
-    target_link_libraries(rootstream PRIVATE
+    # Link all system libraries against rootstream_core (PUBLIC where needed
+    # by downstream, PRIVATE for internal use only).
+    target_link_libraries(rootstream_core PUBLIC
         ${SDL2_LIBRARIES}
         ${DRM_LIBRARIES}
         m pthread
     )
 
-    # Conditional libraries
     if(unofficial-sodium_FOUND)
-        target_link_libraries(rootstream PRIVATE unofficial-sodium::sodium)
+        target_link_libraries(rootstream_core PUBLIC unofficial-sodium::sodium)
     else()
-        target_link_libraries(rootstream PRIVATE ${SODIUM_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${SODIUM_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PUBLIC ${SODIUM_LIBRARIES})
+        target_include_directories(rootstream_core PUBLIC ${SODIUM_INCLUDE_DIRS})
     endif()
 
     if(Opus_FOUND)
-        target_link_libraries(rootstream PRIVATE Opus::opus)
+        target_link_libraries(rootstream_core PUBLIC Opus::opus)
     else()
-        target_link_libraries(rootstream PRIVATE ${OPUS_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${OPUS_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PUBLIC ${OPUS_LIBRARIES})
+        target_include_directories(rootstream_core PUBLIC ${OPUS_INCLUDE_DIRS})
     endif()
 
     if(VAAPI_FOUND)
-        target_link_libraries(rootstream PRIVATE ${VAAPI_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${VAAPI_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PUBLIC ${VAAPI_LIBRARIES})
+        target_include_directories(rootstream_core PUBLIC ${VAAPI_INCLUDE_DIRS})
     endif()
 
     if(ALSA_FOUND)
-        target_link_libraries(rootstream PRIVATE ${ALSA_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${ALSA_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${ALSA_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${ALSA_INCLUDE_DIRS})
     endif()
 
     if(PULSEAUDIO_FOUND)
-        target_link_libraries(rootstream PRIVATE ${PULSEAUDIO_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${PULSEAUDIO_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
     endif()
 
     if(PIPEWIRE_FOUND)
-        target_link_libraries(rootstream PRIVATE ${PIPEWIRE_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${PIPEWIRE_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
     endif()
 
     if(NOT HEADLESS AND GTK3_FOUND)
-        target_link_libraries(rootstream PRIVATE ${GTK3_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${GTK3_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${GTK3_INCLUDE_DIRS})
     endif()
 
     if(AVAHI_FOUND)
-        target_link_libraries(rootstream PRIVATE ${AVAHI_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${AVAHI_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${AVAHI_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${AVAHI_INCLUDE_DIRS})
     endif()
 
     if(X11_FOUND)
-        target_link_libraries(rootstream PRIVATE ${X11_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${X11_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${X11_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${X11_INCLUDE_DIRS})
     endif()
 
     if(QRENCODE_FOUND)
-        target_link_libraries(rootstream PRIVATE ${QRENCODE_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${QRENCODE_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${QRENCODE_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${QRENCODE_INCLUDE_DIRS})
     endif()
 
     if(PNG_FOUND)
-        target_link_libraries(rootstream PRIVATE ${PNG_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${PNG_INCLUDE_DIRS})
-    endif()
-    
-    if(NCURSES_FOUND)
-        target_link_libraries(rootstream PRIVATE ${NCURSES_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${NCURSES_INCLUDE_DIRS})
-    endif()
-    
-    if(FFMPEG_FOUND)
-        target_link_libraries(rootstream PRIVATE ${FFMPEG_LIBRARIES})
-        target_include_directories(rootstream PRIVATE ${FFMPEG_INCLUDE_DIRS})
+        target_link_libraries(rootstream_core PRIVATE ${PNG_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${PNG_INCLUDE_DIRS})
     endif()
 
-    # Recording player tool
+    if(NCURSES_FOUND)
+        target_link_libraries(rootstream_core PRIVATE ${NCURSES_LIBRARIES})
+        target_include_directories(rootstream_core PRIVATE ${NCURSES_INCLUDE_DIRS})
+    endif()
+
+    if(FFMPEG_FOUND)
+        target_link_libraries(rootstream_core PUBLIC ${FFMPEG_LIBRARIES})
+        target_include_directories(rootstream_core PUBLIC ${FFMPEG_INCLUDE_DIRS})
+    endif()
+
+    # ── rootstream: host + client CLI executable ───────────────────────────
+    #
+    # src/main.c is the ONLY source here — all real logic is in rootstream_core.
+    # This keeps the executable thin and makes it easy to verify that no
+    # protocol logic accidentally lives only in main.c.
+    add_executable(rootstream
+        src/main.c
+    )
+
+    target_link_libraries(rootstream PRIVATE rootstream_core)
+
+    # ── rstr-player: recording playback tool ──────────────────────────────
+    #
+    # Links rootstream_core for all decode/display/audio logic.
+    # Only the player tool's own main (tools/rstr-player.c) is compiled here.
     add_executable(rstr-player
         tools/rstr-player.c
-        src/recording.c
-        src/vaapi_decoder.c
-        src/display_sdl2.c
-        src/network.c
-        src/network_tcp.c
-        src/network_reconnect.c
-        src/packet_validate.c
-        src/crypto.c
-        src/config.c
-        src/input.c
-        src/opus_codec.c
-        src/audio_playback.c
-        src/audio_playback_pulse.c
-        src/audio_playback_pipewire.c
-        src/audio_playback_dummy.c
-        src/latency.c
-        ${PLATFORM_SOURCES}
     )
 
-    target_include_directories(rstr-player PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-        ${SDL2_INCLUDE_DIRS}
-    )
+    target_link_libraries(rstr-player PRIVATE rootstream_core)
 
-    target_link_libraries(rstr-player PRIVATE
-        ${SDL2_LIBRARIES}
-        ${VAAPI_LIBRARIES}
-        ${ALSA_LIBRARIES}
-        ${SODIUM_LIBRARIES}
-        ${AVAHI_LIBRARIES}
-        m pthread
-    )
-
-    if(PULSEAUDIO_FOUND)
-        target_link_libraries(rstr-player PRIVATE ${PULSEAUDIO_LIBRARIES})
-        target_include_directories(rstr-player PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
-    endif()
-
-    if(PIPEWIRE_FOUND)
-        target_link_libraries(rstr-player PRIVATE ${PIPEWIRE_LIBRARIES})
-        target_include_directories(rstr-player PRIVATE ${PIPEWIRE_INCLUDE_DIRS})
-    endif()
-
-    if(Opus_FOUND)
-        target_link_libraries(rstr-player PRIVATE Opus::opus)
-    else()
-        target_link_libraries(rstr-player PRIVATE ${OPUS_LIBRARIES})
-    endif()
+    # KDE Plasma client is built via its own CMakeLists.txt which uses
+    # add_subdirectory(../.. rootstream_build) to pull in rootstream_core.
+    # See: clients/kde-plasma-client/CMakeLists.txt (PHASE-93.2)
 
 endif()
 
 if(WIN32)
-    # Windows: Client only
-    add_executable(rootstream-client WIN32
-        src/main_client.c
+    # ── Windows: rootstream_core_win (Windows backend library) ────────────
+    #
+    # Same principle as the Linux library: all backend logic in one library,
+    # thin executable on top.
+    add_library(rootstream_core_win STATIC
         ${COMMON_SOURCES}
         ${WINDOWS_SOURCES}
         ${PLATFORM_SOURCES}
+        src/client_session.c
     )
 
-    target_include_directories(rootstream-client PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
+    target_include_directories(rootstream_core_win
+        PUBLIC
+            ${CMAKE_SOURCE_DIR}/include
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
     )
 
-    # Windows system libraries
-    target_link_libraries(rootstream-client PRIVATE
-        ws2_32           # Winsock
-        mfplat           # Media Foundation
-        mfuuid           # Media Foundation GUIDs
-        mf               # Media Foundation
-        ole32            # COM
-        d3d11            # Direct3D 11
-        dxgi             # DXGI
+    target_link_libraries(rootstream_core_win PUBLIC
+        ws2_32 mfplat mfuuid mf ole32 d3d11 dxgi
     )
 
-    # vcpkg dependencies
     if(unofficial-sodium_FOUND)
-        target_link_libraries(rootstream-client PRIVATE unofficial-sodium::sodium)
+        target_link_libraries(rootstream_core_win PUBLIC unofficial-sodium::sodium)
     endif()
-
     if(SDL2_FOUND)
-        target_link_libraries(rootstream-client PRIVATE SDL2::SDL2 SDL2::SDL2main)
+        target_link_libraries(rootstream_core_win PUBLIC SDL2::SDL2 SDL2::SDL2main)
+    endif()
+    if(Opus_FOUND)
+        target_link_libraries(rootstream_core_win PUBLIC Opus::opus)
     endif()
 
-    if(Opus_FOUND)
-        target_link_libraries(rootstream-client PRIVATE Opus::opus)
-    endif()
+    # Windows client executable — thin, links the library
+    add_executable(rootstream-client WIN32
+        src/main_client.c
+    )
+
+    target_link_libraries(rootstream-client PRIVATE rootstream_core_win)
 endif()
 
 # =============================================================================
@@ -495,8 +514,15 @@ endif()
 # =============================================================================
 
 if(UNIX AND NOT APPLE)
+    install(TARGETS rootstream_core ARCHIVE DESTINATION lib)
     install(TARGETS rootstream RUNTIME DESTINATION bin)
     install(TARGETS rstr-player RUNTIME DESTINATION bin)
+
+    # Public headers (needed by downstream consumers like KDE client)
+    install(FILES
+        include/rootstream.h
+        include/rootstream_client_session.h
+        DESTINATION include/rootstream)
 
     # Desktop file
     install(FILES assets/rootstream.desktop
@@ -508,6 +534,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(WIN32)
+    install(TARGETS rootstream_core_win ARCHIVE DESTINATION lib)
     install(TARGETS rootstream-client RUNTIME DESTINATION bin)
 endif()
 
@@ -517,7 +544,8 @@ endif()
 
 enable_testing()
 
-# Unit tests
+# Unit tests — link against rootstream_core to avoid re-listing source files
+# and to ensure the tests exercise the same compiled code as the executables.
 add_executable(test_crypto tests/unit/test_crypto.c src/crypto.c ${PLATFORM_SOURCES})
 target_include_directories(test_crypto PRIVATE ${CMAKE_SOURCE_DIR}/include)
 if(unofficial-sodium_FOUND)

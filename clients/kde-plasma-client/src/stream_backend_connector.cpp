@@ -1,187 +1,242 @@
-/**
- * @file stream_backend_connector.cpp
- * @brief Implementation of StreamBackendConnector
+/*
+ * stream_backend_connector.cpp — Implementation of StreamBackendConnector
  *
- * Packs the raw Y+UV planes delivered by the network_client frame callback
- * into a frame_t and drives the Vulkan upload → render → present pipeline.
+ * PHASE-95.3 REWRITE
+ * ------------------
+ * The previous implementation used network_client_t (the duplicate local
+ * protocol implementation that was never wired to the real backend) and
+ * drove the Vulkan pipeline directly from the callback.
+ *
+ * This implementation:
+ *   1. Uses rs_client_session_t — the real rootstream_core backend.
+ *   2. Runs the session on a dedicated QThread (same thread model as before,
+ *      but now it's a QThread rather than a raw pthread).
+ *   3. Emits Qt signals (QueuedConnection) so VideoRenderer and AudioPlayer
+ *      receive frames on the correct thread.
+ *   4. Removes the namespace RootStream:: wrapper (StreamBackendConnector is
+ *      a QObject subclass and QObjects cannot live in namespaces that have
+ *      their own QMetaObject conflicts in MOC output).
+ *
+ * WHAT HAPPENED TO THE VULKAN DIRECT PATH?
+ * -----------------------------------------
+ * The old direct vulkan_upload_frame / vulkan_render / vulkan_present calls
+ * have been removed.  The renderer is now driven by VideoRenderer (a
+ * QQuickFramebufferObject) which runs on the Qt render thread.  Bypassing
+ * Qt's render thread would cause GL/Vulkan command buffer ordering issues.
+ *
+ * The new flow is:
+ *   C callback → copy frame → emit videoFrameReady signal
+ *   → VideoRenderer::submitFrame (on GUI thread, via QueuedConnection)
+ *   → VideoRenderer::Renderer::render() (on Qt render thread)
+ *   → GL texture upload + shader draw
+ *
+ * This is correct because the Qt Quick scene graph owns the render thread.
  */
 
 #include "stream_backend_connector.h"
 
+#include <QDebug>
 #include <cstring>
-#include <cstdio>
 
-namespace RootStream {
+/* ── Constructor / Destructor ─────────────────────────────────────── */
 
-// ---------------------------------------------------------------------------
-// Construction / destruction
-// ---------------------------------------------------------------------------
-
-StreamBackendConnector::StreamBackendConnector(vulkan_context_t *vulkan_ctx)
-    : m_vulkan_ctx(vulkan_ctx)
-    , m_net_client(nullptr)
-    , m_state(ConnectionState::Disconnected)
+StreamBackendConnector::StreamBackendConnector(QObject *parent)
+    : QObject(parent)
 {}
 
-StreamBackendConnector::~StreamBackendConnector()
-{
-    stop();
+StreamBackendConnector::~StreamBackendConnector() {
+    /* Ensure clean shutdown even if the caller forgot to call disconnect() */
     disconnect();
 }
 
-// ---------------------------------------------------------------------------
-// Lifecycle
-// ---------------------------------------------------------------------------
+/* ── Public API ───────────────────────────────────────────────────── */
 
-bool StreamBackendConnector::connect(const std::string &host, int port)
+void StreamBackendConnector::connectToHost(const QString &host,
+                                            int            port,
+                                            const QString &code)
 {
-    if (m_net_client) disconnect();
+    /* If a session is already running, stop it first (implicit reconnect) */
+    if (session_) disconnect();
 
-    m_net_client = network_client_create(host.c_str(), port);
-    if (!m_net_client) {
-        if (onError) onError("network_client_create failed");
-        return false;
+    host_ = host;
+    port_ = port;
+    code_ = code;
+
+    /* Build the C session configuration */
+    rs_client_config_t cfg = {};
+    /* Store host as a QByteArray so the C string pointer remains valid
+     * for the lifetime of the session.  The config struct is copied by
+     * rs_client_session_create(), but the peer_host pointer must remain
+     * valid until rs_client_session_destroy(). */
+    QByteArray host_bytes = host.toUtf8();
+    cfg.peer_host     = host_bytes.constData();
+    cfg.peer_port     = port;
+    cfg.audio_enabled = true;
+    cfg.low_latency   = true;
+
+    session_ = rs_client_session_create(&cfg);
+    if (!session_) {
+        qWarning() << "StreamBackendConnector: failed to create session";
+        emit connectionStateChanged(QStringLiteral("error: session create failed"));
+        return;
     }
 
-    network_client_set_frame_callback(m_net_client,
-                                      &StreamBackendConnector::frameCallbackTrampoline,
-                                      this);
-    network_client_set_error_callback(m_net_client,
-                                      &StreamBackendConnector::errorCallbackTrampoline,
-                                      this);
-    return true;
-}
+    /* Register the C static callback trampolines */
+    rs_client_session_set_video_callback(session_, cVideoCallback, this);
+    rs_client_session_set_audio_callback(session_, cAudioCallback, this);
+    rs_client_session_set_state_callback(session_, cStateCallback, this);
 
-void StreamBackendConnector::disconnect()
-{
-    if (!m_net_client) return;
+    /* Create a QThread and run the session loop on it.
+     * We use a lambda rather than subclassing QThread — the lambda captures
+     * the session pointer and calls run() which blocks until the session ends.
+     *
+     * Why not QThread::create()?  QThread::create() was introduced in Qt 5.10
+     * and requires a function object.  Using a lambda here is identical but
+     * more explicit about what is happening. */
+    thread_ = new QThread(this);
 
-    network_client_disconnect(m_net_client);
-    network_client_destroy(m_net_client);
-    m_net_client = nullptr;
-    setState(ConnectionState::Disconnected);
-}
-
-bool StreamBackendConnector::start()
-{
-    if (!m_net_client) return false;
-
-    setState(ConnectionState::Connecting);
-
-    if (network_client_connect(m_net_client) != 0) {
-        setState(ConnectionState::Error);
-        if (onError) {
-            const char *err = network_client_get_error(m_net_client);
-            onError(err ? err : "network_client_connect failed");
+    /* Move the session run call into the thread via a QObject::connect to
+     * the thread's started() signal.  We use a direct connection because
+     * the connector itself lives on the GUI thread and the lambda runs on
+     * the worker thread. */
+    connect(thread_, &QThread::started, this, [this, host_bytes]() mutable {
+        /* host_bytes is kept alive by capture so cfg.peer_host remains valid */
+        int rc = rs_client_session_run(session_);
+        if (rc != 0) {
+            qWarning() << "StreamBackendConnector: session run returned" << rc;
         }
-        return false;
+        /* Signal the GUI thread that the session has ended */
+        emit sessionStopped();
+        thread_->quit();
+    }, Qt::DirectConnection);
+
+    connect(thread_, &QThread::finished, thread_, &QThread::deleteLater);
+    connect(thread_, &QThread::finished, this, [this]() {
+        thread_ = nullptr;
+    });
+
+    thread_->start();
+}
+
+void StreamBackendConnector::disconnect() {
+    if (!session_) return;
+
+    /* Request the session loop to stop.  The loop checks stop_requested at
+     * the top of every iteration (max latency: one recv poll = ~16ms). */
+    rs_client_session_request_stop(session_);
+
+    /* Wait for the thread to exit.  If it has already been deleted by
+     * QThread::deleteLater, thread_ will be nullptr. */
+    if (thread_) {
+        thread_->wait(2000 /* ms timeout */);
+        /* If the thread is still running after 2s, terminate it.
+         * This should not happen in normal operation but is a safety net
+         * against a stuck network recv() call. */
+        if (thread_->isRunning()) {
+            qWarning() << "StreamBackendConnector: thread did not exit cleanly, terminating";
+            thread_->terminate();
+            thread_->wait();
+        }
     }
 
-    setState(ConnectionState::Connected);
-    return true;
+    rs_client_session_destroy(session_);
+    session_ = nullptr;
 }
 
-void StreamBackendConnector::stop()
-{
-    if (!m_net_client) return;
-    network_client_disconnect(m_net_client);
-    setState(ConnectionState::Disconnected);
+bool StreamBackendConnector::isConnected() const {
+    return session_ && rs_client_session_is_running(session_);
 }
 
-bool StreamBackendConnector::isConnected() const
-{
-    return m_net_client && network_client_is_connected(m_net_client);
+QString StreamBackendConnector::decoderName() const {
+    if (!session_) return QStringLiteral("unknown");
+    return QString::fromUtf8(rs_client_session_decoder_name(session_));
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
+/* ── C callback trampolines ───────────────────────────────────────── */
 
-void StreamBackendConnector::setState(ConnectionState state)
+/*
+ * cVideoCallback — called from the session worker thread each decoded frame.
+ *
+ * FRAME COPY STRATEGY (MVP)
+ * -------------------------
+ * We copy the NV12 data into a QByteArray immediately before returning.
+ * This is a CPU memcpy of width*height*1.5 bytes (e.g., 1920×1080 = ~3MB).
+ * At 60fps that is ~180MB/s — fast enough for current hardware.
+ *
+ * ZERO-COPY UPGRADE PATH
+ * ----------------------
+ * Replace this memcpy with a DMABUF handle export from the VA-API decoder.
+ * The VideoRenderer would then import the DMABUF as an EGL image via
+ * EGL_EXT_image_dma_buf_import, skipping the CPU copy entirely.
+ * See docs/architecture/client_session_api.md for the upgrade plan.
+ */
+void StreamBackendConnector::cVideoCallback(void                  *user,
+                                             const rs_video_frame_t *frame)
 {
-    m_state = state;
-    if (onConnectionStateChanged) onConnectionStateChanged(state);
-}
+    auto *self = static_cast<StreamBackendConnector *>(user);
+    if (!self || !frame || !frame->plane0) return;
 
-void StreamBackendConnector::onFrameData(uint8_t *y_data, uint8_t *uv_data,
-                                          int width, int height,
-                                          uint64_t timestamp)
-{
-    if (!m_vulkan_ctx || !y_data || !uv_data) return;
+    int w = frame->width;
+    int h = frame->height;
 
-    /* Build a frame_t that points directly at the caller's buffers.
-     * The Vulkan upload copies the data, so no ownership transfer occurs. */
-    size_t y_size  = static_cast<size_t>(width) * static_cast<size_t>(height);
-    size_t uv_size = static_cast<size_t>(width) * static_cast<size_t>(height / 2);
+    /* NV12 size: Y plane (w*h bytes) + UV plane (w*h/2 bytes) = w*h*3/2 */
+    int nv12_size = w * h * 3 / 2;
 
-    /* We need a contiguous NV12 buffer: Y plane followed by interleaved UV.
-     * network_client_t uses a single receive_thread (pthread_t), so this
-     * callback is always invoked from that one thread – thread_local is safe. */
-    static thread_local uint8_t *tl_buf      = nullptr;
-    static thread_local size_t   tl_buf_size = 0;
+    /* Copy both planes into a single contiguous QByteArray.
+     * QByteArray allocates on the heap and is reference-counted, so the
+     * signal delivery (QueuedConnection) takes a cheap ref-counted copy. */
+    QByteArray data(nv12_size, Qt::Uninitialized);
+    uint8_t *dst = reinterpret_cast<uint8_t *>(data.data());
 
-    size_t total = y_size + uv_size;
-    if (total > tl_buf_size) {
-        delete[] tl_buf;
-        /* Over-allocate by 2× to amortise reallocations when resolution changes. */
-        tl_buf_size = total * 2;
-        tl_buf      = new uint8_t[tl_buf_size];
-    }
-    std::memcpy(tl_buf,          y_data,  y_size);
-    std::memcpy(tl_buf + y_size, uv_data, uv_size);
+    /* Copy Y plane */
+    std::memcpy(dst, frame->plane0, (size_t)(w * h));
 
-    frame_t frame{};
-    frame.data         = tl_buf;
-    frame.size         = static_cast<uint32_t>(total);
-    frame.width        = static_cast<uint32_t>(width);
-    frame.height       = static_cast<uint32_t>(height);
-    frame.format       = FRAME_FORMAT_NV12;
-    frame.timestamp_us = timestamp;
-    frame.is_keyframe  = false;
-
-    /* Drive the Vulkan pipeline */
-    if (vulkan_upload_frame(m_vulkan_ctx, &frame) != 0) {
-        if (onError) onError("vulkan_upload_frame failed");
-        return;
-    }
-    if (vulkan_render(m_vulkan_ctx) != 0) {
-        if (onError) onError("vulkan_render failed");
-        return;
-    }
-    if (vulkan_present(m_vulkan_ctx) != 0) {
-        if (onError) onError("vulkan_present failed");
-        return;
+    /* Copy UV plane (NV12 interleaved).
+     * If plane1 is NULL (RGBA path), zero-fill the chroma area. */
+    if (frame->plane1) {
+        std::memcpy(dst + w * h, frame->plane1, (size_t)(w * h / 2));
+    } else {
+        std::memset(dst + w * h, 0x80, (size_t)(w * h / 2));  /* grey chroma */
     }
 
-    if (onFrameReceived) onFrameReceived(&frame);
+    /* Emit the signal — Qt delivers this on the GUI thread because
+     * VideoRenderer::submitFrame is connected with Qt::QueuedConnection. */
+    emit self->videoFrameReady(data, w, h);
 }
 
-void StreamBackendConnector::onErrorData(const char *error_msg)
+/*
+ * cAudioCallback — called from the session worker thread each audio buffer.
+ *
+ * Copies PCM int16 samples into a QByteArray and emits audioSamplesReady.
+ * The AudioPlayer receives this signal and feeds the data to the audio
+ * backend (ALSA / PulseAudio / PipeWire).
+ */
+void StreamBackendConnector::cAudioCallback(void                   *user,
+                                             const rs_audio_frame_t *frame)
 {
-    setState(ConnectionState::Error);
-    if (onError) onError(error_msg ? error_msg : "unknown network error");
+    auto *self = static_cast<StreamBackendConnector *>(user);
+    if (!self || !frame || !frame->samples || frame->num_samples == 0) return;
+
+    /* Copy PCM samples (int16, interleaved) into a QByteArray */
+    int byte_count = static_cast<int>(frame->num_samples) * 2;  /* int16 = 2 bytes */
+    QByteArray samples(byte_count, Qt::Uninitialized);
+    std::memcpy(samples.data(), frame->samples,
+                static_cast<size_t>(byte_count));
+
+    emit self->audioSamplesReady(samples,
+                                 static_cast<int>(frame->num_samples),
+                                 frame->channels,
+                                 frame->sample_rate);
 }
 
-// ---------------------------------------------------------------------------
-// Static trampolines
-// ---------------------------------------------------------------------------
-
-void StreamBackendConnector::frameCallbackTrampoline(void *user_data,
-                                                      uint8_t *y_data,
-                                                      uint8_t *uv_data,
-                                                      int width,
-                                                      int height,
-                                                      uint64_t timestamp)
-{
-    auto *self = static_cast<StreamBackendConnector *>(user_data);
-    if (self) self->onFrameData(y_data, uv_data, width, height, timestamp);
+/*
+ * cStateCallback — called when the session state changes.
+ *
+ * Converts the C string to a QString and emits connectionStateChanged.
+ */
+void StreamBackendConnector::cStateCallback(void *user, const char *state) {
+    auto *self = static_cast<StreamBackendConnector *>(user);
+    if (!self || !state) return;
+    emit self->connectionStateChanged(QString::fromUtf8(state));
 }
 
-void StreamBackendConnector::errorCallbackTrampoline(void *user_data,
-                                                      const char *error_msg)
-{
-    auto *self = static_cast<StreamBackendConnector *>(user_data);
-    if (self) self->onErrorData(error_msg);
-}
-
-} /* namespace RootStream */

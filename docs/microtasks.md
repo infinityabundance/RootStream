@@ -1372,4 +1372,51 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 86 · Next: Phase 87 (Android/iOS critical gap fixes — see audits)*
+## PHASE-93: rootstream_core Linkable Library
+
+| ID   | Task | Status |
+|------|------|--------|
+| 93.1 | Refactor root CMakeLists.txt — `rootstream_core` STATIC library | ✅ |
+| 93.2 | Link KDE CMakeLists.txt against `rootstream_core` via add_subdirectory | ✅ |
+| 93.3 | Export `include/` as PUBLIC target_include_directories | ✅ |
+| 93.4 | `rootstream` + `rstr-player` thin executables link rootstream_core | ✅ |
+
+## PHASE-94: Client Session Callback API
+
+| ID   | Task | Status |
+|------|------|--------|
+| 94.1 | `include/rootstream_client_session.h` — rs_video_frame_t, rs_audio_frame_t, callback types | ✅ |
+| 94.2 | `src/client_session.c` — lifted receive/decode loop with atomic stop | ✅ |
+| 94.3 | Refactor `service_run_client()` to thin wrapper preserving SDL path | ✅ |
+| 94.4 | Add client_session.c to rootstream_core SOURCES | ✅ |
+
+## PHASE-95: KDE VideoRenderer — Real Implementation
+
+| ID   | Task | Status |
+|------|------|--------|
+| 95.1 | Replace `videorenderer.h` stub — QQuickFramebufferObject, submitFrame(), Q_PROPERTY | ✅ |
+| 95.2 | Replace `videorenderer.cpp` stub — NV12 GL upload, BT.709 GLSL shader | ✅ |
+| 95.3 | Replace `stream_backend_connector.h/.cpp` — rs_client_session bridge, Qt signals | ✅ |
+| 95.4 | Add stream_backend_connector.cpp to KDE SOURCES; stream_backend_connector.h to HEADERS | ✅ |
+
+## PHASE-96: KDE Client End-to-End Connection
+
+| ID   | Task | Status |
+|------|------|--------|
+| 96.1 | `RootStreamClient::connectToPeer/Address()` → StreamBackendConnector::connectToHost() | ✅ |
+| 96.2 | `RootStreamClient::disconnect()` → StreamBackendConnector::disconnect() + thread join | ✅ |
+| 96.3 | `setVideoRenderer()` — wires videoFrameReady → VideoRenderer::submitFrame | ✅ |
+
+## PHASE-97: Documentation Updates
+
+| ID   | Task | Status |
+|------|------|--------|
+| 97.1 | Update `docs/IMPLEMENTATION_STATUS.md` — accurate status, remove phantom files | ✅ |
+| 97.2 | Create `docs/architecture/client_session_api.md` — API reference + threading model | ✅ |
+| 97.3 | Update `docs/microtasks.md` 441 → 465 | ✅ |
+
+---
+
+> **Overall**: 465 / 465 microtasks complete (**100%**)
+
+*Last updated: 2026 · Post-Phase 97 · Next: Phase 98 (Vulkan zero-copy DMABUF, Android/iOS gap fixes)*

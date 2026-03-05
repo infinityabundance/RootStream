@@ -1,146 +1,130 @@
-/**
- * @file stream_backend_connector.h
- * @brief Wires the C network backend to the Vulkan renderer for the KDE Plasma client
+/*
+ * stream_backend_connector.h — Bridge between rs_client_session and Qt
  *
- * StreamBackendConnector receives decoded NV12 frames from the network_client_t
- * backend and hands them off to the Vulkan pipeline
- * (vulkan_upload_frame → vulkan_render → vulkan_present).
+ * PHASE-95.3 REWRITE
+ * ------------------
+ * This file previously used the local network_client.h (a duplicate of the
+ * core protocol logic that was never connected to the real backend).
  *
- * Usage:
- * @code
- *   StreamBackendConnector conn(vulkanCtx);
- *   conn.onFrameReceived = [](const frame_t *f){ ... };
- *   conn.connect("192.168.1.1", 7777);
- *   conn.start();
- *   // ...
- *   conn.stop();
- *   conn.disconnect();
- * @endcode
+ * It now uses rs_client_session_t (from include/rootstream_client_session.h),
+ * which IS the real backend.  This eliminates the gap described in:
+ *   "docs/IMPLEMENTATION_STATUS.md references StreamBackendConnector.cpp
+ *    which does not exist anywhere … and the KDE client has no implemented bridge."
+ *
+ * OVERVIEW
+ * --------
+ * StreamBackendConnector is a QObject that:
+ *   1. Owns the rs_client_session_t lifecycle.
+ *   2. Runs the session receive/decode loop on a QThread (not the UI thread).
+ *   3. Converts C callback frames (rs_video_frame_t, rs_audio_frame_t) to
+ *      Qt signals so VideoRenderer and AudioPlayer can consume them safely
+ *      across thread boundaries.
+ *
+ * THREADING
+ * ---------
+ *   GUI thread:     creates StreamBackendConnector, calls connectToHost/disconnect
+ *   Session thread: rs_client_session_run() blocks here; C callbacks fire here
+ *   Render thread:  VideoRenderer::synchronize() and render() run here
+ *
+ * The C callbacks copy frame data and emit Qt signals (QueuedConnection),
+ * so video/audio handling always happens on the correct thread.
+ *
+ * FRAME LIFETIME
+ * --------------
+ * rs_video_frame_t pointers are valid ONLY for the callback duration.
+ * We memcpy the NV12 data into a QByteArray immediately in cVideoCallback(),
+ * before the callback returns.  The signal carries the copy.
  */
 
 #ifndef STREAM_BACKEND_CONNECTOR_H
 #define STREAM_BACKEND_CONNECTOR_H
 
-#include <functional>
-#include <string>
-#include <cstdint>
+#include <QObject>
+#include <QThread>
+#include <QByteArray>
+#include <QString>
 
-/* Pull in the C renderer types */
-#include "renderer/renderer.h"
-#include "renderer/vulkan_renderer.h"
+extern "C" {
+#include "rootstream_client_session.h"
+}
 
-/* Pull in the C network client */
-#include "network/network_client.h"
+class StreamBackendConnector : public QObject
+{
+    Q_OBJECT
 
-namespace RootStream {
-
-/**
- * @brief Connection state reported to onConnectionStateChanged.
- */
-enum class ConnectionState {
-    Disconnected,  /**< No active connection */
-    Connecting,    /**< TCP handshake in progress */
-    Connected,     /**< Streaming active */
-    Error          /**< Unrecoverable error; call disconnect() to reset */
-};
-
-/**
- * @brief Bridges the streaming network backend to the Vulkan renderer.
- *
- * Thread safety: connect/disconnect/start/stop must be called from a single
- * owner thread.  Frame callbacks are invoked from the network receive thread.
- */
-class StreamBackendConnector {
 public:
+    explicit StreamBackendConnector(QObject *parent = nullptr);
+    ~StreamBackendConnector() override;
+
     /**
-     * @brief Construct a connector that targets an existing Vulkan context.
-     * @param vulkan_ctx  Initialised Vulkan context (ownership not transferred)
+     * connectToHost — create a session and start streaming on a worker thread.
+     *
+     * @param host  Peer hostname or IP address
+     * @param port  Peer port number
+     * @param code  Optional pairing code (may be empty)
      */
-    explicit StreamBackendConnector(vulkan_context_t *vulkan_ctx);
+    void connectToHost(const QString &host, int port, const QString &code = {});
 
     /**
-     * @brief Destructor – calls stop() and disconnect() if still running.
-     */
-    ~StreamBackendConnector();
-
-    /* Non-copyable, non-movable */
-    StreamBackendConnector(const StreamBackendConnector &) = delete;
-    StreamBackendConnector &operator=(const StreamBackendConnector &) = delete;
-
-    // -------------------------------------------------------------------------
-    // Callbacks (set before calling connect())
-    // -------------------------------------------------------------------------
-
-    /** Called (from receive thread) each time a complete frame is rendered. */
-    std::function<void(const frame_t *)> onFrameReceived;
-
-    /** Called when the connection state changes. */
-    std::function<void(ConnectionState)> onConnectionStateChanged;
-
-    /** Called when a non-fatal error occurs (e.g., a dropped frame). */
-    std::function<void(const std::string &)> onError;
-
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
-
-    /**
-     * @brief Resolve host and create the underlying network_client_t.
-     * @param host  Server hostname or IP address
-     * @param port  Server port number
-     * @return true on success, false if the client could not be created
-     */
-    bool connect(const std::string &host, int port);
-
-    /**
-     * @brief Tear down the network connection and destroy the network_client_t.
+     * disconnect — stop the session and join the worker thread.
+     *
+     * Safe to call if not connected.  Blocks for at most one recv poll cycle.
      */
     void disconnect();
 
-    /**
-     * @brief Start the receive thread and begin streaming.
-     * @return true if the connection was established successfully
-     */
-    bool start();
-
-    /**
-     * @brief Stop streaming and join the receive thread.
-     */
-    void stop();
-
-    /**
-     * @brief Query whether the underlying network client reports connected.
-     * @return true if the client is connected and the handshake is complete
-     */
+    /** True while the session thread is running */
     bool isConnected() const;
 
+    /** Returns the decoder backend name after streaming starts */
+    QString decoderName() const;
+
+signals:
+    /**
+     * videoFrameReady — emitted (QueuedConnection) when a decoded frame is ready.
+     *
+     * Connect to VideoRenderer::submitFrame with Qt::QueuedConnection:
+     *   connect(connector, &StreamBackendConnector::videoFrameReady,
+     *           renderer,  &VideoRenderer::submitFrame,
+     *           Qt::QueuedConnection);
+     *
+     * @param nv12_data  NV12 frame: Y plane (width×height) + UV plane (width×height/2)
+     * @param width      Frame width in pixels
+     * @param height     Frame height in pixels
+     */
+    void videoFrameReady(QByteArray nv12_data, int width, int height);
+
+    /**
+     * audioSamplesReady — emitted when a decoded audio buffer is available.
+     *
+     * @param samples      PCM int16 samples (QByteArray of int16 values)
+     * @param num_samples  Total samples (frames × channels)
+     * @param channels     Number of audio channels
+     * @param sample_rate  Sample rate in Hz (e.g. 48000)
+     */
+    void audioSamplesReady(QByteArray samples, int num_samples,
+                           int channels, int sample_rate);
+
+    /** Emitted when connection state changes ("connecting", "connected", "disconnected", etc.) */
+    void connectionStateChanged(QString state);
+
+    /** Emitted once the session thread has fully exited */
+    void sessionStopped();
+
 private:
-    /** Static trampoline forwarded to onFrameData(). */
-    static void frameCallbackTrampoline(void *user_data,
-                                        uint8_t *y_data,
-                                        uint8_t *uv_data,
-                                        int width,
-                                        int height,
-                                        uint64_t timestamp);
+    /* Static C callback trampolines — registered with rs_client_session.
+     * 'user' points to the StreamBackendConnector instance. */
+    static void cVideoCallback(void *user, const rs_video_frame_t *frame);
+    static void cAudioCallback(void *user, const rs_audio_frame_t *frame);
+    static void cStateCallback(void *user, const char *state);
 
-    /** Static trampoline forwarded to onErrorData(). */
-    static void errorCallbackTrampoline(void *user_data, const char *error_msg);
+    rs_client_session_t *session_ = nullptr;  /**< Owned session handle */
+    QThread             *thread_  = nullptr;  /**< Session worker thread */
 
-    /** Process an incoming decoded frame: upload → render → present. */
-    void onFrameData(uint8_t *y_data, uint8_t *uv_data,
-                     int width, int height, uint64_t timestamp);
-
-    /** Handle an error reported by the network client. */
-    void onErrorData(const char *error_msg);
-
-    /** Update and broadcast a state change. */
-    void setState(ConnectionState state);
-
-    vulkan_context_t   *m_vulkan_ctx;   /**< Borrowed Vulkan context */
-    network_client_t   *m_net_client;   /**< Owned network client (or NULL) */
-    ConnectionState     m_state;        /**< Current connection state */
+    /* Connection parameters — stored for reconnect support */
+    QString host_;
+    int     port_ = 0;
+    QString code_;
 };
 
-} /* namespace RootStream */
-
 #endif /* STREAM_BACKEND_CONNECTOR_H */
+

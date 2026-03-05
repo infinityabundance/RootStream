@@ -355,37 +355,75 @@ Total Test time (real) =   0.15 sec
 - [x] LibFuzzer packet/handshake fuzzing, rate limiting, SQL injection prevention, TLS (Phase 30)
 - **Status**: ✅ Complete
 
-### PHASE 31: Vulkan Renderer *(NEW — Just Completed)*
-- [x] Frame upload infrastructure — `VulkanFrameUploader.cpp` (702 LOC): staging buffer pool, VMA, timeline semaphores
-- [x] YUV→RGB shader system — `yuv_to_rgb.frag` (275 LOC): BT.709/601/2020, HDR tone mapping
-- [x] Graphics pipeline — render pass, framebuffers, descriptor sets, specialisation constants
-- [x] Swapchain presentation — mailbox/FIFO mode, acquire/present semaphores
-- [x] Dynamic resize — swapchain recreation without frame drops
-- [x] Resource cleanup — validation layers report zero errors
-- **Status**: ✅ Complete
+### PHASE 31: Vulkan Renderer *(Backend C modules exist)*
+- [x] OpenGL + Vulkan renderer backends exist in `clients/kde-plasma-client/src/renderer/`
+- [x] YUV→RGB shader (`yuv_to_rgb.frag`): BT.709/601/2020, HDR tone mapping
+- [x] Vulkan surface backends: X11VulkanSurface.cpp, WaylandVulkanSurface.cpp
+- ⚠️ **NOTE**: `VulkanFrameUploader.cpp` referenced in earlier docs does **not** exist
+  in the repository.  The renderer C modules are present but were not yet driven
+  by the Qt layer (this is fixed in PHASE-95 below).
+- **Status**: ✅ C renderer modules complete; Qt integration completed in PHASE-95
+
+---
+
+## ✅ PHASE-93–96: Backend Integration *(Completed)*
+
+### PHASE-93: rootstream_core Linkable Library
+- [x] Root `CMakeLists.txt` refactored — `rootstream_core` STATIC library
+  contains all protocol/crypto/network/decode sources
+- [x] `rootstream` executable is now a thin `src/main.c` + link to `rootstream_core`
+- [x] `rstr-player` executable similarly thin
+- [x] KDE `clients/kde-plasma-client/CMakeLists.txt` links `rootstream_core` via
+  `add_subdirectory(../.. rootstream_build)`
+- [x] `include/rootstream.h` exported as PUBLIC include directory
+
+### PHASE-94: Client Session Callback API
+- [x] `include/rootstream_client_session.h` — `rs_client_session_t`,
+  `rs_video_frame_t`, `rs_audio_frame_t`, callback types
+- [x] `src/client_session.c` — real receive/decode loop with atomic stop flag;
+  lifted from `service_run_client()`
+- [x] `src/service.c::service_run_client()` refactored to thin wrapper over
+  `rs_client_session_*` — SDL path preserved unchanged
+
+### PHASE-95: KDE VideoRenderer — Real Implementation
+- [x] `clients/kde-plasma-client/src/videorenderer.h` — replaced stub with
+  full `QQuickFramebufferObject` subclass; NV12 GL texture upload; BT.709 shader
+- [x] `clients/kde-plasma-client/src/videorenderer.cpp` — NV12 → two GL textures
+  (tex_y GL_RED + tex_uv GL_RG); GLSL BT.709 YUV→RGB conversion shader
+- [x] `clients/kde-plasma-client/src/stream_backend_connector.h/.cpp` — replaced
+  old duplicate `network_client_t` approach with `rs_client_session_t` bridge;
+  static C trampolines → Qt signals (QueuedConnection)
+- ⚠️ **Note**: `VulkanFrameUploader.cpp` is NOT in this repository.  The OpenGL
+  path (this file) is the implemented renderer.  Vulkan upload is a future task.
+
+### PHASE-96: KDE Client End-to-End Connection
+- [x] `rootstreamclient.h` — added `StreamBackendConnector *m_connector`,
+  `VideoRenderer *m_renderer`, `setVideoRenderer()`, new slots
+- [x] `rootstreamclient.cpp::connectToPeer()` — delegates to
+  `m_connector->connectToHost()` (real session, not stub)
+- [x] `rootstreamclient.cpp::disconnect()` — calls
+  `m_connector->disconnect()` (joins session thread)
+- [x] `setVideoRenderer()` wires `videoFrameReady → VideoRenderer::submitFrame`
+  with `Qt::QueuedConnection`
 
 ---
 
 ## 🔭 What's Next
 
-### PHASE-32: Backend Integration *(Not Started)*
-Connect the Phase 31 Vulkan renderer to the actual streaming backend:
-- `StreamBackendConnector.cpp` — frame handoff from decode to Vulkan upload
+### PHASE-32 / Remaining: Vulkan Zero-Copy Path *(Not Started)*
+- `VulkanFrameUploader.cpp` — DMABUF → VkImage import (zero-copy from VA-API)
 - Lock-free ring buffer between decode and render threads
-- X11 + Wayland `VkSurfaceKHR` platform backends
-- Integration and performance benchmark suites
+- See `docs/architecture/client_session_api.md` for the upgrade path
 
 ### PHASE-33: Code Standards & Quality *(Not Started)*
 - clang-format + clang-tidy with zero violations
 - ≥ 80% line coverage across all modules
 - ASan/UBSan/TSan clean passes
-- cppcheck static analysis
 
 ### PHASE-34: Production Readiness *(Not Started)*
 - End-to-end Docker integration test
 - Performance benchmark suite (glass-to-glass latency)
 - AUR/deb/AppImage release packaging
-- Final documentation review
 
 ---
 

@@ -1,8 +1,22 @@
 /*
  * RootStream KDE Plasma Client - Main Client Wrapper Implementation
+ *
+ * PHASE-96 ADDITIONS
+ * ------------------
+ * Added StreamBackendConnector member (m_connector) and wired it in
+ * connectToPeer() / connectToAddress() / disconnect().
+ *
+ * The m_connector owns the rs_client_session_t that actually does the
+ * streaming — all the receive/decrypt/reassemble/decode logic lives in
+ * rootstream_core, not here.
+ *
+ * setVideoRenderer() wires the connector's videoFrameReady signal to
+ * VideoRenderer::submitFrame with Qt::QueuedConnection so frames arrive
+ * on the GUI thread safely from the session worker thread.
  */
 
 #include "rootstreamclient.h"
+#include "videorenderer.h"
 #include <QDebug>
 #include <QCoreApplication>
 
@@ -17,8 +31,16 @@ RootStreamClient::RootStreamClient(QObject *parent)
     , m_eventLoopTimer(nullptr)
     , m_connected(false)
     , m_connectionState("Disconnected")
+    , m_connector(new StreamBackendConnector(this))  /* PHASE-96 */
+    , m_renderer(nullptr)
 {
     initializeContext();
+
+    /* Wire StreamBackendConnector state signals to our own slots */
+    connect(m_connector, &StreamBackendConnector::connectionStateChanged,
+            this,        &RootStreamClient::onSessionStateChanged);
+    connect(m_connector, &StreamBackendConnector::sessionStopped,
+            this,        &RootStreamClient::onSessionStopped);
     
     // Create event loop timer for processing network events
     m_eventLoopTimer = new QTimer(this);
@@ -100,34 +122,44 @@ void RootStreamClient::cleanupContext()
 
 int RootStreamClient::connectToPeer(const QString &rootstreamCode)
 {
-    if (!m_ctx) {
-        emit connectionError("Client not initialized");
-        return -1;
-    }
-    
     if (m_connected) {
         emit connectionError("Already connected");
         return -1;
     }
-    
+
     qInfo() << "Connecting to peer:" << rootstreamCode;
-    
-    int ret = rootstream_connect_to_peer(m_ctx, rootstreamCode.toUtf8().constData());
-    if (ret < 0) {
-        emit connectionError("Failed to connect to peer");
-        return -1;
+
+    /* Parse "host:port" from rootstreamCode.  If no port is given, use 7777
+     * (the default RootStream port).  This replaces the old stub call to
+     * rootstream_connect_to_peer() which existed but didn't start a session. */
+    QString host = rootstreamCode;
+    int     port = 7777;
+    int     colon = rootstreamCode.lastIndexOf(':');
+    if (colon > 0) {
+        host = rootstreamCode.left(colon);
+        port = rootstreamCode.mid(colon + 1).toInt();
+        if (port <= 0 || port > 65535) port = 7777;
     }
-    
+
+    m_peerHostname = host;
+    m_connectionState = "Connecting";
+    emit connectionStateChanged();
+    emit peerHostnameChanged();
+
+    /* Delegate to StreamBackendConnector — it creates the rs_client_session_t
+     * and starts the receive/decode loop on a worker QThread. */
+    m_connector->connectToHost(host, port, rootstreamCode);
+
+    /* Mark as connected immediately; the connector will emit
+     * connectionStateChanged("error: ...") if it actually fails. */
     m_connected = true;
     m_connectionState = "Connected";
-    m_peerHostname = rootstreamCode;
-    
+
     emit connected();
     emit connectedChanged();
     emit connectionStateChanged();
-    emit peerHostnameChanged();
     emit statusUpdated("Connected to " + rootstreamCode);
-    
+
     return 0;
 }
 
@@ -137,35 +169,99 @@ int RootStreamClient::connectToAddress(const QString &hostname, quint16 port)
         emit connectionError("Client not initialized");
         return -1;
     }
-    
-    // For now, we need to use the RootStream code format
-    // This is a simplified version - in production, you'd need proper address resolution
-    QString code = hostname + ":" + QString::number(port);
-    return connectToPeer(code);
+
+    /* Delegate to StreamBackendConnector directly with host+port */
+    m_peerHostname = hostname;
+    m_connectionState = "Connecting";
+    emit connectionStateChanged();
+    emit peerHostnameChanged();
+
+    m_connector->connectToHost(hostname, (int)port);
+
+    m_connected = true;
+    m_connectionState = "Connected";
+
+    emit connected();
+    emit connectedChanged();
+    emit connectionStateChanged();
+    emit statusUpdated(QString("Connected to %1:%2").arg(hostname).arg(port));
+
+    return 0;
 }
 
 void RootStreamClient::disconnect()
 {
-    if (!m_ctx || !m_connected) {
-        return;
-    }
-    
+    if (!m_connected) return;
+
     qInfo() << "Disconnecting from peer";
-    
-    // Clean up all peers
-    for (int i = 0; i < m_ctx->num_peers; i++) {
-        rootstream_remove_peer(m_ctx, &m_ctx->peers[i]);
+
+    /* Stop the streaming session first, then clean up the core context */
+    m_connector->disconnect();
+
+    /* Also clean up any legacy core context peers */
+    if (m_ctx) {
+        for (int i = 0; i < m_ctx->num_peers; i++) {
+            rootstream_remove_peer(m_ctx, &m_ctx->peers[i]);
+        }
     }
-    
+
     m_connected = false;
     m_connectionState = "Disconnected";
     m_peerHostname.clear();
-    
+
     emit disconnected();
     emit connectedChanged();
     emit connectionStateChanged();
     emit peerHostnameChanged();
     emit statusUpdated("Disconnected");
+}
+
+/* ── New PHASE-96 methods ─────────────────────────────────────────── */
+
+void RootStreamClient::setVideoRenderer(VideoRenderer *renderer) {
+    m_renderer = renderer;
+    if (!renderer) return;
+
+    /* Wire: StreamBackendConnector::videoFrameReady → VideoRenderer::submitFrame
+     * Qt::QueuedConnection ensures submitFrame is called on the GUI thread
+     * even though videoFrameReady is emitted from the session worker thread. */
+    connect(m_connector, &StreamBackendConnector::videoFrameReady,
+            renderer,    &VideoRenderer::submitFrame,
+            Qt::QueuedConnection);
+
+    qInfo() << "VideoRenderer wired to StreamBackendConnector";
+}
+
+void RootStreamClient::onSessionStateChanged(const QString &state) {
+    qInfo() << "Session state:" << state;
+    m_connectionState = state;
+    emit connectionStateChanged();
+    emit statusUpdated(state);
+
+    /* If the session reports an error, update our connected flag */
+    if (state.startsWith("error:") || state == "disconnected") {
+        if (m_connected) {
+            m_connected = false;
+            m_peerHostname.clear();
+            emit disconnected();
+            emit connectedChanged();
+            emit peerHostnameChanged();
+        }
+    }
+}
+
+void RootStreamClient::onSessionStopped() {
+    qInfo() << "Session stopped";
+    if (m_connected) {
+        m_connected = false;
+        m_connectionState = "Disconnected";
+        m_peerHostname.clear();
+        emit disconnected();
+        emit connectedChanged();
+        emit connectionStateChanged();
+        emit peerHostnameChanged();
+        emit statusUpdated("Disconnected");
+    }
 }
 
 void RootStreamClient::setVideoCodec(const QString &codec)
