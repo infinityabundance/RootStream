@@ -32,9 +32,9 @@ fi
 echo ""
 
 # ── 2. All required PHASE-NN headers present ─────────
-echo "[ 2 ] Checking phase IDs PHASE-00 through PHASE-62..."
+echo "[ 2 ] Checking phase IDs PHASE-00 through PHASE-66..."
 ALL_PHASES_OK=true
-for i in $(seq -w 0 62); do
+for i in $(seq -w 0 66); do
     PHASE_ID="PHASE-${i}"
     if grep -q "$PHASE_ID" "$MICROTASKS"; then
         pass "$PHASE_ID present"

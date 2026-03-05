@@ -96,8 +96,12 @@
 | PHASE-60 | Bandwidth Probe | 🟢 | 4 | 4 |
 | PHASE-61 | Packet Reorder Buffer | 🟢 | 4 | 4 |
 | PHASE-62 | Adaptive GOP Controller | 🟢 | 4 | 4 |
+| PHASE-63 | Stream Health Monitor | 🟢 | 4 | 4 |
+| PHASE-64 | FEC Encoder / Decoder | 🟢 | 4 | 4 |
+| PHASE-65 | Clock Sync Offset Estimator | 🟢 | 4 | 4 |
+| PHASE-66 | Plugin Hot-Reload Manager | 🟢 | 4 | 4 |
 
-> **Overall**: 345 / 345 microtasks complete (**100%**)
+> **Overall**: 361 / 361 microtasks complete (**100%**)
 
 ---
 
@@ -1006,6 +1010,58 @@
 
 ---
 
+## PHASE-63: Stream Health Monitor
+
+> Typed-metric (GAUGE/COUNTER/RATE/BOOLEAN) registry with threshold evaluation (OK/WARN/CRIT), worst-level rollup, and a JSON snapshot serialiser using a `foreach` iterator to avoid exposing internals.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 63.1 | Health metric | 🟢 | P0 | 2h | 5 | `src/health/health_metric.c` — GAUGE/COUNTER/RATE/BOOLEAN kinds; warn_lo/hi crit_lo/hi threshold; `evaluate()` returns HM_OK/WARN/CRIT; level/kind names | `scripts/validate_traceability.sh` |
+| 63.2 | Health monitor | 🟢 | P0 | 3h | 7 | `src/health/health_monitor.c` — 32-slot registry; dup-name guard; `evaluate()` sets overall = worst level; `foreach()` iterator | `scripts/validate_traceability.sh` |
+| 63.3 | Health report | 🟢 | P1 | 2h | 5 | `src/health/health_report.c` — JSON serialiser via `foreach` callback; NUL-safe truncation | `scripts/validate_traceability.sh` |
+| 63.4 | Health unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_health.c` — 5 tests: metric init/evaluate/names, monitor register/evaluate, report JSON keys; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-64: FEC Encoder / Decoder
+
+> XOR-over-GF(2) parity matrix; group encoder producing k source + r repair packets; decoder recovering up to r lost source packets via single-missing-per-repair XOR inversion.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 64.1 | FEC matrix | 🟢 | P0 | 2h | 5 | `src/fec/fec_matrix.c` — `fec_repair_covers(j, ri)` = (j % (ri+2)) == 0; `fec_build_repair()` XOR loop; FEC_MAX_K=16, FEC_MAX_R=4 | `scripts/validate_traceability.sh` |
+| 64.2 | FEC encoder | 🟢 | P0 | 2h | 5 | `src/fec/fec_encoder.c` — copies k sources then appends r repair blocks via fec_build_repair | `scripts/validate_traceability.sh` |
+| 64.3 | FEC decoder | 🟢 | P0 | 3h | 7 | `src/fec/fec_decoder.c` — for each repair block: if exactly 1 covered source is missing, recover it by XOR of repair ⊕ other present covered sources | `scripts/validate_traceability.sh` |
+| 64.4 | FEC unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_fec.c` — 4 tests: matrix covers, encode pass-through/repair, decode single-loss recovery, irrecoverable scenario; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-65: Clock Sync Offset Estimator
+
+> NTP four-timestamp sample (t0/t1/t2/t3); 8-sample sliding-window median filter for robust offset/RTT estimation; statistics tracking min/avg/max offset and RTT with convergence flag.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 65.1 | Clock sync sample | 🟢 | P0 | 1h | 4 | `src/clocksync/cs_sample.c` — t0/t1/t2/t3 NTP timestamps; `rtt_us()` = (t3-t0)-(t2-t1); `offset_us()` = ((t1-t0)+(t2-t3))/2 | `scripts/validate_traceability.sh` |
+| 65.2 | Clock sync filter | 🟢 | P0 | 3h | 7 | `src/clocksync/cs_filter.c` — 8-sample sliding ring; insertion-sort median; `converged` after CS_FILTER_SIZE samples; `reset()` | `scripts/validate_traceability.sh` |
+| 65.3 | Clock sync stats | 🟢 | P1 | 2h | 5 | `src/clocksync/cs_stats.c` — sample_count; min/avg/max offset and RTT; convergence flag after CS_CONVERGENCE_SAMPLES; `reset()` | `scripts/validate_traceability.sh` |
+| 65.4 | Clock sync unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_clocksync.c` — 3 tests: sample RTT/offset arithmetic, filter median/convergence/reset, stats snapshot/min/max/avg/converged; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-66: Plugin Hot-Reload Manager
+
+> Plugin entry descriptor (path, dlopen handle, version counter, state); 16-slot manager with overridable dlopen/dlclose pointers for testability; statistics tracking reload/fail counts and last reload timestamp.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 66.1 | Hot-reload entry | 🟢 | P0 | 1h | 4 | `src/hotreload/hr_entry.c` — path (256), handle, version (uint32), state (UNLOADED/LOADED/FAILED), last_load_us; `init()`; `clear()` preserves path; `state_name()` | `scripts/validate_traceability.sh` |
+| 66.2 | Hot-reload manager | 🟢 | P0 | 4h | 8 | `src/hotreload/hr_manager.c` — injected dlopen/dlclose or built-in stubs; `register()` with dup-guard; `load()`/`reload()` bump version; `unload()`; `get()` | `scripts/validate_traceability.sh` |
+| 66.3 | Hot-reload stats | 🟢 | P1 | 2h | 5 | `src/hotreload/hr_stats.c` — reload_count/fail_count/last_reload_us/loaded_plugins; `record_reload(success, now_us)`; `set_loaded(count)`; `reset()` | `scripts/validate_traceability.sh` |
+| 66.4 | Hot-reload unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_hotreload.c` — 5 tests: entry init/clear/names, manager register/dup, load/reload/unload/version, failed load state, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -1036,4 +1092,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 62 · Next: Phase 63 (to be defined)*
+*Last updated: 2026 · Post-Phase 66 · Next: Phase 67 (to be defined)*
