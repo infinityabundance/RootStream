@@ -100,8 +100,12 @@
 | PHASE-64 | FEC Encoder / Decoder | 🟢 | 4 | 4 |
 | PHASE-65 | Clock Sync Offset Estimator | 🟢 | 4 | 4 |
 | PHASE-66 | Plugin Hot-Reload Manager | 🟢 | 4 | 4 |
+| PHASE-67 | Frame Rate Controller | 🟢 | 4 | 4 |
+| PHASE-68 | Output Target Registry | 🟢 | 4 | 4 |
+| PHASE-69 | Bitrate Ladder Builder | 🟢 | 4 | 4 |
+| PHASE-70 | Packet Loss Estimator | 🟢 | 4 | 4 |
 
-> **Overall**: 361 / 361 microtasks complete (**100%**)
+> **Overall**: 377 / 377 microtasks complete (**100%**)
 
 ---
 
@@ -1062,6 +1066,58 @@
 
 ---
 
+## PHASE-67: Frame Rate Controller
+
+> Token-bucket frame pacer with configurable burst cap; EWMA-based actual-fps tracker; statistics for frame/drop counts and interval min/avg/max.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 67.1 | Frame rate limiter | 🟢 | P0 | 2h | 5 | `src/framerate/fr_limiter.c` — token-bucket accumulation (elapsed_us × fps); burst cap FR_MAX_BURST=2; `tick()` returns frames_ready; `set_fps()` / `reset()` | `scripts/validate_traceability.sh` |
+| 67.2 | Frame rate target | 🟢 | P0 | 2h | 5 | `src/framerate/fr_target.c` — EWMA of inter-frame interval (α=0.1); `actual_fps = 1e6/avg_interval_us`; `mark(now_us)` updates on each frame; `reset()` preserves target | `scripts/validate_traceability.sh` |
+| 67.3 | Frame rate stats | 🟢 | P1 | 2h | 5 | `src/framerate/fr_stats.c` — frame_count/drop_count/sum_interval; min/avg/max interval; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 67.4 | Frame rate unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_framerate.c` — 4 tests: limiter init/tick/burst/set_fps, target EWMA/actual_fps/reset, stats snapshot/min/max/avg/drop; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-68: Output Target Registry
+
+> Single output endpoint descriptor (URL/protocol/state); 16-slot registry with dup-guard, enable/disable, state transitions, and foreach iterator; statistics for bytes/connect/error/active counts.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 68.1 | Output target | 🟢 | P0 | 1h | 4 | `src/output/output_target.c` — name/url/protocol/state(IDLE/ACTIVE/ERROR/DISABLED)/enabled; `ot_init()`; `ot_state_name()` | `scripts/validate_traceability.sh` |
+| 68.2 | Output registry | 🟢 | P0 | 3h | 7 | `src/output/output_registry.c` — 16-slot dup-guarded registry; `add()`/`remove()`/`get()`; `enable()`/`disable()`; `set_state()`; `active_count()`; `foreach()` | `scripts/validate_traceability.sh` |
+| 68.3 | Output stats | 🟢 | P1 | 2h | 5 | `src/output/output_stats.c` — bytes_sent/connect_count/error_count/active_count; `record_bytes()`/`record_connect()`/`record_error()`; `snapshot()`; `reset()` | `scripts/validate_traceability.sh` |
+| 68.4 | Output unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_output.c` — 5 tests: target init/names, registry add/remove/dup, enable/disable/active_count, foreach, stats; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-69: Bitrate Ladder Builder
+
+> Single ABR rung value type (bitrate/width/height/fps); iterative ladder builder (step-down ratio, FPS-halve threshold, max LADDER_MAX_RUNGS=8, ascending qsort); highest-fitting rung selector with safety margin.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 69.1 | Ladder rung | 🟢 | P0 | 1h | 4 | `src/ladder/ladder_rung.c` — bitrate_bps/width/height/fps; `lr_init()` with validity checks; `lr_compare()` qsort comparator (ascending bitrate) | `scripts/validate_traceability.sh` |
+| 69.2 | Ladder builder | 🟢 | P0 | 3h | 7 | `src/ladder/ladder_builder.c` — iterative step-down loop (bps × step_ratio); sqrt-proportional height snapping to std_heights[]; 16:9 width; fps halved below threshold; qsort output | `scripts/validate_traceability.sh` |
+| 69.3 | Ladder selector | 🟢 | P0 | 1h | 4 | `src/ladder/ladder_selector.c` — scans ascending rungs; picks highest where bps ≤ budget × (1-margin); defaults to rung 0 | `scripts/validate_traceability.sh` |
+| 69.4 | Ladder unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_ladder.c` — 3 tests: rung init/compare/qsort, build ascending/range/invalid params, selector margin/fallback; all pass | `scripts/validate_traceability.sh` |
+
+---
+
+## PHASE-70: Packet Loss Estimator
+
+> 64-slot sliding bitmask window with wrapping uint16 sequence numbers; EWMA loss-rate layer on top; burst-tracking statistics for congestion control feedback.
+
+| ID | Microtask | Status | P | Effort | 🌟 | Description (done when) | Gate |
+|----|-----------|--------|---|--------|----|-------------------------|------|
+| 70.1 | Loss window | 🟢 | P0 | 3h | 7 | `src/loss/loss_window.c` — 64-bit received_mask; `lw_receive()` advances window marking skipped slots lost; `lw_loss_rate()` = total_lost/total_seen; `lw_reset()` | `scripts/validate_traceability.sh` |
+| 70.2 | Loss rate | 🟢 | P0 | 2h | 5 | `src/loss/loss_rate.c` — wraps loss_window; EWMA (α=0.125) of instantaneous loss rate; `lr_rate_receive()`; `lr_rate_get()` instantaneous; `lr_rate_ewma()` smooth | `scripts/validate_traceability.sh` |
+| 70.3 | Loss stats | 🟢 | P1 | 2h | 5 | `src/loss/loss_stats.c` — total_sent/total_lost/burst_count/max_burst/current_burst; `record(lost)`; loss_pct in snapshot; `reset()` | `scripts/validate_traceability.sh` |
+| 70.4 | Loss unit tests | 🟢 | P0 | 2h | 5 | `tests/unit/test_loss.c` — 4 tests: window no-loss/skip-loss, rate EWMA/ready/reset, stats burst_count/max_burst/pct/reset; all pass | `scripts/validate_traceability.sh` |
+
+---
+
 ## 📐 Architecture Overview
 
 ```
@@ -1092,4 +1148,4 @@
 
 ---
 
-*Last updated: 2026 · Post-Phase 66 · Next: Phase 67 (to be defined)*
+*Last updated: 2026 · Post-Phase 70 · Next: Phase 71 (to be defined)*
