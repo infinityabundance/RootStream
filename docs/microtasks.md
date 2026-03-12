@@ -1420,3 +1420,238 @@
 > **Overall**: 465 / 465 microtasks complete (**100%**)
 
 *Last updated: 2026 · Post-Phase 97 · Next: Phase 98 (Vulkan zero-copy DMABUF, Android/iOS gap fixes)*
+
+
+> Historical snapshot above reflects the registry state through Phase 97. Active transformation phases 98 through 108 continue below in the same table style.
+
+---
+
+## PHASE-98: Product Core Definition
+
+| ID | Task | Status |
+|------|------|--------|
+| 98.1.1 | [Repository audit and baseline truth] Create or normalize `/docs/microtasks.md` and seed initial execution ledger | 🟢 |
+| 98.1.2 | [Repository audit and baseline truth] Inventory top-level subsystems and entrypoints | 🟢 |
+| 98.1.3 | [Repository audit and baseline truth] Identify implemented vs claimed product capabilities | 🟢 |
+| 98.1.4 | [Repository audit and baseline truth] Identify conflicting status and truth-source documents | 🟢 |
+| 98.2.1 | [Product scope definition] Draft the product core definition | 🟢 |
+| 98.2.2 | [Product scope definition] Define supported user journey and non-goals | 🟢 |
+| 98.3.1 | [Support matrix creation] Draft `docs/SUPPORT_MATRIX.md` | 🟢 |
+| 98.3.2 | [Support matrix creation] Add explicit support caveats and environment constraints | 🟢 |
+| 98.4.1 | [Golden path documentation] Draft `docs/CORE_PATH.md` | 🟢 |
+| 98.4.2 | [Golden path documentation] Add concrete setup and validation checkpoints to the golden path | 🟢 |
+| 98.5.1 | [Feature flag and maturity classification] Define supported, preview, experimental, and roadmap categories | 🟢 |
+| 98.5.2 | [Feature flag and maturity classification] Classify visible features and entrypoints by maturity | 🟢 |
+| 98.6.1 | [Root README trust cleanup] Revise `README.md` to reflect the supported product honestly | 🟢 |
+| 98.6.2 | [Root README trust cleanup] Add explicit not-yet-supported and non-goal language to high-visibility docs | 🟢 |
+| 98.7.1 | [Status document reconciliation] Reconcile `IMPLEMENTATION_STATUS`, `ROADMAP`, `ARCHITECTURE`, and audit docs | 🟢 |
+| 98.7.2 | [Status document reconciliation] Add status ownership notes to core product docs | 🟢 |
+
+> Phase 98 progress: 16 / 16
+
+---
+
+## PHASE-99: Golden Path Hardening
+
+| ID | Task | Status |
+|------|------|--------|
+| 99.1.1 | [Build system baseline validation] Audit current build instructions and entrypoints against repository reality | 🔴 |
+| 99.1.2 | [Build system baseline validation] Verify the canonical build path from a clean working tree | 🔴 |
+| 99.1.3 | [Build system baseline validation] Record build blockers, warnings, and doc gaps | 🔴 |
+| 99.2.1 | [Dependency normalization] Separate required dependencies from optional or experimental ones | 🔴 |
+| 99.2.2 | [Dependency normalization] Create or refine a reproducible developer bootstrap path | 🔴 |
+| 99.3.1 | [Golden path runtime validation] Validate the canonical host path | 🔴 |
+| 99.3.2 | [Golden path runtime validation] Validate the canonical client path and first connection flow | 🔴 |
+| 99.4.1 | [Error handling and failure-path cleanup] Audit golden-path failure modes and error messages | 🔴 |
+| 99.4.2 | [Error handling and failure-path cleanup] Improve first-failure diagnostics in the canonical path | 🔴 |
+| 99.5.1 | [Canonical demo path] Define the canonical demo and validation flow | 🔴 |
+| 99.5.2 | [Canonical demo path] Add or refine canonical run scripts for the demo path | 🔴 |
+| 99.6.1 | [Packaging and developer setup tightening] Tighten packaging and local setup documentation around the golden path | 🔴 |
+| 99.6.2 | [Packaging and developer setup tightening] Validate the first-run experience from the tightened docs | 🔴 |
+
+> Phase 99 progress: 0 / 13
+
+---
+
+## PHASE-100: CI and Quality Gate Hardening
+
+| ID | Task | Status |
+|------|------|--------|
+| 100.1.1 | [CI workflow audit] Inventory existing CI workflows, jobs, and triggers | 🔴 |
+| 100.1.2 | [CI workflow audit] Map CI coverage to the supported product matrix | 🔴 |
+| 100.2.1 | [Build matrix tightening] Tighten the CI build matrix around supported targets | 🔴 |
+| 100.2.2 | [Build matrix tightening] Ensure release builds are exercised in CI | 🔴 |
+| 100.3.1 | [Static analysis and formatting enforcement] Add or refine formatting enforcement | 🔴 |
+| 100.3.2 | [Static analysis and formatting enforcement] Add or refine lint and static-analysis enforcement | 🔴 |
+| 100.4.1 | [Test gate hardening] Audit which tests are currently gating merges | 🔴 |
+| 100.4.2 | [Test gate hardening] Add or tighten core-path test gates | 🔴 |
+| 100.5.1 | [Sanitizer and reliability jobs] Define a sanitizer and reliability-job strategy | 🔴 |
+| 100.5.2 | [Sanitizer and reliability jobs] Add at least one practical sanitizer or reliability job | 🔴 |
+| 100.6.1 | [Artifact and packaging checks] Verify CI artifact and packaging outputs for the supported path | 🔴 |
+| 100.6.2 | [Artifact and packaging checks] Document what CI proves and what it does not prove | 🔴 |
+
+> Phase 100 progress: 0 / 12
+
+---
+
+## PHASE-101: Architecture Boundary Cleanup
+
+| ID | Task | Status |
+|------|------|--------|
+| 101.1.1 | [Architecture map audit] Map current subsystem boundaries from the repository tree | 🔴 |
+| 101.1.2 | [Architecture map audit] Identify cross-layer violations and architecture ambiguities | 🔴 |
+| 101.2.1 | [Boundary rule definition] Define target architectural layering and boundary rules | 🔴 |
+| 101.2.2 | [Boundary rule definition] Publish boundary rules in architecture docs | 🔴 |
+| 101.3.1 | [Directory/layout rationalization] Identify low-risk directory and layout rationalization opportunities | 🔴 |
+| 101.3.2 | [Directory/layout rationalization] Execute one safe layout rationalization step | 🔴 |
+| 101.4.1 | [Interface cleanup] Audit core interfaces and seams on the supported path | 🔴 |
+| 101.4.2 | [Interface cleanup] Normalize one high-value interface family | 🔴 |
+| 101.5.1 | [Naming and consistency pass] Audit naming inconsistencies in high-visibility architecture surfaces | 🔴 |
+| 101.5.2 | [Naming and consistency pass] Apply a targeted naming consistency pass | 🔴 |
+| 101.6.1 | [Legacy/experimental isolation] Identify legacy, preview, and experimental surfaces that need stronger isolation | 🔴 |
+| 101.6.2 | [Legacy/experimental isolation] Document and implement one isolation improvement for non-core surfaces | 🔴 |
+
+> Phase 101 progress: 0 / 12
+
+---
+
+## PHASE-102: Observability and Reliability
+
+| ID | Task | Status |
+|------|------|--------|
+| 102.1.1 | [Logging audit] Inventory current logging patterns on the supported path | 🔴 |
+| 102.1.2 | [Logging audit] Identify inconsistent log shapes and missing context | 🔴 |
+| 102.2.1 | [Structured event schema] Define a structured event schema for the golden path | 🔴 |
+| 102.2.2 | [Structured event schema] Apply the structured schema to one critical path | 🔴 |
+| 102.3.1 | [Metrics surface expansion] Identify critical metrics for encode, network, decode, and render stages | 🔴 |
+| 102.3.2 | [Metrics surface expansion] Expose missing metrics in at least one critical supported path | 🔴 |
+| 102.4.1 | [Session and stream tracing] Add session correlation and trace identifiers to the supported path | 🔴 |
+| 102.4.2 | [Session and stream tracing] Document how to interpret session traces | 🔴 |
+| 102.5.1 | [Reliability diagnostics] Identify the highest-value reliability diagnostics gaps | 🔴 |
+| 102.5.2 | [Reliability diagnostics] Improve one reliability diagnostic path and validate it | 🔴 |
+| 102.6.1 | [Operational troubleshooting documentation] Write troubleshooting guidance keyed to logs, metrics, and checkpoints | 🔴 |
+| 102.6.2 | [Operational troubleshooting documentation] Cross-link troubleshooting docs from support and onboarding surfaces | 🔴 |
+
+> Phase 102 progress: 0 / 12
+
+---
+
+## PHASE-103: Testing, Stress, and Soak Discipline
+
+| ID | Task | Status |
+|------|------|--------|
+| 103.1.1 | [Test inventory and gap analysis] Map existing tests to supported product areas | 🔴 |
+| 103.1.2 | [Test inventory and gap analysis] Identify unsupported or unvalidated core-path code | 🔴 |
+| 103.2.1 | [Core-path unit and integration strengthening] Add tests for the highest-risk core-path validation gap | 🔴 |
+| 103.2.2 | [Core-path unit and integration strengthening] Ensure the canonical path has explicit regression coverage | 🔴 |
+| 103.3.1 | [Adverse condition simulation] Define adverse-network and failure simulations for the supported path | 🔴 |
+| 103.3.2 | [Adverse condition simulation] Add at least one adverse-condition simulation harness or job | 🔴 |
+| 103.4.1 | [Soak test scaffolding] Create soak-test scaffolding for the supported path | 🔴 |
+| 103.4.2 | [Soak test scaffolding] Document soak-test execution and result expectations | 🔴 |
+| 103.5.1 | [Regression harness improvement] Audit regression harness ergonomics and reporting | 🔴 |
+| 103.5.2 | [Regression harness improvement] Tighten regression harness output or fixtures | 🔴 |
+| 103.6.1 | [Test documentation and reporting] Document the expected pre-release test suite | 🔴 |
+| 103.6.2 | [Test documentation and reporting] Publish test result interpretation guidance | 🔴 |
+
+> Phase 103 progress: 0 / 12
+
+---
+
+## PHASE-104: Performance and Benchmark Proof
+
+| ID | Task | Status |
+|------|------|--------|
+| 104.1.1 | [Performance surface audit] Inventory performance-sensitive surfaces and current performance claims | 🔴 |
+| 104.1.2 | [Performance surface audit] Define key metrics and benchmark environments | 🔴 |
+| 104.2.1 | [Benchmark harness creation or normalization] Normalize the benchmark entrypoint and invocation flow | 🔴 |
+| 104.2.2 | [Benchmark harness creation or normalization] Add reproducible benchmark execution instructions | 🔴 |
+| 104.3.1 | [Baseline metric capture] Capture baseline metrics for the canonical path where feasible | 🔴 |
+| 104.3.2 | [Baseline metric capture] Record measurement caveats and environment details | 🔴 |
+| 104.4.1 | [Bottleneck analysis] Analyze baseline results for bottlenecks in the supported path | 🔴 |
+| 104.4.2 | [Bottleneck analysis] Record validated optimization follow-ups without overcommitting | 🔴 |
+| 104.5.1 | [Performance documentation] Write honest performance documentation tied to measured evidence | 🔴 |
+| 104.5.2 | [Performance documentation] Cross-link performance docs from the supported-path surfaces | 🔴 |
+| 104.6.1 | [Optimization follow-up queue] Prioritize the performance optimization backlog from measured evidence | 🔴 |
+| 104.6.2 | [Optimization follow-up queue] Tag benchmark checkpoints for future regression tracking | 🔴 |
+
+> Phase 104 progress: 0 / 12
+
+---
+
+## PHASE-105: Security Posture and Trust Signals
+
+| ID | Task | Status |
+|------|------|--------|
+| 105.1.1 | [Security documentation audit] Audit current security documentation and policy signals | 🔴 |
+| 105.1.2 | [Security documentation audit] Map security-relevant code touchpoints for the supported path | 🔴 |
+| 105.2.1 | [Threat model definition] Draft a repository threat model for the supported product | 🔴 |
+| 105.2.2 | [Threat model definition] Document trust boundaries and security assumptions in user-facing docs | 🔴 |
+| 105.3.1 | [Auth and crypto implementation review] Review authentication and cryptography implementation touchpoints against docs | 🔴 |
+| 105.3.2 | [Auth and crypto implementation review] Record unfinished, risky, or unreviewed security areas | 🔴 |
+| 105.4.1 | [Security workflow and policy cleanup] Tighten `docs/SECURITY.md` and vulnerability-reporting guidance | 🔴 |
+| 105.4.2 | [Security workflow and policy cleanup] Add explicit security review-status language to core docs | 🔴 |
+| 105.5.1 | [Trust signal enhancements] Improve visible repository trust signals around security and support | 🔴 |
+| 105.5.2 | [Trust signal enhancements] Document what is and is not security-reviewed | 🔴 |
+
+> Phase 105 progress: 0 / 10
+
+---
+
+## PHASE-106: Enterprise-Grade Repo Polish
+
+| ID | Task | Status |
+|------|------|--------|
+| 106.1.1 | [Root directory cleanup plan] Audit root-directory clutter, duplication, and first-contact confusion | 🔴 |
+| 106.1.2 | [Root directory cleanup plan] Execute one low-risk root-level cleanup with validation | 🔴 |
+| 106.2.1 | [Documentation style and consistency pass] Define concise documentation style rules for top-level docs | 🔴 |
+| 106.2.2 | [Documentation style and consistency pass] Normalize high-visibility docs to the defined style | 🔴 |
+| 106.3.1 | [Onboarding and contributor flow cleanup] Audit onboarding and contributor flow from first read to first change | 🔴 |
+| 106.3.2 | [Onboarding and contributor flow cleanup] Tighten contributor and onboarding docs around the supported path | 🔴 |
+| 106.4.1 | [Canonical command references] Consolidate canonical commands for setup, build, test, and demo flows | 🔴 |
+| 106.4.2 | [Canonical command references] Validate canonical commands against actual scripts or entrypoints | 🔴 |
+| 106.5.1 | [Public-facing repo presentation polish] Polish public-facing docs to emphasize proof over posture | 🔴 |
+| 106.5.2 | [Public-facing repo presentation polish] Remove remaining high-visibility unsupported claims | 🔴 |
+
+> Phase 106 progress: 0 / 10
+
+---
+
+## PHASE-107: Release Readiness System
+
+| ID | Task | Status |
+|------|------|--------|
+| 107.1.1 | [Release process audit] Audit the current release process, artifacts, and repo signals | 🔴 |
+| 107.1.2 | [Release process audit] Identify missing release-discipline components | 🔴 |
+| 107.2.1 | [Versioning policy] Define a versioning policy appropriate for the supported product | 🔴 |
+| 107.2.2 | [Versioning policy] Document version semantics and branch expectations | 🔴 |
+| 107.3.1 | [Release checklist] Create a release checklist grounded in validation evidence | 🔴 |
+| 107.3.2 | [Release checklist] Add release evidence requirements and result-capture guidance | 🔴 |
+| 107.4.1 | [Known issues and blocker tracking] Define blocker severity levels and known-issue taxonomy | 🔴 |
+| 107.4.2 | [Known issues and blocker tracking] Create known-issues and blocker tracking guidance | 🔴 |
+| 107.5.1 | [Production readiness criteria] Define ship/no-ship criteria for the supported product | 🔴 |
+| 107.5.2 | [Production readiness criteria] Cross-link release-readiness criteria from high-visibility docs | 🔴 |
+
+> Phase 107 progress: 0 / 10
+
+---
+
+## PHASE-108: Legendary Consistency Pass
+
+| ID | Task | Status |
+|------|------|--------|
+| 108.1.1 | [Terminology normalization] Build a terminology glossary from core product docs | 🔴 |
+| 108.1.2 | [Terminology normalization] Normalize high-visibility terminology to the glossary | 🔴 |
+| 108.2.1 | [Naming consistency audit] Audit naming consistency across visible interfaces and docs | 🔴 |
+| 108.2.2 | [Naming consistency audit] Fix the highest-confusion naming mismatches | 🔴 |
+| 108.3.1 | [Document cross-linking and truth-source cleanup] Consolidate truth sources and cross-links across core docs | 🔴 |
+| 108.3.2 | [Document cross-linking and truth-source cleanup] Remove contradictory duplicate guidance from core docs | 🔴 |
+| 108.4.1 | [Final support-claim audit] Audit final support and performance claims against evidence | 🔴 |
+| 108.4.2 | [Final support-claim audit] Correct remaining unsupported, preview, or ambiguous claims | 🔴 |
+| 108.5.1 | [Final polish pass] Apply the final consistency polish to key docs and repository surfaces | 🔴 |
+| 108.5.2 | [Final polish pass] Run the final consistency validation sweep and close the program | 🔴 |
+
+> Phase 108 progress: 0 / 10
+
+---
+
+> Transformation program progress: 16 / 129 microtasks complete.

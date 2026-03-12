@@ -24,60 +24,53 @@
 
 ---
 
+## Current Status
+
+RootStream currently supports one primary product path:
+
+- Linux host via `rootstream host`
+- Linux peer via `rootstream connect <code>`
+- direct peer-to-peer networking on a LAN or similarly controlled network
+- pairing/bootstrap via `rootstream --qr`, peer codes, and local discovery where available
+
+Repository surfaces such as the KDE client, Windows client, web dashboard, Android, iOS, VR, and infrastructure code exist in-tree, but they are not the default supported product path today.
+
+Start with these truth sources:
+
+- [Product Core](docs/PRODUCT_CORE.md)
+- [Support Matrix](docs/SUPPORT_MATRIX.md)
+- [Core Path](docs/CORE_PATH.md)
+
+## Not Yet Supported As Defaults
+
+Do not treat these as part of the current default supported path:
+
+- KDE as the primary desktop client
+- Windows as the primary peer platform
+- Android or iOS as supported client platforms
+- the React dashboard or optional web backend as the default management path
+- VR / Proton as part of the supported baseline experience
+- cloud-managed or account-based RootStream deployments
+- benchmark numbers as settled product guarantees
+
 ## What is RootStream?
 
-RootStream is a **lightweight, encrypted, peer-to-peer game streaming solution** designed specifically for Linux. Design goals include:
+RootStream is a Linux-first native peer-to-peer game streaming project. The repository is broader than the current support commitment, so the most important distinction is between what exists in code and what the project currently supports.
 
-- ✅ **No accounts required** - Each device has a unique cryptographic identity
-- ✅ **No central servers** - Direct peer-to-peer connections
-- ✅ **Minimal compositor dependencies** - Uses kernel DRM/KMS directly when available
-- ✅ **Fewer permission popups** - Bypasses PipeWire/portal stack after initial video group setup
-- ✅ **Zero-configuration** - Share a QR code, instant connection
-- ✅ **Hardware accelerated** - VA-API (Intel/AMD) encoding when available
-- ✅ **Low memory footprint** - ~15MB baseline (varies by enabled features)
-- ✅ **Strong encryption** - Ed25519 + ChaCha20-Poly1305 (libsodium)
+What is evidence-backed today:
 
-## Why RootStream?
+- no required account or hosted control-plane in the supported core path
+- native Linux host and peer entrypoints in the root executable
+- libsodium-based cryptographic primitives
+- QR or peer-code bootstrap for the native flow
+- local discovery and backend fallback code in the native runtime
 
-### The Problem
+What is not yet a top-level support commitment:
 
-Current Linux streaming solutions (Steam Remote Play, Parsec, Sunshine) suffer from:
-
-| Issue | Steam | Parsec | Sunshine | **RootStream** |
-|-------|-------|--------|----------|----------------|
-| Requires account | ✗ | ✗ | ✗ | **✓** |
-| PipeWire dependency | ✗ | ✗ | ✗ | **✓** (bypasses) |
-| Permission dialogs | Constant | Sometimes | Sometimes | **Rarely¹** |
-| Compositor resilience | Low | Low | Low | **Higher²** |
-| Consumer GPU support | Limited³ | ✓ | ✓ | **Yes⁴** |
-| Stream encryption | ✗ | ✗ | ✗ | **✓** |
-| Open source | ✗ | ✗ | ✓ | **✓** |
-
-¹ After initial video group membership setup
-² Uses kernel-stable DRM/KMS APIs (10+ year stability)
-³ NVFBC disabled on GeForce cards
-⁴ Intel/AMD via VA-API; NVIDIA via VDPAU wrapper
-
-### The Solution
-
-RootStream takes a **radically different approach**:
-```
-Traditional Stack (7+ layers, more failure points):
-┌─────────────────────────────────────────────┐
-│ App → Compositor → PipeWire → Portal →      │
-│ → Permission Dialog → FFmpeg → Encoder      │
-└─────────────────────────────────────────────┘
-Estimated: 30-56ms latency | 500MB memory
-
-RootStream Stack (3 layers, kernel-stable APIs):
-┌─────────────────────────────────────────────┐
-│ DRM/KMS → VA-API → ChaCha20-Poly1305 → UDP  │
-└─────────────────────────────────────────────┘
-Target: 14-24ms latency | ~15MB memory baseline
-```
-
-> **Note**: Performance numbers are design targets. Actual performance varies by hardware,
-> network conditions, and system configuration. See "Reality vs. Claims" section below.
+- a benchmark-backed latency or memory proof set
+- a clean NVIDIA-first product story
+- KDE as the default desktop client
+- web, mobile, VR, or cloud-managed deployment as equal first-class product lanes
 
 ---
 
@@ -96,14 +89,15 @@ Target: 14-24ms latency | ~15MB memory baseline
 
 ### 🎮 Optimized for Gaming
 
-- **Low Latency Target** - 14-24ms end-to-end on LAN (varies by hardware and network)
-- **High Framerate Support** - Target 60 FPS at 1080p, 30 FPS at 4K (depends on encoder capability)
-- **Hardware Acceleration** - VA-API (Intel/AMD) and optional NVENC fallback (NVIDIA)
-- **Adaptive Quality** - Prioritizes framerate consistency
-- **Input Injection** - Virtual keyboard/mouse via uinput (requires video group membership)
+- **Linux-first native runtime** - Host and peer flows exist in the root executable
+- **VA-API acceleration path** - Intel/AMD Linux acceleration story is the clearest evidence-backed path today
+- **Adaptive and fallback-oriented design** - Multiple capture, discovery, audio, and encode paths exist in the native runtime
+- **Input forwarding** - Native input paths exist for the Linux flow
+- **Performance targets exist** - Benchmark-backed proof is still being tightened; treat headline numbers as targets rather than settled guarantees
 
 ### 🎥 Stream Recording (Phase 18)
 
+- **Current maturity: Preview** - Recording code and CLI exposure exist, but recording is not yet the primary supported product story
 - **Multi-Codec Support** - H.264 (fast, universal), VP9 (better compression), AV1 (best compression)
 - **Quality Presets** - Fast, Balanced, High Quality, and Archival modes
 - **Container Formats** - MP4 (universal compatibility), Matroska/MKV (advanced features)
@@ -111,29 +105,22 @@ Target: 14-24ms latency | ~15MB memory baseline
 - **Smart Storage** - Automatic disk space monitoring and cleanup of old recordings
 - **Instant Replay** - Save the last N seconds of gameplay (buffer feature)
 
-> **Note**: Recording feature requires FFmpeg libraries. See `src/recording/README.md` for details.
+> **Note**: Recording feature requires FFmpeg libraries. See `src/recording/README.md` for details and treat it as preview rather than the supported default path.
 
-### 💡 Actually Easy to Use
+### Current Core Workflow
 
-1. **Install RootStream**
-```bash
-   make && sudo make install
-```
+1. Build the native Linux binary.
+2. Start the host with `rootstream host`.
+3. Generate/share host identity with `rootstream --qr`.
+4. Connect from another Linux machine with `rootstream connect <peer_code>`.
 
-2. **Show your QR code**
-```bash
-   rootstream --qr
-```
-
-3. **Scan on another device**
-   - Instant pairing, no typing 44-character keys
-
-4. **Auto-connect on LAN**
-   - mDNS discovery finds peers automatically
+See [docs/CORE_PATH.md](docs/CORE_PATH.md) for the canonical path and [docs/SUPPORT_MATRIX.md](docs/SUPPORT_MATRIX.md) for adjacent surfaces that are preview or experimental.
 
 ---
 
 ## Installation
+
+> **Support note**: The current supported product core is Linux-first. Intel/AMD VA-API is the clearest supported acceleration path today. NVIDIA-related instructions are kept here because the repository contains NVIDIA-oriented code and package assumptions, but they should not be read as a settled support guarantee.
 
 ### Arch Linux
 
@@ -183,7 +170,7 @@ vainfo
 **Expected output:**
 - **Intel**: `iHD driver` or `i965 driver`
 - **AMD**: `Radeon` or `AMD Radeon`
-- **NVIDIA**: `VDPAU backend` or `nvidia`
+- **NVIDIA**: output varies by driver stack; treat NVIDIA results as less settled than the Intel/AMD VA-API path
 
 ---
 
@@ -247,7 +234,7 @@ sudo dnf install gcc make libdrm-devel libva-devel gtk3-devel \
 
 ### First Time Setup
 
-1. **Generate your identity**
+1. **Generate host identity material**
 ```bash
    rootstream --qr
 ```
@@ -259,23 +246,35 @@ sudo dnf install gcc make libdrm-devel libva-devel gtk3-devel \
    ╚══════╝
 ```
 
-2. **Share with another device**
-   - Scan the QR code with your phone/tablet
-   - Or copy/paste the text code
+2. **Start the Linux host**
+```bash
+rootstream host
+```
 
-3. **That's it!**
-   - Devices auto-connect when on same network
-   - Or manually: `rootstream connect <peer_code>`
+3. **Connect from the Linux peer**
+```bash
+rootstream connect <peer_code>
+```
+
+4. **Optional convenience**
+   - mDNS discovery may help on compatible local networks
+   - peer-code sharing remains the clearest documented bootstrap path
 
 ### Daily Use
 
-**Tray App (Recommended)**
+**Canonical supported path**
+```bash
+rootstream host
+rootstream --qr
+rootstream connect kXx7Y...@gaming-pc
+```
+
+**Alternate Linux tray entrypoint**
 ```bash
 rootstream
 ```
-- System tray icon shows status
-- Left-click: Show your QR code
-- Right-click: Menu (connect, view peers, quit)
+- Available when GUI dependencies are present
+- Not the canonical path documented in `docs/CORE_PATH.md`
 
 **Command Line**
 ```bash
@@ -321,6 +320,7 @@ rootstream --replay-save last30s.mp4       # Save last 30 seconds
 
 **Troubleshooting**
 - See `docs/TROUBLESHOOTING.md` for decode, black screen, input, and dependency diagnostics.
+- See `docs/SUPPORT_MATRIX.md` before treating alternate surfaces as supported.
 
 **Identity Backup & Restore**
 RootStream stores identity keys in `~/.config/rootstream/`:
@@ -517,7 +517,7 @@ are validated vs. aspirational design targets.
 
 - **Compositor crash resilience**: DRM/KMS bypasses compositor in theory, but not extensively tested
   
-- **NVIDIA support**: NVENC backend exists but VDPAU wrapper performance not benchmarked
+- **NVIDIA support**: NVIDIA-oriented paths exist, but the repository does not yet present a clean benchmark-backed or support-committed NVIDIA story
 
 #### 🎯 Aspirational / Not Fully Validated
 
@@ -528,7 +528,7 @@ are validated vs. aspirational design targets.
 - **Security audit**: While using audited libraries (libsodium), RootStream's implementation
   has not undergone independent security audit
 
-- **Cross-platform**: Currently Linux-only; Windows/macOS support is future work
+- **Cross-platform**: The supported core is Linux-to-Linux. A Windows client build path exists as preview; broader cross-platform support remains future work
 
 - **Perfect forward secrecy**: Session key derivation uses ECDH, but no explicit ephemeral
   key rotation per-packet
@@ -624,19 +624,19 @@ A: They can intercept encrypted packets, but cannot decrypt without your private
 A: Only for internet streaming. LAN works without port forwarding.
 
 **Q: Works over internet?**  
-A: Yes, but you need to forward UDP port 9876. Consider VPN (Tailscale, ZeroTier) for easier setup.
+A: It may work with your own routing or VPN setup, but the current supported path is documented around LAN or similarly controlled private-network use.
 
 **Q: Why not just use Steam Remote Play?**  
-A: Steam requires their servers, uses PipeWire (breaks often), NVFBC disabled on consumer GPUs, no encryption, and constant permission dialogs on Wayland.
+A: RootStream is aimed at users who want a Linux-first native P2P path without required accounts. If you need a broader or more polished cross-platform product today, use the tool that fits your environment.
 
 **Q: Will this work on my GPU?**  
-A: Intel/AMD: Yes (VA-API). NVIDIA: Via VDPAU wrapper (slower but works). Run `vainfo` to check.
+A: Intel/AMD VA-API is the clearest supported acceleration story today. NVIDIA-related code exists, but the support story is still being cleaned up; see `docs/SUPPORT_MATRIX.md`.
 
 **Q: Can I stream to Windows/Mac/Android?**  
-A: Not yet. Linux-only currently. Cross-platform client planned.
+A: The supported core today is Linux-to-Linux. A Windows client build path exists as preview; Android, iOS, web, and VR remain outside the primary supported path.
 
 **Q: Is this better than Parsec?**  
-A: For Linux-to-Linux: Yes (lower latency, no account, encrypted). For other platforms: Use Parsec for now.
+A: Different goal. RootStream currently prioritizes a Linux-first native P2P path over broad platform coverage.
 
 ---
 
@@ -644,6 +644,9 @@ A: For Linux-to-Linux: Yes (lower latency, no account, encrypted). For other pla
 
 For more detailed information, see our documentation:
 
+- **[Product Core](docs/PRODUCT_CORE.md)** - Supported product definition and non-goals
+- **[Support Matrix](docs/SUPPORT_MATRIX.md)** - Supported, preview, experimental, and roadmap surfaces
+- **[Core Path](docs/CORE_PATH.md)** - Canonical Linux host/peer workflow and checkpoints
 - **[User Guide](docs/user-guide.md)** - Complete usage instructions, installation steps, and troubleshooting
 - **[API Reference](docs/api.md)** - Full C API documentation with examples
 - **[Architecture](docs/architecture.md)** - Technical deep-dive into protocol, security model, and internals
@@ -701,9 +704,9 @@ including integration with GitHub Copilot, Claude, and ChatGPT.
 
 ## Clients
 
-### KDE Plasma Native Client (Recommended)
+### KDE Plasma Client (Preview)
 
-RootStream now features a **native KDE Plasma Qt/QML client** for the best Linux desktop experience:
+A separate KDE Plasma Qt/QML client exists in-tree:
 
 ```bash
 cd clients/kde-plasma-client
@@ -713,15 +716,13 @@ make -j$(nproc)
 sudo make install
 ```
 
-**Features:**
-- Native Qt 6 / QML interface
-- KDE Plasma integration
-- Hardware-accelerated decoding (VA-API)
-- PulseAudio/PipeWire audio support
-- AI logging mode for debugging
-- Comprehensive settings management
+Current status:
 
-See **[clients/kde-plasma-client/README.md](clients/kde-plasma-client/README.md)** for complete documentation.
+- visible desktop client target with its own build system
+- not the canonical supported client path
+- subtree README still marks several core runtime areas as in progress
+
+See **[clients/kde-plasma-client/README.md](clients/kde-plasma-client/README.md)** for subtree-specific details, and see **[docs/SUPPORT_MATRIX.md](docs/SUPPORT_MATRIX.md)** before treating it as a supported default.
 
 ## Contributing
 

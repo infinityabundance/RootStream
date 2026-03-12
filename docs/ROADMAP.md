@@ -1,7 +1,9 @@
 # RootStream Roadmap
 
-This roadmap is **not a contract**, but a guide.  
-RootStream will evolve as we learn from real-world usage, hardware quirks, and community feedback.
+This roadmap is **not a contract** and it is not the source of truth for current support.  
+Use [`docs/PRODUCT_CORE.md`](PRODUCT_CORE.md) for the supported product definition, [`docs/SUPPORT_MATRIX.md`](SUPPORT_MATRIX.md) for current surface maturity, and [`docs/microtasks.md`](microtasks.md) for active execution work.
+
+This document should describe future work, hardening targets, and deferred ambitions only.
 
 Core principles (these NEVER change):
 
@@ -13,13 +15,13 @@ Core principles (these NEVER change):
 
 ---
 
-## v1.1 – Core Loop & Client MVP
+## v1.1 – Linux Core Path Hardening
 
 Goal: **End-to-end Linux ↔ Linux streaming that is boringly reliable.**
 
 ### Features
 
-- [ ] Linux client MVP
+- [ ] Harden the existing Linux peer/client path
   - [ ] VA-API decode path
   - [ ] Basic frame presentation (SDL2 or DRM/KMS)
   - [ ] Input capture + injection (keyboard/mouse)
@@ -109,7 +111,7 @@ Goal: **Turn RootStream into a clean reference implementation and protocol that 
   - [ ] `rootstream host --headless --card /dev/dri/cardX`
   - [ ] Use cases: render nodes, CI visualizations, remote GPU workloads
 
-- [ ] Windows client (client-only, no host)
+- [ ] Harden the existing Windows client path into a supportable client-only lane
   - [ ] Decode + input only
   - [ ] LAN/VPN use, no cloud
 

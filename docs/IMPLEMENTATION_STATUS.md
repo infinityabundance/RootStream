@@ -2,38 +2,31 @@
 
 ## 🎯 Overview
 
-This document details what is **actually implemented** vs. what is **claimed** in the README and issues.
+This document now serves as a legacy implementation-notes companion, not as the canonical support or execution-status source.
 
-> **Single source of truth for microtasks:** [`docs/microtasks.md`](microtasks.md)
+Use these documents for current truth:
 
-**Last Updated:** 2026 (Post-Phase 31 · Vulkan Renderer Complete)**
+- Current execution status and active work: [`docs/microtasks.md`](microtasks.md)
+- Supported product definition: [`docs/PRODUCT_CORE.md`](PRODUCT_CORE.md)
+- Supported, preview, experimental, and roadmap surfaces: [`docs/SUPPORT_MATRIX.md`](SUPPORT_MATRIX.md)
+- Claims evidence and mismatches: [`docs/audits/claims_audit.md`](audits/claims_audit.md)
 
-### 📊 High-Level Phase Completion
+**Last Updated:** 2026-03-12
 
-| Range | Phases | Status |
-|-------|--------|--------|
-| Core Infrastructure | 0–8 | ✅ Complete |
-| Protocol & Crypto | 9–11 | ✅ Complete |
-| KDE Client | 12–16 | ✅ Complete |
-| Platform & Recording | 17–19 | ✅ Complete |
-| Advanced Features | 20–23 | ✅ Complete |
-| VR / Proton | 24 | 🔄 In Progress (5/9 tasks) |
-| Security Hardening | 25 | ✅ Complete |
-| Network Optimization | 26 | ✅ Complete |
-| CI / Infrastructure | 27 | ✅ Complete |
-| Event Sourcing | 28 | ✅ Complete |
-| Mobile Full Client | 29 | 🔄 In Progress (3/8 tasks) |
-| Security Phase 2 | 30 | ✅ Complete |
-| Vulkan Renderer | 31 | ✅ Complete |
-| Backend Integration | 32 | 🔴 Not Started |
-| Code Standards | 33 | 🔴 Not Started |
-| Production Readiness | 34 | 🔴 Not Started |
+### 📊 Current Truth Boundary
 
-**Overall: 186 / 221 microtasks complete (84%)**
+| Topic | Current source of truth | Current read |
+|-------|--------------------------|--------------|
+| Execution ledger | [`docs/microtasks.md`](microtasks.md) | Canonical execution tracking resumes at Phase 98. |
+| Supported product path | [`docs/PRODUCT_CORE.md`](PRODUCT_CORE.md) | Linux host plus Linux peer is the current supported core. |
+| Support and maturity labels | [`docs/SUPPORT_MATRIX.md`](SUPPORT_MATRIX.md) | Only the Linux native root path is currently supported; KDE/Windows are preview; web/mobile/VR are not supported defaults. |
+| Claim grading | [`docs/audits/claims_audit.md`](audits/claims_audit.md) | README, status, and subsystem claims are graded as evidenced, partial, unsupported, or unclear. |
+
+Historical phase notes remain below as legacy implementation context. They should not be read as the current support matrix, roadmap, or execution ledger.
 
 ---
 
-## ✅ Fully Implemented (Phases 0-7)
+## Historical Phase Notes (Legacy)
 
 ### PHASE 0: Backend Infrastructure
 - [x] Context struct with backend tracking

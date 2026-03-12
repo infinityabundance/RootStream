@@ -1,5 +1,14 @@
 # RootStream Technical Architecture
 
+This document explains subsystem structure and intended technical boundaries. It is not the source of truth for support status, roadmap scope, or current execution progress.
+
+Use these documents for neighboring questions:
+
+- Support status: [`docs/SUPPORT_MATRIX.md`](SUPPORT_MATRIX.md)
+- Supported product scope: [`docs/PRODUCT_CORE.md`](PRODUCT_CORE.md)
+- Current execution work: [`docs/microtasks.md`](microtasks.md)
+- Claims evidence: [`docs/audits/claims_audit.md`](audits/claims_audit.md)
+
 ## Design Philosophy
 
 RootStream is built on one core principle: **Use the kernel APIs directly**. Every abstraction layer adds latency, complexity, and failure points. We bypass them all.
@@ -45,7 +54,7 @@ UDP socket
 - Uses kernel APIs (stable for 10+ years)
 - Reduced permission requirements (video group membership)
 - Reduced compositor dependencies
-- Target latency: 14-24ms (varies by hardware; see Performance section)
+- Latency targets exist, but benchmark-backed proof belongs in dedicated benchmark and performance docs rather than this architecture summary
 
 ## Component Details
 
@@ -104,10 +113,10 @@ munmap(pixels, size);
 **What is VA-API?**
 Video Acceleration API - hardware video encoding/decoding interface.
 
-**Supported Hardware:**
+**Current acceleration codepaths in tree:**
 - Intel: All modern integrated + discrete GPUs
 - AMD: AMDGPU driver (GCN 1.0+)
-- NVIDIA: Via VDPAU wrapper (lower performance)
+- NVIDIA: NVIDIA-oriented code exists in-tree, but the current public support story is still being reconciled
 
 **How It Works:**
 ```c
