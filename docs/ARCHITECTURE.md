@@ -8,6 +8,10 @@ Use these documents for neighboring questions:
 - Supported product scope: [`docs/PRODUCT_CORE.md`](PRODUCT_CORE.md)
 - Current execution work: [`docs/microtasks.md`](microtasks.md)
 - Claims evidence: [`docs/audits/claims_audit.md`](audits/claims_audit.md)
+- Architectural boundary rules: [`docs/architecture/BOUNDARY_RULES.md`](architecture/BOUNDARY_RULES.md)
+- Observability and logging: [`docs/OBSERVABILITY.md`](OBSERVABILITY.md)
+- Performance baselines: [`docs/PERFORMANCE.md`](PERFORMANCE.md)
+- Terminology: [`docs/GLOSSARY.md`](GLOSSARY.md)
 
 ## Design Philosophy
 

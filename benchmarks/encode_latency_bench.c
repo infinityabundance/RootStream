@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
 /* Raw encoder header is part of the main include */
 #include "../include/rootstream.h"
