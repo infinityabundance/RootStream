@@ -68,3 +68,4 @@ __pycache__/
 # Logs and temporary files
 infrastructure/**/*.log
 infrastructure/**/tmp/
+_demo_state/

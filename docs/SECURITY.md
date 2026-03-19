@@ -1,25 +1,36 @@
 # Security Policy
 
-## Security Architecture (Phase 21)
+## Security Architecture
 
-RootStream implements comprehensive end-to-end encryption and security features:
+RootStream uses audited cryptographic primitives via libsodium for all
+encryption and authentication operations. The cryptographic design is:
 
-### **Enhanced Security Features**
-- ✅ **Cryptographic Primitives**: AES-256-GCM, ChaCha20-Poly1305 AEAD encryption
-- ✅ **Key Exchange**: ECDH (X25519) with X3DH protocol for asynchronous messaging
-- ✅ **User Authentication**: Argon2id password hashing with TOTP/2FA support
-- ✅ **Session Management**: Secure sessions with perfect forward secrecy
-- ✅ **Attack Prevention**: Replay protection, brute force defense, rate limiting
-- ✅ **Security Audit**: Comprehensive event logging and audit trails
+- **Ed25519** keypairs for device identity (one keypair per machine, generated once)
+- **X25519 ECDH** for session key derivation from device keypairs
+- **ChaCha20-Poly1305** authenticated encryption for all stream packets
+- **Monotonic nonces** for replay attack prevention
 
-See [PHASE21_SUMMARY.md](planning/PHASE21_SUMMARY.md) for detailed security documentation.
+> **Important**: RootStream uses audited algorithms (Ed25519, ChaCha20-Poly1305
+> via libsodium), but the RootStream implementation itself has **not** undergone
+> independent security audit. Use on trusted networks only.
 
-## Supported versions
+For a full threat model including trust boundaries, threat scenarios, and
+residual risks, see [`docs/THREAT_MODEL.md`](THREAT_MODEL.md).
 
-RootStream is an early-stage project. Security issues will generally be addressed
-on the latest `main` branch and the most recent tagged release.
+### What is currently NOT implemented
 
-## Reporting a vulnerability
+The following are **not** part of the current supported product:
+- Argon2id password hashing (account system not present in supported path)
+- TOTP/2FA (no account system)
+- Rate limiting at the network layer
+- At-rest encryption of recording files
+
+## Supported Versions
+
+RootStream is an early-stage project. Security issues will generally be
+addressed on the latest `main` branch and the most recent tagged release.
+
+## Reporting a Vulnerability
 
 **Please do not open public GitHub issues for security vulnerabilities.**
 
@@ -29,7 +40,7 @@ Instead:
 2. Include:
    - A clear description of the issue
    - Steps to reproduce, if possible
-   - Any potential impact you’ve identified
+   - Any potential impact you've identified
 
 We will:
 
@@ -43,14 +54,16 @@ Security issues of interest include (but are not limited to):
 
 - Remote code execution
 - Unauthorized access to streams or encryption keys
-- Cryptographic misuse
+- Cryptographic misuse or implementation errors
 - Privilege escalation due to RootStream usage
+- Private key exposure
 
 Issues that are **not** considered security vulnerabilities:
 
 - Misconfiguration of the host system (e.g. unsafe firewall rules)
 - Compromise of other software on the same host
 - Physical access attacks
+- Streaming over untrusted public networks without VPN
 
 RootStream aims to use well-vetted cryptographic primitives (via libsodium) and
 a minimal attack surface. Security feedback and review are highly appreciated.

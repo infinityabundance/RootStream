@@ -303,11 +303,12 @@ int rs_client_session_run(rs_client_session_t *s) {
         {
             /* Decode Opus-compressed audio to PCM */
             int16_t pcm_buf[48000 / 10 * 2];  /* 100ms stereo at 48 kHz */
+            size_t pcm_len = sizeof(pcm_buf) / sizeof(pcm_buf[0]);
             int pcm_samples = rootstream_opus_decode(ctx,
                                                       ctx->current_audio.data,
                                                       ctx->current_audio.size,
                                                       pcm_buf,
-                                                      sizeof(pcm_buf) / 2);
+                                                      &pcm_len);
             if (pcm_samples > 0) {
                 rs_audio_frame_t af;
                 af.samples      = pcm_buf;

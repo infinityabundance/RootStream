@@ -10,6 +10,15 @@ CC := gcc
 CFLAGS := -Wall -Wextra -Werror -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation -pedantic -std=gnu11 -O2 -D_GNU_SOURCE
 CFLAGS += -I./include
 
+# Allow caller to inject additional compiler/linker flags (e.g. sanitizers)
+# Example: make EXTRA_CFLAGS="-fsanitize=address,undefined" EXTRA_LDFLAGS="-fsanitize=address,undefined"
+ifdef EXTRA_CFLAGS
+    CFLAGS += $(EXTRA_CFLAGS)
+endif
+ifdef EXTRA_LDFLAGS
+    LDFLAGS += $(EXTRA_LDFLAGS)
+endif
+
 # Debug flags (use: make DEBUG=1)
 ifdef DEBUG
     CFLAGS += -g -O0 -DDEBUG
@@ -61,6 +70,16 @@ endif
 ifeq ($(shell pkg-config --exists avahi-client && echo yes),yes)
     CFLAGS += -DHAVE_AVAHI $(shell pkg-config --cflags avahi-client)
     LIBS += $(shell pkg-config --libs avahi-client)
+endif
+
+# PipeWire (optional, for PipeWire audio backend)
+PIPEWIRE_FOUND := $(shell pkg-config --exists libpipewire-0.3 && echo yes)
+ifeq ($(PIPEWIRE_FOUND),yes)
+    CFLAGS += $(shell pkg-config --cflags libpipewire-0.3)
+    LIBS += $(shell pkg-config --libs libpipewire-0.3)
+    CFLAGS += -DHAVE_PIPEWIRE
+else
+    $(info PipeWire not found - PipeWire audio backend will be disabled)
 endif
 
 # SDL2 (required for client display)
@@ -199,6 +218,9 @@ SRCS := src/main.c \
         src/recording.c \
         src/diagnostics.c \
         src/ai_logging.c \
+        src/client_session.c \
+        src/audio_capture_pipewire.c \
+        src/audio_playback_pipewire.c \
         src/platform/platform_linux.c \
         src/packet_validate.c
 

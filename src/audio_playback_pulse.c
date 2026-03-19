@@ -142,7 +142,7 @@ int audio_playback_init_pulse(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success, -1 on error
  */
-int audio_playback_write_pulse(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples,
                                size_t num_samples) {
 #ifdef HAVE_PULSEAUDIO
     if (!ctx || !samples || num_samples == 0) {
