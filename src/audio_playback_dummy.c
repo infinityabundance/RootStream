@@ -41,7 +41,7 @@ int audio_playback_init_dummy(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success (always succeeds)
  */
-int audio_playback_write_dummy(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples,
                                size_t num_samples) {
     /* Do nothing - discard audio */
     (void)ctx;

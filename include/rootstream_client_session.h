@@ -24,7 +24,7 @@
  *   ┌──────────────────────────────────────────────────────────────┐
  *   │                     rootstream_core                          │
  *   │                                                              │
- *   │  network.c → crypto.c → packet_validate.c → decoder/*.c     │
+ *   │  network.c → crypto.c → packet_validate.c → decoder/...c    │
  *   │                              ↓                               │
  *   │                  rs_client_session_t (client_session.c)      │
  *   │                    on_video_fn ──→ caller's video renderer   │

@@ -647,9 +647,17 @@ For more detailed information, see our documentation:
 - **[Product Core](docs/PRODUCT_CORE.md)** - Supported product definition and non-goals
 - **[Support Matrix](docs/SUPPORT_MATRIX.md)** - Supported, preview, experimental, and roadmap surfaces
 - **[Core Path](docs/CORE_PATH.md)** - Canonical Linux host/peer workflow and checkpoints
-- **[User Guide](docs/user-guide.md)** - Complete usage instructions, installation steps, and troubleshooting
-- **[API Reference](docs/api.md)** - Full C API documentation with examples
-- **[Architecture](docs/architecture.md)** - Technical deep-dive into protocol, security model, and internals
+- **[Build Validation](docs/BUILD_VALIDATION.md)** - Verified build instructions, required vs optional deps, build blockers
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical deep-dive into subsystems and design
+- **[Architecture Boundary Rules](docs/architecture/BOUNDARY_RULES.md)** - Layering rules, naming conventions
+- **[Observability](docs/OBSERVABILITY.md)** - Logging, metrics, session tracing, diagnostics
+- **[Performance](docs/PERFORMANCE.md)** - Benchmark baselines and latency targets
+- **[Security Policy](docs/SECURITY.md)** and **[Threat Model](docs/THREAT_MODEL.md)** - Cryptographic design and risk model
+- **[Testing](docs/TESTING.md)** - Test suite structure, coverage map, and how to run tests
+- **[CI Coverage](docs/CI_COVERAGE.md)** - What CI validates and what it does not
+- **[Release Process](docs/RELEASE_PROCESS.md)** - Versioning, release checklist, ship criteria
+- **[Known Issues](docs/KNOWN_ISSUES.md)** - Active and resolved known issues
+- **[Glossary](docs/GLOSSARY.md)** - Canonical terminology reference
 - **[AI Logging Mode](docs/AI_LOGGING_MODE.md)** - Structured logging for AI-assisted development
 
 ---

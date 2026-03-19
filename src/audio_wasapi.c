@@ -274,7 +274,7 @@ static int wasapi_init_shared(wasapi_ctx_t *ctx) {
  * Playback
  * ============================================================================ */
 
-int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples, size_t num_samples) {
+int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples) {
     wasapi_ctx_t *wasapi = (wasapi_ctx_t *)ctx->audio_playback.backend_ctx;
     HRESULT hr;
     UINT32 padding;

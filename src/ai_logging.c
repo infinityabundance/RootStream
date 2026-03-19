@@ -21,6 +21,7 @@ static ai_logging_state_t g_ai_logging = {
 };
 
 void ai_logging_init(rootstream_ctx_t *ctx) {
+    (void)ctx;  /* ctx reserved for future per-session configuration */
     /* Check environment variable first */
     const char *copilot_mode = getenv("AI_COPILOT_MODE");
     if (copilot_mode && (strcmp(copilot_mode, "1") == 0 || 

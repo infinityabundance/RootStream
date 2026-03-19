@@ -131,10 +131,16 @@ typedef struct frame_buffer {
     uint32_t width;            /* Frame width */
     uint32_t height;           /* Frame height */
     uint32_t pitch;            /* Bytes per row (stride) */
-    uint32_t format;           /* Pixel format (DRM fourcc) */
+    uint32_t format;           /* Pixel format — use FRAME_FORMAT_* constants */
     uint64_t timestamp;        /* Capture timestamp (microseconds) */
     bool is_keyframe;          /* True if this is an I-frame/IDR */
 } frame_buffer_t;
+
+/* Pixel format constants for frame_buffer_t.format */
+#define FRAME_FORMAT_RGBA  0   /* 32-bit RGBA, 4 bytes/pixel */
+#define FRAME_FORMAT_NV12  1   /* YUV 4:2:0, Y plane + interleaved UV */
+#define FRAME_FORMAT_BGRA  2   /* 32-bit BGRA (Windows / Direct3D) */
+#define FRAME_FORMAT_P010  3   /* 10-bit NV12 (HDR) */
 
 /* ============================================================================
  * LATENCY - Stage timing and reporting
@@ -484,6 +490,8 @@ typedef struct {
     /* Audio settings */
     bool audio_enabled;        /* Enable audio streaming */
     uint32_t audio_bitrate;    /* Audio bitrate (bits/sec) */
+    int audio_channels;        /* Audio channel count (1=mono, 2=stereo) */
+    int audio_sample_rate;     /* Audio sample rate (Hz, e.g. 48000) */
 
     /* Network settings */
     uint16_t network_port;     /* UDP port */
@@ -526,7 +534,7 @@ typedef struct {
 typedef struct {
     const char *name;
     int (*init_fn)(rootstream_ctx_t *ctx);
-    int (*playback_fn)(rootstream_ctx_t *ctx, int16_t *samples, size_t num_samples);
+    int (*playback_fn)(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples);
     void (*cleanup_fn)(rootstream_ctx_t *ctx);
     bool (*is_available_fn)(void);
 } audio_playback_backend_t;
@@ -563,6 +571,17 @@ typedef struct rootstream_ctx {
     /* Network */
     rs_socket_t sock_fd;       /* UDP socket */
     uint16_t port;             /* Listening port */
+
+    /* Peer connection target (client mode) */
+    char peer_host[256];       /* Peer hostname or IP (client mode) */
+    int peer_port;             /* Peer port number (client mode) */
+
+    /* Current decoded audio buffer (client mode) */
+    struct {
+        uint8_t *data;         /* Encoded audio packet data */
+        size_t   size;         /* Encoded audio packet size */
+        size_t   capacity;     /* Allocated buffer capacity */
+    } current_audio;
 
     /* Peers */
     peer_t peers[MAX_PEERS];   /* Connected peers */
@@ -756,7 +775,7 @@ int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
 void audio_capture_cleanup(rootstream_ctx_t *ctx);
 
 int audio_playback_init(rootstream_ctx_t *ctx);
-int audio_playback_write(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples,
                         size_t num_samples);
 void audio_playback_cleanup(rootstream_ctx_t *ctx);
 
@@ -769,7 +788,7 @@ void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx);
 
 bool audio_playback_alsa_available(void);
 int audio_playback_init_alsa(rootstream_ctx_t *ctx);
-int audio_playback_write_alsa(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples,
                               size_t num_samples);
 void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx);
 
@@ -782,7 +801,7 @@ void audio_capture_cleanup_pulse(rootstream_ctx_t *ctx);
 
 bool audio_playback_pulse_available(void);
 int audio_playback_init_pulse(rootstream_ctx_t *ctx);
-int audio_playback_write_pulse(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples,
                                size_t num_samples);
 void audio_playback_cleanup_pulse(rootstream_ctx_t *ctx);
 
@@ -806,7 +825,7 @@ int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples,
 void audio_capture_cleanup_dummy(rootstream_ctx_t *ctx);
 
 int audio_playback_init_dummy(rootstream_ctx_t *ctx);
-int audio_playback_write_dummy(rootstream_ctx_t *ctx, int16_t *samples,
+int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples,
                                size_t num_samples);
 void audio_playback_cleanup_dummy(rootstream_ctx_t *ctx);
 
