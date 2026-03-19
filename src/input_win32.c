@@ -10,10 +10,11 @@
 
 #ifdef _WIN32
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
+
+#include "../include/rootstream.h"
 
 /* Linux input event types (from linux/input-event-codes.h) */
 #define EV_SYN 0x00
@@ -21,18 +22,18 @@
 #define EV_REL 0x02
 
 /* Linux relative axis codes */
-#define REL_X    0x00
-#define REL_Y    0x01
+#define REL_X 0x00
+#define REL_Y 0x01
 #define REL_WHEEL 0x08
 #define REL_HWHEEL 0x06
 
 /* Linux mouse button codes */
-#define BTN_MOUSE   0x110
-#define BTN_LEFT    0x110
-#define BTN_RIGHT   0x111
-#define BTN_MIDDLE  0x112
-#define BTN_SIDE    0x113
-#define BTN_EXTRA   0x114
+#define BTN_MOUSE 0x110
+#define BTN_LEFT 0x110
+#define BTN_RIGHT 0x111
+#define BTN_MIDDLE 0x112
+#define BTN_SIDE 0x113
+#define BTN_EXTRA 0x114
 
 /* ============================================================================
  * Linux to Windows Keycode Mapping
@@ -43,110 +44,110 @@
  */
 
 /* Linux keyboard codes (from input-event-codes.h) */
-#define KEY_ESC         1
-#define KEY_1           2
-#define KEY_2           3
-#define KEY_3           4
-#define KEY_4           5
-#define KEY_5           6
-#define KEY_6           7
-#define KEY_7           8
-#define KEY_8           9
-#define KEY_9           10
-#define KEY_0           11
-#define KEY_MINUS       12
-#define KEY_EQUAL       13
-#define KEY_BACKSPACE   14
-#define KEY_TAB         15
-#define KEY_Q           16
-#define KEY_W           17
-#define KEY_E           18
-#define KEY_R           19
-#define KEY_T           20
-#define KEY_Y           21
-#define KEY_U           22
-#define KEY_I           23
-#define KEY_O           24
-#define KEY_P           25
-#define KEY_LEFTBRACE   26
-#define KEY_RIGHTBRACE  27
-#define KEY_ENTER       28
-#define KEY_LEFTCTRL    29
-#define KEY_A           30
-#define KEY_S           31
-#define KEY_D           32
-#define KEY_F           33
-#define KEY_G           34
-#define KEY_H           35
-#define KEY_J           36
-#define KEY_K           37
-#define KEY_L           38
-#define KEY_SEMICOLON   39
-#define KEY_APOSTROPHE  40
-#define KEY_GRAVE       41
-#define KEY_LEFTSHIFT   42
-#define KEY_BACKSLASH   43
-#define KEY_Z           44
-#define KEY_X           45
-#define KEY_C           46
-#define KEY_V           47
-#define KEY_B           48
-#define KEY_N           49
-#define KEY_M           50
-#define KEY_COMMA       51
-#define KEY_DOT         52
-#define KEY_SLASH       53
-#define KEY_RIGHTSHIFT  54
-#define KEY_KPASTERISK  55
-#define KEY_LEFTALT     56
-#define KEY_SPACE       57
-#define KEY_CAPSLOCK    58
-#define KEY_F1          59
-#define KEY_F2          60
-#define KEY_F3          61
-#define KEY_F4          62
-#define KEY_F5          63
-#define KEY_F6          64
-#define KEY_F7          65
-#define KEY_F8          66
-#define KEY_F9          67
-#define KEY_F10         68
-#define KEY_NUMLOCK     69
-#define KEY_SCROLLLOCK  70
-#define KEY_KP7         71
-#define KEY_KP8         72
-#define KEY_KP9         73
-#define KEY_KPMINUS     74
-#define KEY_KP4         75
-#define KEY_KP5         76
-#define KEY_KP6         77
-#define KEY_KPPLUS      78
-#define KEY_KP1         79
-#define KEY_KP2         80
-#define KEY_KP3         81
-#define KEY_KP0         82
-#define KEY_KPDOT       83
-#define KEY_F11         87
-#define KEY_F12         88
-#define KEY_KPENTER     96
-#define KEY_RIGHTCTRL   97
-#define KEY_KPSLASH     98
-#define KEY_SYSRQ       99
-#define KEY_RIGHTALT    100
-#define KEY_HOME        102
-#define KEY_UP          103
-#define KEY_PAGEUP      104
-#define KEY_LEFT        105
-#define KEY_RIGHT       106
-#define KEY_END         107
-#define KEY_DOWN        108
-#define KEY_PAGEDOWN    109
-#define KEY_INSERT      110
-#define KEY_DELETE      111
-#define KEY_PAUSE       119
-#define KEY_LEFTMETA    125
-#define KEY_RIGHTMETA   126
-#define KEY_COMPOSE     127
+#define KEY_ESC 1
+#define KEY_1 2
+#define KEY_2 3
+#define KEY_3 4
+#define KEY_4 5
+#define KEY_5 6
+#define KEY_6 7
+#define KEY_7 8
+#define KEY_8 9
+#define KEY_9 10
+#define KEY_0 11
+#define KEY_MINUS 12
+#define KEY_EQUAL 13
+#define KEY_BACKSPACE 14
+#define KEY_TAB 15
+#define KEY_Q 16
+#define KEY_W 17
+#define KEY_E 18
+#define KEY_R 19
+#define KEY_T 20
+#define KEY_Y 21
+#define KEY_U 22
+#define KEY_I 23
+#define KEY_O 24
+#define KEY_P 25
+#define KEY_LEFTBRACE 26
+#define KEY_RIGHTBRACE 27
+#define KEY_ENTER 28
+#define KEY_LEFTCTRL 29
+#define KEY_A 30
+#define KEY_S 31
+#define KEY_D 32
+#define KEY_F 33
+#define KEY_G 34
+#define KEY_H 35
+#define KEY_J 36
+#define KEY_K 37
+#define KEY_L 38
+#define KEY_SEMICOLON 39
+#define KEY_APOSTROPHE 40
+#define KEY_GRAVE 41
+#define KEY_LEFTSHIFT 42
+#define KEY_BACKSLASH 43
+#define KEY_Z 44
+#define KEY_X 45
+#define KEY_C 46
+#define KEY_V 47
+#define KEY_B 48
+#define KEY_N 49
+#define KEY_M 50
+#define KEY_COMMA 51
+#define KEY_DOT 52
+#define KEY_SLASH 53
+#define KEY_RIGHTSHIFT 54
+#define KEY_KPASTERISK 55
+#define KEY_LEFTALT 56
+#define KEY_SPACE 57
+#define KEY_CAPSLOCK 58
+#define KEY_F1 59
+#define KEY_F2 60
+#define KEY_F3 61
+#define KEY_F4 62
+#define KEY_F5 63
+#define KEY_F6 64
+#define KEY_F7 65
+#define KEY_F8 66
+#define KEY_F9 67
+#define KEY_F10 68
+#define KEY_NUMLOCK 69
+#define KEY_SCROLLLOCK 70
+#define KEY_KP7 71
+#define KEY_KP8 72
+#define KEY_KP9 73
+#define KEY_KPMINUS 74
+#define KEY_KP4 75
+#define KEY_KP5 76
+#define KEY_KP6 77
+#define KEY_KPPLUS 78
+#define KEY_KP1 79
+#define KEY_KP2 80
+#define KEY_KP3 81
+#define KEY_KP0 82
+#define KEY_KPDOT 83
+#define KEY_F11 87
+#define KEY_F12 88
+#define KEY_KPENTER 96
+#define KEY_RIGHTCTRL 97
+#define KEY_KPSLASH 98
+#define KEY_SYSRQ 99
+#define KEY_RIGHTALT 100
+#define KEY_HOME 102
+#define KEY_UP 103
+#define KEY_PAGEUP 104
+#define KEY_LEFT 105
+#define KEY_RIGHT 106
+#define KEY_END 107
+#define KEY_DOWN 108
+#define KEY_PAGEDOWN 109
+#define KEY_INSERT 110
+#define KEY_DELETE 111
+#define KEY_PAUSE 119
+#define KEY_LEFTMETA 125
+#define KEY_RIGHTMETA 126
+#define KEY_COMPOSE 127
 
 /* Maximum Linux keycode we handle */
 #define MAX_LINUX_KEYCODE 256
@@ -156,7 +157,8 @@ static WORD linux_to_vk[MAX_LINUX_KEYCODE] = {0};
 static bool keymap_initialized = false;
 
 static void init_keymap(void) {
-    if (keymap_initialized) return;
+    if (keymap_initialized)
+        return;
 
     /* Clear table */
     memset(linux_to_vk, 0, sizeof(linux_to_vk));
@@ -275,12 +277,12 @@ static void init_keymap(void) {
     linux_to_vk[KEY_KPPLUS] = VK_ADD;
     linux_to_vk[KEY_KPDOT] = VK_DECIMAL;
     linux_to_vk[KEY_KPSLASH] = VK_DIVIDE;
-    linux_to_vk[KEY_KPENTER] = VK_RETURN;  /* Same as regular enter */
+    linux_to_vk[KEY_KPENTER] = VK_RETURN; /* Same as regular enter */
 
     /* Lock keys */
     linux_to_vk[KEY_SCROLLLOCK] = VK_SCROLL;
     linux_to_vk[KEY_PAUSE] = VK_PAUSE;
-    linux_to_vk[KEY_SYSRQ] = VK_SNAPSHOT;  /* Print Screen */
+    linux_to_vk[KEY_SYSRQ] = VK_SNAPSHOT; /* Print Screen */
 
     keymap_initialized = true;
 }
@@ -294,12 +296,12 @@ static void init_keymap(void) {
  */
 static int inject_key(uint16_t linux_code, int32_t value) {
     if (linux_code >= MAX_LINUX_KEYCODE) {
-        return 0;  /* Unknown key, ignore */
+        return 0; /* Unknown key, ignore */
     }
 
     WORD vk = linux_to_vk[linux_code];
     if (vk == 0) {
-        return 0;  /* No mapping, ignore */
+        return 0; /* No mapping, ignore */
     }
 
     INPUT input = {0};
@@ -311,17 +313,13 @@ static int inject_key(uint16_t linux_code, int32_t value) {
     if (value == 0) {
         input.ki.dwFlags = KEYEVENTF_KEYUP;
     } else {
-        input.ki.dwFlags = 0;  /* Key down */
+        input.ki.dwFlags = 0; /* Key down */
     }
 
     /* Extended key flag for certain keys */
-    if (vk == VK_RCONTROL || vk == VK_RMENU ||
-        vk == VK_INSERT || vk == VK_DELETE ||
-        vk == VK_HOME || vk == VK_END ||
-        vk == VK_PRIOR || vk == VK_NEXT ||
-        vk == VK_UP || vk == VK_DOWN ||
-        vk == VK_LEFT || vk == VK_RIGHT ||
-        vk == VK_LWIN || vk == VK_RWIN ||
+    if (vk == VK_RCONTROL || vk == VK_RMENU || vk == VK_INSERT || vk == VK_DELETE ||
+        vk == VK_HOME || vk == VK_END || vk == VK_PRIOR || vk == VK_NEXT || vk == VK_UP ||
+        vk == VK_DOWN || vk == VK_LEFT || vk == VK_RIGHT || vk == VK_LWIN || vk == VK_RWIN ||
         vk == VK_DIVIDE || vk == VK_NUMLOCK) {
         input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }
@@ -359,7 +357,7 @@ static int inject_mouse_button(uint16_t button, int32_t value) {
             input.mi.mouseData = XBUTTON2;
             break;
         default:
-            return 0;  /* Unknown button */
+            return 0; /* Unknown button */
     }
 
     if (SendInput(1, &input, sizeof(INPUT)) != 1) {
@@ -395,7 +393,7 @@ static int inject_mouse_move(uint16_t axis, int32_t delta) {
             input.mi.mouseData = delta * WHEEL_DELTA;
             break;
         default:
-            return 0;  /* Unknown axis */
+            return 0; /* Unknown axis */
     }
 
     if (SendInput(1, &input, sizeof(INPUT)) != 1) {

@@ -10,9 +10,10 @@
 #ifndef ROOTSTREAM_METADATA_EXPORT_H
 #define ROOTSTREAM_METADATA_EXPORT_H
 
-#include "stream_metadata.h"
-#include "metadata_store.h"
 #include <stddef.h>
+
+#include "metadata_store.h"
+#include "stream_metadata.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,9 +27,7 @@ extern "C" {
  * @param buf_sz  Buffer size
  * @return        Bytes written (excl. NUL), or -1 if buf too small
  */
-int metadata_export_json(const stream_metadata_t *meta,
-                           char                    *buf,
-                           size_t                   buf_sz);
+int metadata_export_json(const stream_metadata_t *meta, char *buf, size_t buf_sz);
 
 /**
  * metadata_store_export_json — render @store as a JSON object into @buf
@@ -40,9 +39,7 @@ int metadata_export_json(const stream_metadata_t *meta,
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 if buf too small
  */
-int metadata_store_export_json(const metadata_store_t *store,
-                                 char                   *buf,
-                                 size_t                  buf_sz);
+int metadata_store_export_json(const metadata_store_t *store, char *buf, size_t buf_sz);
 
 #ifdef __cplusplus
 }

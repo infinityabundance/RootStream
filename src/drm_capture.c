@@ -1,23 +1,24 @@
 /*
  * drm_capture.c - Direct DRM/KMS framebuffer capture
- * 
+ *
  * This is what makes us better than PipeWire/Steam Remote Play.
  * We read directly from the kernel's DRM subsystem, bypassing all
  * the compositor/portal nonsense that constantly breaks.
  */
 
-#include "../include/rootstream.h"
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <sys/ioctl.h>
-#include <errno.h>
-#include <dirent.h>
-#include <stdarg.h>
+#include <sys/mman.h>
 #include <time.h>
+#include <unistd.h>
+
+#include "../include/rootstream.h"
 
 /* DRM kernel headers */
 #include <drm/drm.h>
@@ -29,7 +30,7 @@
 
 static char last_error[256] = {0};
 
-const char* rootstream_get_error(void) {
+const char *rootstream_get_error(void) {
     return last_error;
 }
 
@@ -53,7 +54,7 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
 
     int count = 0;
     struct dirent *entry;
-    
+
     while ((entry = readdir(dir)) && count < max_displays) {
         if (strncmp(entry->d_name, "card", 4) != 0)
             continue;
@@ -62,7 +63,7 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
         if (snprintf(path, sizeof(path), "/dev/dri/%s", entry->d_name) >= (int)sizeof(path)) {
             continue;
         }
-        
+
         int fd = open(path, O_RDWR | O_CLOEXEC);
         if (fd < 0)
             continue;
@@ -78,11 +79,11 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
         uint32_t *connectors = calloc(res.count_connectors, sizeof(uint32_t));
         uint32_t *crtcs = calloc(res.count_crtcs, sizeof(uint32_t));
         uint32_t *fbs = calloc(res.count_fbs, sizeof(uint32_t));
-        
+
         res.connector_id_ptr = (uint64_t)connectors;
         res.crtc_id_ptr = (uint64_t)crtcs;
         res.fb_id_ptr = (uint64_t)fbs;
-        
+
         if (ioctl(fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
             free(connectors);
             free(crtcs);
@@ -95,7 +96,7 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
         for (uint32_t i = 0; i < res.count_connectors; i++) {
             struct drm_mode_get_connector conn = {0};
             conn.connector_id = connectors[i];
-            
+
             if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) < 0)
                 continue;
 
@@ -104,51 +105,50 @@ int rootstream_detect_displays(display_info_t *displays, int max_displays) {
                 continue;
 
             /* Get connector modes */
-            struct drm_mode_modeinfo *modes = calloc(conn.count_modes, 
-                                                     sizeof(struct drm_mode_modeinfo));
+            struct drm_mode_modeinfo *modes =
+                calloc(conn.count_modes, sizeof(struct drm_mode_modeinfo));
             conn.modes_ptr = (uint64_t)modes;
-            
+
             if (ioctl(fd, DRM_IOCTL_MODE_GETCONNECTOR, &conn) == 0 && conn.count_modes > 0) {
                 /* Use first mode (usually native resolution) */
                 displays[count].fd = fd;
                 displays[count].connector_id = connectors[i];
-                displays[count].crtc_id = conn.encoder_id;  /* Simplified */
+                displays[count].crtc_id = conn.encoder_id; /* Simplified */
                 displays[count].width = modes[0].hdisplay;
                 displays[count].height = modes[0].vdisplay;
                 displays[count].refresh_rate = modes[0].vrefresh;
-                
+
                 /* Get connector name */
-                if (snprintf(displays[count].name, sizeof(displays[count].name),
-                             "%s-%u", entry->d_name, conn.connector_type) >=
-                    (int)sizeof(displays[count].name)) {
-                    strncpy(displays[count].name, "drm-unknown",
-                            sizeof(displays[count].name) - 1);
+                if (snprintf(displays[count].name, sizeof(displays[count].name), "%s-%u",
+                             entry->d_name,
+                             conn.connector_type) >= (int)sizeof(displays[count].name)) {
+                    strncpy(displays[count].name, "drm-unknown", sizeof(displays[count].name) - 1);
                     displays[count].name[sizeof(displays[count].name) - 1] = '\0';
                 }
-                
+
                 count++;
                 free(modes);
                 break;
             }
-            
+
             free(modes);
         }
 
         free(connectors);
         free(crtcs);
         free(fbs);
-        
+
         if (count == 0)
             close(fd);
     }
 
     closedir(dir);
-    
+
     if (count == 0) {
         set_error("No active displays found");
         return -1;
     }
-    
+
     return count;
 }
 
@@ -179,8 +179,8 @@ int rootstream_select_display(rootstream_ctx_t *ctx, int display_index) {
                 close(displays[i].fd);
             }
         }
-        set_error("Display selection failed: index %d out of range (0-%d)",
-                  display_index, num_displays - 1);
+        set_error("Display selection failed: index %d out of range (0-%d)", display_index,
+                  num_displays - 1);
         return -1;
     }
 
@@ -219,7 +219,7 @@ int rootstream_capture_init_drm(rootstream_ctx_t *ctx) {
     /* Get first framebuffer (active display) */
     uint32_t *fbs = calloc(res.count_fbs, sizeof(uint32_t));
     res.fb_id_ptr = (uint64_t)fbs;
-    
+
     if (ioctl(ctx->display.fd, DRM_IOCTL_MODE_GETRESOURCES, &res) < 0) {
         free(fbs);
         set_error("Cannot get framebuffer IDs: %s", strerror(errno));
@@ -243,8 +243,8 @@ int rootstream_capture_init_drm(rootstream_ctx_t *ctx) {
     ctx->current_frame.capacity = frame_size;
     ctx->current_frame.format = 0x34325258; /* DRM_FORMAT_XRGB8888 */
 
-    printf("✓ DRM capture initialized: %dx%d @ %d Hz\n",
-           ctx->display.width, ctx->display.height, ctx->display.refresh_rate);
+    printf("✓ DRM capture initialized: %dx%d @ %d Hz\n", ctx->display.width, ctx->display.height,
+           ctx->display.refresh_rate);
 
     return 0;
 }
@@ -262,7 +262,7 @@ int rootstream_capture_frame_drm(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     /* Get framebuffer info */
     struct drm_mode_fb_cmd fb_cmd = {0};
     fb_cmd.fb_id = ctx->display.fb_id;
-    
+
     if (ioctl(ctx->display.fd, DRM_IOCTL_MODE_GETFB, &fb_cmd) < 0) {
         set_error("Cannot get framebuffer info: %s", strerror(errno));
         return -1;
@@ -271,17 +271,16 @@ int rootstream_capture_frame_drm(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     /* Map the framebuffer into our address space */
     struct drm_mode_map_dumb map_req = {0};
     map_req.handle = fb_cmd.handle;
-    
+
     if (ioctl(ctx->display.fd, DRM_IOCTL_MODE_MAP_DUMB, &map_req) < 0) {
         set_error("Cannot map framebuffer: %s", strerror(errno));
         return -1;
     }
 
     /* mmap the framebuffer */
-    void *fb_map = mmap(0, fb_cmd.pitch * fb_cmd.height,
-                        PROT_READ, MAP_SHARED,
-                        ctx->display.fd, map_req.offset);
-    
+    void *fb_map = mmap(0, fb_cmd.pitch * fb_cmd.height, PROT_READ, MAP_SHARED, ctx->display.fd,
+                        map_req.offset);
+
     if (fb_map == MAP_FAILED) {
         set_error("mmap failed: %s", strerror(errno));
         return -1;
@@ -290,7 +289,7 @@ int rootstream_capture_frame_drm(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
     /* Copy framebuffer data */
     memcpy(frame->data, fb_map, frame->size);
     frame->pitch = fb_cmd.pitch;
-    
+
     /* Get timestamp */
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

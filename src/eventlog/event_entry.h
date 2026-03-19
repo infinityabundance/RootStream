@@ -24,31 +24,31 @@
 #ifndef ROOTSTREAM_EVENT_ENTRY_H
 #define ROOTSTREAM_EVENT_ENTRY_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EVENT_ENTRY_HDR_SIZE  16
-#define EVENT_MSG_MAX         128   /**< Max message length including NUL */
+#define EVENT_ENTRY_HDR_SIZE 16
+#define EVENT_MSG_MAX 128 /**< Max message length including NUL */
 
 /** Log level */
 typedef enum {
     EVENT_LEVEL_DEBUG = 0,
-    EVENT_LEVEL_INFO  = 1,
-    EVENT_LEVEL_WARN  = 2,
+    EVENT_LEVEL_INFO = 1,
+    EVENT_LEVEL_WARN = 2,
     EVENT_LEVEL_ERROR = 3,
 } event_level_t;
 
 /** Event log entry */
 typedef struct {
-    uint64_t      timestamp_us;
+    uint64_t timestamp_us;
     event_level_t level;
-    uint16_t      event_type;
-    char          msg[EVENT_MSG_MAX];  /**< NUL-terminated message */
+    uint16_t event_type;
+    char msg[EVENT_MSG_MAX]; /**< NUL-terminated message */
 } event_entry_t;
 
 /**
@@ -59,9 +59,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 on error
  */
-int event_entry_encode(const event_entry_t *e,
-                         uint8_t             *buf,
-                         size_t               buf_sz);
+int event_entry_encode(const event_entry_t *e, uint8_t *buf, size_t buf_sz);
 
 /**
  * event_entry_decode — parse @e from @buf

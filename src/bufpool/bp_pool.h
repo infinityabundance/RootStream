@@ -12,14 +12,15 @@
 #ifndef ROOTSTREAM_BP_POOL_H
 #define ROOTSTREAM_BP_POOL_H
 
-#include "bp_block.h"
 #include <stddef.h>
+
+#include "bp_block.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BP_MAX_BLOCKS  64   /**< Maximum blocks per pool */
+#define BP_MAX_BLOCKS 64 /**< Maximum blocks per pool */
 
 /** Opaque buffer pool */
 typedef struct bp_pool_s bp_pool_t;

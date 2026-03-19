@@ -10,11 +10,12 @@
  * - CUDA driver (no CUDA Toolkit needed for encoding)
  */
 
-#include "../include/rootstream.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
+
+#include "../include/rootstream.h"
 
 #ifdef HAVE_NVENC
 
@@ -64,17 +65,18 @@ static CUresult (*cuMemcpy2D)(const CUDA_MEMCPY2D *pCopy) = NULL;
  * Detect if H.264 NAL stream contains an IDR (keyframe)
  */
 static bool detect_h264_keyframe_nvenc(const uint8_t *data, size_t size) {
-    if (!data || size < 5) return false;
+    if (!data || size < 5)
+        return false;
 
     for (size_t i = 0; i < size - 4; i++) {
-        bool sc3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
-        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
-                   data[i+2] == 0x00 && data[i+3] == 0x01);
+        bool sc3 = (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01);
+        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 &&
+                    data[i + 3] == 0x01);
 
         if (sc3 || sc4) {
             size_t idx = sc4 ? i + 4 : i + 3;
             if (idx < size && (data[idx] & 0x1F) == 5) {
-                return true;  /* IDR slice */
+                return true; /* IDR slice */
             }
             i += sc4 ? 3 : 2;
         }
@@ -86,19 +88,20 @@ static bool detect_h264_keyframe_nvenc(const uint8_t *data, size_t size) {
  * Detect if H.265/HEVC NAL stream contains an IDR (keyframe)
  */
 static bool detect_h265_keyframe_nvenc(const uint8_t *data, size_t size) {
-    if (!data || size < 5) return false;
+    if (!data || size < 5)
+        return false;
 
     for (size_t i = 0; i < size - 4; i++) {
-        bool sc3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
-        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
-                   data[i+2] == 0x00 && data[i+3] == 0x01);
+        bool sc3 = (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01);
+        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 &&
+                    data[i + 3] == 0x01);
 
         if (sc3 || sc4) {
             size_t idx = sc4 ? i + 4 : i + 3;
             if (idx < size) {
                 uint8_t nal_type = (data[idx] >> 1) & 0x3F;
                 if (nal_type == 19 || nal_type == 20 || nal_type == 21) {
-                    return true;  /* IDR or CRA */
+                    return true; /* IDR or CRA */
                 }
             }
             i += sc4 ? 3 : 2;
@@ -132,8 +135,8 @@ static int nvenc_load_cuda(nvenc_ctx_t *nv) {
     cuMemFree = dlsym(nv->cuda_lib, "cuMemFree_v2");
     cuMemcpy2D = dlsym(nv->cuda_lib, "cuMemcpy2D_v2");
 
-    if (!cuInit || !cuDeviceGet || !cuCtxCreate || !cuCtxDestroy ||
-        !cuMemAlloc || !cuMemFree || !cuMemcpy2D) {
+    if (!cuInit || !cuDeviceGet || !cuCtxCreate || !cuCtxDestroy || !cuMemAlloc || !cuMemFree ||
+        !cuMemcpy2D) {
         fprintf(stderr, "ERROR: Failed to load CUDA symbols\n");
         dlclose(nv->cuda_lib);
         return -1;
@@ -159,7 +162,8 @@ static int nvenc_load_sdk(nvenc_ctx_t *nv) {
     }
 
     /* Get API function list */
-    typedef NVENCSTATUS (NVENCAPI *NvEncodeAPICreateInstance_t)(NV_ENCODE_API_FUNCTION_LIST *functionList);
+    typedef NVENCSTATUS(NVENCAPI * NvEncodeAPICreateInstance_t)(NV_ENCODE_API_FUNCTION_LIST *
+                                                                functionList);
     NvEncodeAPICreateInstance_t NvEncodeAPICreateInstance;
 
     NvEncodeAPICreateInstance = dlsym(nv->nvenc_lib, "NvEncodeAPICreateInstance");
@@ -278,8 +282,7 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     caps_param.capsToQuery = NV_ENC_CAPS_SUPPORTED_RATECONTROL_MODES;
 
     int caps_value = 0;
-    status = nv->nvenc_api.nvEncGetEncodeCaps(nv->encoder, codec_guid,
-                                              &caps_param, &caps_value);
+    status = nv->nvenc_api.nvEncGetEncodeCaps(nv->encoder, codec_guid, &caps_param, &caps_value);
     if (status != NV_ENC_SUCCESS || caps_value == 0) {
         fprintf(stderr, "ERROR: %s encoding not supported\n", codec_name);
         nv->nvenc_api.nvEncDestroyEncoder(nv->encoder);
@@ -299,21 +302,21 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
         nv->bitrate = ctx->settings.video_bitrate;
     }
     if (nv->bitrate == 0) {
-        nv->bitrate = 10000000;  /* 10 Mbps default */
+        nv->bitrate = 10000000; /* 10 Mbps default */
     }
 
     /* Initialize encoder */
     NV_ENC_INITIALIZE_PARAMS init_params = {0};
     init_params.version = NV_ENC_INITIALIZE_PARAMS_VER;
     init_params.encodeGUID = codec_guid;
-    init_params.presetGUID = NV_ENC_PRESET_P3_GUID;  /* Low latency, good quality */
+    init_params.presetGUID = NV_ENC_PRESET_P3_GUID; /* Low latency, good quality */
     init_params.encodeWidth = nv->width;
     init_params.encodeHeight = nv->height;
     init_params.darWidth = nv->width;
     init_params.darHeight = nv->height;
     init_params.frameRateNum = nv->fps;
     init_params.frameRateDen = 1;
-    init_params.enablePTD = 1;  /* Picture Type Decision */
+    init_params.enablePTD = 1; /* Picture Type Decision */
     init_params.reportSliceOffsets = 0;
     init_params.enableSubFrameWrite = 0;
     init_params.maxEncodeWidth = nv->width;
@@ -330,8 +333,8 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
         encode_config.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
     }
 
-    encode_config.gopLength = nv->fps * 2;  /* 2 second GOP */
-    encode_config.frameIntervalP = 1;        /* All P-frames (low latency) */
+    encode_config.gopLength = nv->fps * 2; /* 2 second GOP */
+    encode_config.frameIntervalP = 1;      /* All P-frames (low latency) */
     encode_config.frameFieldMode = NV_ENC_PARAMS_FRAME_FIELD_MODE_FRAME;
     encode_config.mvPrecision = NV_ENC_MV_PRECISION_QUARTER_PEL;
 
@@ -343,7 +346,7 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     encode_config.rcParams.vbvInitialDelay = nv->bitrate / (nv->fps * 2);
     encode_config.rcParams.enableMinQP = 0;
     encode_config.rcParams.enableMaxQP = 0;
-    encode_config.rcParams.zeroReorderDelay = 1;  /* Low latency */
+    encode_config.rcParams.zeroReorderDelay = 1; /* Low latency */
 
     /* Codec-specific settings */
     if (codec == CODEC_H265) {
@@ -352,7 +355,7 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
         encode_config.encodeCodecConfig.hevcConfig.sliceMode = 0;
         encode_config.encodeCodecConfig.hevcConfig.sliceModeData = 0;
         encode_config.encodeCodecConfig.hevcConfig.level = NV_ENC_LEVEL_AUTOSELECT;
-        encode_config.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1;  /* YUV 4:2:0 */
+        encode_config.encodeCodecConfig.hevcConfig.chromaFormatIDC = 1; /* YUV 4:2:0 */
         encode_config.encodeCodecConfig.hevcConfig.outputBufferingPeriodSEI = 0;
         encode_config.encodeCodecConfig.hevcConfig.outputPictureTimingSEI = 0;
         encode_config.encodeCodecConfig.hevcConfig.outputAUD = 0;
@@ -365,7 +368,7 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
         encode_config.encodeCodecConfig.h264Config.sliceMode = 0;
         encode_config.encodeCodecConfig.h264Config.sliceModeData = 0;
         encode_config.encodeCodecConfig.h264Config.level = NV_ENC_LEVEL_AUTOSELECT;
-        encode_config.encodeCodecConfig.h264Config.chromaFormatIDC = 1;  /* YUV 4:2:0 */
+        encode_config.encodeCodecConfig.h264Config.chromaFormatIDC = 1; /* YUV 4:2:0 */
         encode_config.encodeCodecConfig.h264Config.outputBufferingPeriodSEI = 0;
         encode_config.encodeCodecConfig.h264Config.outputPictureTimingSEI = 0;
         encode_config.encodeCodecConfig.h264Config.outputAUD = 0;
@@ -389,8 +392,8 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     }
 
     /* Create input buffer (in CUDA device memory) */
-    size_t frame_size = nv->width * nv->height * 4;  /* RGBA */
-    cu_status = cuMemAlloc((CUdeviceptr*)&nv->input_buffer, frame_size);
+    size_t frame_size = nv->width * nv->height * 4; /* RGBA */
+    cu_status = cuMemAlloc((CUdeviceptr *)&nv->input_buffer, frame_size);
     if (cu_status != CUDA_SUCCESS) {
         fprintf(stderr, "ERROR: cuMemAlloc failed for input buffer: %d\n", cu_status);
         nv->nvenc_api.nvEncDestroyEncoder(nv->encoder);
@@ -459,8 +462,8 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
         ctx->encoder.max_output_size = max_size;
     }
 
-    printf("✓ NVENC %s encoder ready: %dx%d @ %d fps, %d kbps\n",
-           codec_name, nv->width, nv->height, nv->fps, nv->bitrate / 1000);
+    printf("✓ NVENC %s encoder ready: %dx%d @ %d fps, %d kbps\n", codec_name, nv->width, nv->height,
+           nv->fps, nv->bitrate / 1000);
 
     return 0;
 }
@@ -468,13 +471,13 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
 /*
  * Encode a frame using NVENC
  */
-int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                  uint8_t *out, size_t *out_size) {
+int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                  size_t *out_size) {
     if (!ctx || !in || !out || !out_size) {
         return -1;
     }
 
-    nvenc_ctx_t *nv = (nvenc_ctx_t*)ctx->encoder.hw_ctx;
+    nvenc_ctx_t *nv = (nvenc_ctx_t *)ctx->encoder.hw_ctx;
     if (!nv || !nv->encoder) {
         fprintf(stderr, "ERROR: NVENC encoder not initialized\n");
         return -1;
@@ -511,7 +514,7 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
     /* Check if we should force a keyframe */
     bool force_idr = ctx->encoder.force_keyframe;
     if (force_idr) {
-        ctx->encoder.force_keyframe = false;  /* Reset the flag */
+        ctx->encoder.force_keyframe = false; /* Reset the flag */
     }
 
     /* Encode frame */
@@ -550,8 +553,8 @@ int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
     /* Copy encoded data */
     *out_size = lock_params.bitstreamSizeInBytes;
     if (ctx->encoder.max_output_size > 0 && *out_size > ctx->encoder.max_output_size) {
-        fprintf(stderr, "ERROR: Encoded frame too large (%zu > %zu)\n",
-                *out_size, ctx->encoder.max_output_size);
+        fprintf(stderr, "ERROR: Encoded frame too large (%zu > %zu)\n", *out_size,
+                ctx->encoder.max_output_size);
         nv->nvenc_api.nvEncUnlockBitstream(nv->encoder, nv->output_buffer);
         return -1;
     }
@@ -583,7 +586,7 @@ void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx) {
         return;
     }
 
-    nvenc_ctx_t *nv = (nvenc_ctx_t*)ctx->encoder.hw_ctx;
+    nvenc_ctx_t *nv = (nvenc_ctx_t *)ctx->encoder.hw_ctx;
 
     if (nv->output_buffer && nv->nvenc_api.nvEncDestroyBitstreamBuffer) {
         nv->nvenc_api.nvEncDestroyBitstreamBuffer(nv->encoder, nv->output_buffer);
@@ -634,7 +637,7 @@ bool rootstream_encoder_nvenc_available(void) {
     }
 
     CUresult (*cuInit_check)(unsigned int) = dlsym(cuda_lib, "cuInit");
-    CUresult (*cuDeviceGetCount_check)(int*) = dlsym(cuda_lib, "cuDeviceGetCount");
+    CUresult (*cuDeviceGetCount_check)(int *) = dlsym(cuda_lib, "cuDeviceGetCount");
 
     if (!cuInit_check || !cuDeviceGetCount_check) {
         dlclose(cuda_lib);
@@ -656,7 +659,7 @@ bool rootstream_encoder_nvenc_available(void) {
     return true;
 }
 
-#else  /* !HAVE_NVENC */
+#else /* !HAVE_NVENC */
 
 /* Stub implementations when NVENC is not available */
 
@@ -667,9 +670,12 @@ int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec) {
     return -1;
 }
 
-int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                  uint8_t *out, size_t *out_size) {
-    (void)ctx; (void)in; (void)out; (void)out_size;
+int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                  size_t *out_size) {
+    (void)ctx;
+    (void)in;
+    (void)out;
+    (void)out_size;
     return -1;
 }
 
@@ -681,4 +687,4 @@ bool rootstream_encoder_nvenc_available(void) {
     return false;
 }
 
-#endif  /* HAVE_NVENC */
+#endif /* HAVE_NVENC */

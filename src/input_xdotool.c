@@ -1,28 +1,29 @@
 /*
  * input_xdotool.c - X11 input injection via xdotool
- * 
+ *
  * Fallback when uinput unavailable.
  * Uses xdotool external command (subprocess).
  * Works on X11 systems even without kernel uinput.
- * 
+ *
  * SECURITY NOTE: This implementation uses system() to execute xdotool commands.
  * While normally a security risk, the following mitigations are in place:
  * 1. All key names are from a controlled switch statement (no user input)
  * 2. Mouse coordinates are integers, not strings (no injection risk)
  * 3. This is a fallback mechanism only used when uinput is unavailable
  * 4. xdotool itself is a trusted system utility
- * 
+ *
  * Future improvement: Use fork()/execve() for additional security hardening.
  */
 
-#include "../include/rootstream.h"
+#include <linux/input-event-codes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <linux/input-event-codes.h>
+#include <unistd.h>
+
+#include "../include/rootstream.h"
 
 typedef struct {
     bool available;
@@ -33,19 +34,14 @@ typedef struct {
  */
 bool input_xdotool_available(void) {
     /* Check common installation paths for xdotool */
-    const char *paths[] = {
-        "/usr/bin/xdotool",
-        "/usr/local/bin/xdotool",
-        "/bin/xdotool",
-        NULL
-    };
-    
+    const char *paths[] = {"/usr/bin/xdotool", "/usr/local/bin/xdotool", "/bin/xdotool", NULL};
+
     for (int i = 0; paths[i] != NULL; i++) {
         if (access(paths[i], X_OK) == 0) {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -59,7 +55,8 @@ int input_init_xdotool(rootstream_ctx_t *ctx) {
     }
 
     xdotool_ctx_t *xdt = calloc(1, sizeof(xdotool_ctx_t));
-    if (!xdt) return -1;
+    if (!xdt)
+        return -1;
 
     xdt->available = true;
     ctx->input_priv = xdt;
@@ -72,45 +69,108 @@ int input_init_xdotool(rootstream_ctx_t *ctx) {
  * Note: This is a simplified mapping for demonstration
  */
 int input_inject_key_xdotool(uint32_t keycode, bool press) {
-    if (keycode == 0) return -1;
+    if (keycode == 0)
+        return -1;
 
     /* Map a few common evdev keycodes to xdotool key names */
     const char *key_name = NULL;
     switch (keycode) {
-        case KEY_A: key_name = "a"; break;
-        case KEY_B: key_name = "b"; break;
-        case KEY_C: key_name = "c"; break;
-        case KEY_D: key_name = "d"; break;
-        case KEY_E: key_name = "e"; break;
-        case KEY_F: key_name = "f"; break;
-        case KEY_G: key_name = "g"; break;
-        case KEY_H: key_name = "h"; break;
-        case KEY_I: key_name = "i"; break;
-        case KEY_J: key_name = "j"; break;
-        case KEY_K: key_name = "k"; break;
-        case KEY_L: key_name = "l"; break;
-        case KEY_M: key_name = "m"; break;
-        case KEY_N: key_name = "n"; break;
-        case KEY_O: key_name = "o"; break;
-        case KEY_P: key_name = "p"; break;
-        case KEY_Q: key_name = "q"; break;
-        case KEY_R: key_name = "r"; break;
-        case KEY_S: key_name = "s"; break;
-        case KEY_T: key_name = "t"; break;
-        case KEY_U: key_name = "u"; break;
-        case KEY_V: key_name = "v"; break;
-        case KEY_W: key_name = "w"; break;
-        case KEY_X: key_name = "x"; break;
-        case KEY_Y: key_name = "y"; break;
-        case KEY_Z: key_name = "z"; break;
-        case KEY_SPACE: key_name = "space"; break;
-        case KEY_ENTER: key_name = "Return"; break;
-        case KEY_ESC: key_name = "Escape"; break;
-        case KEY_TAB: key_name = "Tab"; break;
-        default: return -1;
+        case KEY_A:
+            key_name = "a";
+            break;
+        case KEY_B:
+            key_name = "b";
+            break;
+        case KEY_C:
+            key_name = "c";
+            break;
+        case KEY_D:
+            key_name = "d";
+            break;
+        case KEY_E:
+            key_name = "e";
+            break;
+        case KEY_F:
+            key_name = "f";
+            break;
+        case KEY_G:
+            key_name = "g";
+            break;
+        case KEY_H:
+            key_name = "h";
+            break;
+        case KEY_I:
+            key_name = "i";
+            break;
+        case KEY_J:
+            key_name = "j";
+            break;
+        case KEY_K:
+            key_name = "k";
+            break;
+        case KEY_L:
+            key_name = "l";
+            break;
+        case KEY_M:
+            key_name = "m";
+            break;
+        case KEY_N:
+            key_name = "n";
+            break;
+        case KEY_O:
+            key_name = "o";
+            break;
+        case KEY_P:
+            key_name = "p";
+            break;
+        case KEY_Q:
+            key_name = "q";
+            break;
+        case KEY_R:
+            key_name = "r";
+            break;
+        case KEY_S:
+            key_name = "s";
+            break;
+        case KEY_T:
+            key_name = "t";
+            break;
+        case KEY_U:
+            key_name = "u";
+            break;
+        case KEY_V:
+            key_name = "v";
+            break;
+        case KEY_W:
+            key_name = "w";
+            break;
+        case KEY_X:
+            key_name = "x";
+            break;
+        case KEY_Y:
+            key_name = "y";
+            break;
+        case KEY_Z:
+            key_name = "z";
+            break;
+        case KEY_SPACE:
+            key_name = "space";
+            break;
+        case KEY_ENTER:
+            key_name = "Return";
+            break;
+        case KEY_ESC:
+            key_name = "Escape";
+            break;
+        case KEY_TAB:
+            key_name = "Tab";
+            break;
+        default:
+            return -1;
     }
 
-    if (!key_name) return -1;
+    if (!key_name)
+        return -1;
 
     char cmd[256];
     if (press) {
@@ -129,23 +189,24 @@ int input_inject_key_xdotool(uint32_t keycode, bool press) {
 int input_inject_mouse_xdotool(int x, int y, uint32_t buttons) {
     char cmd[256];
     int ret;
-    
+
     /* Move mouse */
     snprintf(cmd, sizeof(cmd), "xdotool mousemove %d %d 2>/dev/null", x, y);
-    if (system(cmd) != 0) return -1;
+    if (system(cmd) != 0)
+        return -1;
 
     /* Handle button clicks */
     if (buttons & BTN_LEFT) {
         ret = system("xdotool click 1 2>/dev/null");
-        (void)ret;  /* Ignore result */
+        (void)ret; /* Ignore result */
     }
     if (buttons & BTN_MIDDLE) {
         ret = system("xdotool click 2 2>/dev/null");
-        (void)ret;  /* Ignore result */
+        (void)ret; /* Ignore result */
     }
     if (buttons & BTN_RIGHT) {
         ret = system("xdotool click 3 2>/dev/null");
-        (void)ret;  /* Ignore result */
+        (void)ret; /* Ignore result */
     }
 
     return 0;
@@ -155,7 +216,8 @@ int input_inject_mouse_xdotool(int x, int y, uint32_t buttons) {
  * Cleanup xdotool backend
  */
 void input_cleanup_xdotool(rootstream_ctx_t *ctx) {
-    if (!ctx || !ctx->input_priv) return;
+    if (!ctx || !ctx->input_priv)
+        return;
     free(ctx->input_priv);
     ctx->input_priv = NULL;
 }

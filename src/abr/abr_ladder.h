@@ -11,24 +11,24 @@
 #ifndef ROOTSTREAM_ABR_LADDER_H
 #define ROOTSTREAM_ABR_LADDER_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define ABR_LADDER_MAX_LEVELS  8
+#define ABR_LADDER_MAX_LEVELS 8
 
 /** A single quality level on the bitrate ladder */
 typedef struct {
-    int      width;       /**< Video width in pixels */
-    int      height;      /**< Video height in pixels */
-    int      fps;         /**< Target frame rate */
+    int width;            /**< Video width in pixels */
+    int height;           /**< Video height in pixels */
+    int fps;              /**< Target frame rate */
     uint32_t bitrate_bps; /**< Target video bitrate in bps */
-    int      quality;     /**< Encoder quality hint 0–100 */
-    char     name[32];    /**< Human-readable level name */
+    int quality;          /**< Encoder quality hint 0–100 */
+    char name[32];        /**< Human-readable level name */
 } abr_level_t;
 
 /** Opaque bitrate ladder */

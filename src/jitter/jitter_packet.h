@@ -21,17 +21,17 @@
 #ifndef ROOTSTREAM_JITTER_PACKET_H
 #define ROOTSTREAM_JITTER_PACKET_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define JITTER_MAGIC           0x4A504B54UL  /* 'JPKT' */
-#define JITTER_PKT_HDR_SIZE    24
-#define JITTER_MAX_PAYLOAD     1400          /* MTU-safe payload bytes */
+#define JITTER_MAGIC 0x4A504B54UL /* 'JPKT' */
+#define JITTER_PKT_HDR_SIZE 24
+#define JITTER_MAX_PAYLOAD 1400 /* MTU-safe payload bytes */
 
 /** Jitter buffer packet */
 typedef struct {
@@ -39,9 +39,9 @@ typedef struct {
     uint32_t rtp_ts;
     uint64_t capture_us;
     uint16_t payload_len;
-    uint8_t  payload_type;
-    uint8_t  flags;
-    uint8_t  payload[JITTER_MAX_PAYLOAD];
+    uint8_t payload_type;
+    uint8_t flags;
+    uint8_t payload[JITTER_MAX_PAYLOAD];
 } jitter_packet_t;
 
 /**
@@ -52,9 +52,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 on error
  */
-int jitter_packet_encode(const jitter_packet_t *pkt,
-                           uint8_t               *buf,
-                           size_t                 buf_sz);
+int jitter_packet_encode(const jitter_packet_t *pkt, uint8_t *buf, size_t buf_sz);
 
 /**
  * jitter_packet_decode — parse @pkt from @buf
@@ -64,9 +62,7 @@ int jitter_packet_encode(const jitter_packet_t *pkt,
  * @param pkt     Output packet
  * @return        0 on success, -1 on error
  */
-int jitter_packet_decode(const uint8_t  *buf,
-                           size_t          buf_sz,
-                           jitter_packet_t *pkt);
+int jitter_packet_decode(const uint8_t *buf, size_t buf_sz, jitter_packet_t *pkt);
 
 /**
  * jitter_packet_before — return true if @a arrives before @b (seq-num order)

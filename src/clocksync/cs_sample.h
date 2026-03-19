@@ -19,8 +19,8 @@
 #ifndef ROOTSTREAM_CS_SAMPLE_H
 #define ROOTSTREAM_CS_SAMPLE_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,10 +28,10 @@ extern "C" {
 
 /** NTP-style round-trip sample */
 typedef struct {
-    uint64_t t0;   /**< Client send      (µs, local clock) */
-    uint64_t t1;   /**< Server receive   (µs, remote clock) */
-    uint64_t t2;   /**< Server send      (µs, remote clock) */
-    uint64_t t3;   /**< Client receive   (µs, local clock) */
+    uint64_t t0; /**< Client send      (µs, local clock) */
+    uint64_t t1; /**< Server receive   (µs, remote clock) */
+    uint64_t t2; /**< Server send      (µs, remote clock) */
+    uint64_t t3; /**< Client receive   (µs, local clock) */
 } cs_sample_t;
 
 /**
@@ -44,9 +44,7 @@ typedef struct {
  * @param t3 Client receive timestamp (µs)
  * @return   0 on success, -1 on NULL
  */
-int cs_sample_init(cs_sample_t *s,
-                    uint64_t t0, uint64_t t1,
-                    uint64_t t2, uint64_t t3);
+int cs_sample_init(cs_sample_t *s, uint64_t t0, uint64_t t1, uint64_t t2, uint64_t t3);
 
 /**
  * cs_sample_rtt_us — compute round-trip delay in µs

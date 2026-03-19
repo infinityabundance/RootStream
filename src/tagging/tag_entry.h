@@ -17,8 +17,8 @@
 extern "C" {
 #endif
 
-#define TAG_KEY_MAX  32    /**< Max key length (incl. NUL) */
-#define TAG_VAL_MAX  128   /**< Max value length (incl. NUL) */
+#define TAG_KEY_MAX 32  /**< Max key length (incl. NUL) */
+#define TAG_VAL_MAX 128 /**< Max value length (incl. NUL) */
 
 /** Single key=value tag */
 typedef struct {

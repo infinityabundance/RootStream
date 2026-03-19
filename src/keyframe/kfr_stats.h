@@ -9,8 +9,8 @@
 #ifndef ROOTSTREAM_KFR_STATS_H
 #define ROOTSTREAM_KFR_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +22,7 @@ typedef struct {
     uint64_t requests_forwarded;  /**< Requests forwarded to encoder */
     uint64_t requests_suppressed; /**< Requests suppressed (dedup / cooldown) */
     uint64_t urgent_requests;     /**< Requests with priority > 0 */
-    double   suppression_rate;    /**< suppressed / received */
+    double suppression_rate;      /**< suppressed / received */
 } kfr_stats_snapshot_t;
 
 /** Opaque stats context */

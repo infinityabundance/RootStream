@@ -18,10 +18,11 @@
 #ifndef ROOTSTREAM_TS_WRITER_H
 #define ROOTSTREAM_TS_WRITER_H
 
-#include "hls_config.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "hls_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,11 +70,8 @@ int ts_writer_write_pat_pmt(ts_writer_t *w);
  * @param is_keyframe True if this is an IDR / keyframe
  * @return            0 on success, -1 on error
  */
-int ts_writer_write_pes(ts_writer_t   *w,
-                         const uint8_t *payload,
-                         size_t         payload_len,
-                         uint64_t       pts_90khz,
-                         bool           is_keyframe);
+int ts_writer_write_pes(ts_writer_t *w, const uint8_t *payload, size_t payload_len,
+                        uint64_t pts_90khz, bool is_keyframe);
 
 /**
  * ts_writer_bytes_written — total bytes written so far

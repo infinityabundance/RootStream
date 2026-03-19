@@ -9,7 +9,7 @@ int rootstream_net_validate_packet(const uint8_t *buffer, size_t len) {
         return -1;
     }
 
-    const packet_header_t *hdr = (const packet_header_t*)buffer;
+    const packet_header_t *hdr = (const packet_header_t *)buffer;
     if (hdr->magic != 0x524F4F54) {
         return -1;
     }

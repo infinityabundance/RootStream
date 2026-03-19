@@ -5,17 +5,18 @@
  * Stores video frames with timestamps for playback.
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <time.h>
+#include <unistd.h>
+
+#include "../include/rootstream.h"
 
 /* RootStream Recording Format (RSTR) */
-#define RSTR_MAGIC 0x52535452  /* "RSTR" */
+#define RSTR_MAGIC 0x52535452 /* "RSTR" */
 #define RSTR_VERSION 1
 
 typedef struct __attribute__((packed)) {
@@ -23,16 +24,16 @@ typedef struct __attribute__((packed)) {
     uint32_t version;
     uint32_t width;
     uint32_t height;
-    uint32_t codec;        /* 0=H.264, 1=H.265 */
+    uint32_t codec; /* 0=H.264, 1=H.265 */
     uint32_t fps;
-    uint64_t start_time;   /* Unix timestamp */
-    uint32_t reserved[8];  /* For future use */
+    uint64_t start_time;  /* Unix timestamp */
+    uint32_t reserved[8]; /* For future use */
 } rstr_header_t;
 
 typedef struct __attribute__((packed)) {
     uint64_t timestamp_us; /* Relative to start */
     uint32_t size;
-    uint8_t flags;         /* 0x01=keyframe */
+    uint8_t flags; /* 0x01=keyframe */
     uint8_t reserved[3];
 } rstr_frame_header_t;
 
@@ -76,9 +77,8 @@ int recording_init(rootstream_ctx_t *ctx, const char *filename) {
     strncpy(ctx->recording.filename, filename, sizeof(ctx->recording.filename) - 1);
     ctx->recording.filename[sizeof(ctx->recording.filename) - 1] = '\0';
 
-    printf("✓ Recording started: %s (%dx%d @ %d fps, %s)\n",
-           filename, header.width, header.height, header.fps,
-           header.codec == 1 ? "H.265" : "H.264");
+    printf("✓ Recording started: %s (%dx%d @ %d fps, %s)\n", filename, header.width, header.height,
+           header.fps, header.codec == 1 ? "H.265" : "H.264");
 
     return 0;
 }
@@ -86,8 +86,8 @@ int recording_init(rootstream_ctx_t *ctx, const char *filename) {
 /*
  * Write encoded frame to recording file
  */
-int recording_write_frame(rootstream_ctx_t *ctx, const uint8_t *data,
-                          size_t size, bool is_keyframe) {
+int recording_write_frame(rootstream_ctx_t *ctx, const uint8_t *data, size_t size,
+                          bool is_keyframe) {
     if (!ctx || !ctx->recording.active || !data || size == 0) {
         return -1;
     }
@@ -177,8 +177,7 @@ int rstr_read_header(int fd, rstr_header_t *header) {
  * Read next frame from RSTR file
  * Returns 0 on success, -1 on error, 1 on EOF
  */
-int rstr_read_frame(int fd, uint8_t *buffer, size_t buffer_size,
-                    rstr_frame_header_t *frame_hdr) {
+int rstr_read_frame(int fd, uint8_t *buffer, size_t buffer_size, rstr_frame_header_t *frame_hdr) {
     if (fd < 0 || !buffer || !frame_hdr) {
         return -1;
     }
@@ -186,7 +185,7 @@ int rstr_read_frame(int fd, uint8_t *buffer, size_t buffer_size,
     /* Read frame header */
     ssize_t read_bytes = read(fd, frame_hdr, sizeof(rstr_frame_header_t));
     if (read_bytes == 0) {
-        return 1;  /* EOF */
+        return 1; /* EOF */
     }
     if (read_bytes != sizeof(rstr_frame_header_t)) {
         fprintf(stderr, "ERROR: Failed to read frame header\n");
@@ -194,8 +193,8 @@ int rstr_read_frame(int fd, uint8_t *buffer, size_t buffer_size,
     }
 
     if (frame_hdr->size > buffer_size) {
-        fprintf(stderr, "ERROR: Frame size %u exceeds buffer size %zu\n",
-                frame_hdr->size, buffer_size);
+        fprintf(stderr, "ERROR: Frame size %u exceeds buffer size %zu\n", frame_hdr->size,
+                buffer_size);
         return -1;
     }
 

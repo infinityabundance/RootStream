@@ -3,10 +3,11 @@
  */
 
 #include "websocket_server.h"
+
+#include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <pthread.h>
 
 // Stub implementation for now - will be expanded with libwebsockets
 // when dependencies are properly installed
@@ -55,7 +56,7 @@ int websocket_server_start(websocket_server_t *server) {
     server->running = true;
 
     printf("WebSocket server started on port %u\n", server->config.port);
-    
+
     return 0;
 }
 
@@ -71,7 +72,7 @@ int websocket_server_stop(websocket_server_t *server) {
     server->running = false;
 
     printf("WebSocket server stopped\n");
-    
+
     return 0;
 }
 
@@ -88,19 +89,18 @@ int websocket_server_broadcast_metrics(websocket_server_t *server,
 
     // TODO: Format metrics as JSON and broadcast via libwebsockets
     // For now, just log
-    printf("Broadcasting metrics: FPS=%u, RTT=%ums, GPU=%u%%\n",
-           metrics->fps, metrics->rtt_ms, metrics->gpu_util);
+    printf("Broadcasting metrics: FPS=%u, RTT=%ums, GPU=%u%%\n", metrics->fps, metrics->rtt_ms,
+           metrics->gpu_util);
 
     pthread_mutex_unlock(&server->lock);
-    
+
     return 0;
 }
 
 /**
  * Broadcast event to all connected clients
  */
-int websocket_server_broadcast_event(websocket_server_t *server,
-                                     const char *event_type,
+int websocket_server_broadcast_event(websocket_server_t *server, const char *event_type,
                                      const char *data) {
     if (!server || !event_type || !data || !server->running) {
         return -1;
@@ -112,7 +112,7 @@ int websocket_server_broadcast_event(websocket_server_t *server,
     printf("Broadcasting event: %s = %s\n", event_type, data);
 
     pthread_mutex_unlock(&server->lock);
-    
+
     return 0;
 }
 

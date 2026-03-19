@@ -19,10 +19,10 @@ extern "C" {
 
 /** Retry manager statistics snapshot */
 typedef struct {
-    uint64_t total_attempts;      /**< Total individual attempt firings */
-    uint32_t total_succeeded;     /**< Requests removed as succeeded */
-    uint32_t total_expired;       /**< Requests removed after exhausting budget */
-    uint32_t max_attempts_seen;   /**< Max attempts for any single request */
+    uint64_t total_attempts;    /**< Total individual attempt firings */
+    uint32_t total_succeeded;   /**< Requests removed as succeeded */
+    uint32_t total_expired;     /**< Requests removed after exhausting budget */
+    uint32_t max_attempts_seen; /**< Max attempts for any single request */
 } rm_stats_snapshot_t;
 
 /** Opaque retry stats context */

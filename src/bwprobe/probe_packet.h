@@ -22,16 +22,16 @@
 #ifndef ROOTSTREAM_PROBE_PACKET_H
 #define ROOTSTREAM_PROBE_PACKET_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PROBE_PKT_MAGIC  0x50524F42UL  /* 'PROB' */
-#define PROBE_PKT_SIZE   32
+#define PROBE_PKT_MAGIC 0x50524F42UL /* 'PROB' */
+#define PROBE_PKT_SIZE 32
 
 /** Probe packet */
 typedef struct {
@@ -50,9 +50,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        PROBE_PKT_SIZE on success, -1 on error
  */
-int probe_packet_encode(const probe_packet_t *pkt,
-                          uint8_t              *buf,
-                          size_t                buf_sz);
+int probe_packet_encode(const probe_packet_t *pkt, uint8_t *buf, size_t buf_sz);
 
 /**
  * probe_packet_decode — parse @pkt from @buf
@@ -62,9 +60,7 @@ int probe_packet_encode(const probe_packet_t *pkt,
  * @param pkt     Output packet
  * @return        0 on success, -1 on error
  */
-int probe_packet_decode(const uint8_t  *buf,
-                          size_t          buf_sz,
-                          probe_packet_t *pkt);
+int probe_packet_decode(const uint8_t *buf, size_t buf_sz, probe_packet_t *pkt);
 
 #ifdef __cplusplus
 }

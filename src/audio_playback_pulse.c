@@ -10,15 +10,16 @@
  * - 16-bit signed PCM
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
 
 #ifdef HAVE_PULSEAUDIO
-#include <pulse/simple.h>
 #include <pulse/error.h>
+#include <pulse/simple.h>
 #endif
 
 #define SAMPLE_RATE 48000
@@ -42,14 +43,10 @@ bool audio_playback_pulse_available(void) {
 #ifdef HAVE_PULSEAUDIO
     /* Try to create a test connection */
     int error;
-    pa_sample_spec ss = {
-        .format = PA_SAMPLE_S16LE,
-        .rate = SAMPLE_RATE,
-        .channels = CHANNELS
-    };
-    
-    pa_simple *test = pa_simple_new(NULL, "RootStream-Test", PA_STREAM_PLAYBACK,
-                                    NULL, "test", &ss, NULL, NULL, &error);
+    pa_sample_spec ss = {.format = PA_SAMPLE_S16LE, .rate = SAMPLE_RATE, .channels = CHANNELS};
+
+    pa_simple *test = pa_simple_new(NULL, "RootStream-Test", PA_STREAM_PLAYBACK, NULL, "test", &ss,
+                                    NULL, NULL, &error);
     if (test) {
         pa_simple_free(test);
         return true;
@@ -83,37 +80,31 @@ int audio_playback_init_pulse(rootstream_ctx_t *ctx) {
 
     /* Configure sample format */
     pa_sample_spec ss = {
-        .format = PA_SAMPLE_S16LE,
-        .rate = playback->sample_rate,
-        .channels = playback->channels
-    };
+        .format = PA_SAMPLE_S16LE, .rate = playback->sample_rate, .channels = playback->channels};
 
     /* Configure buffer attributes for low latency */
     pa_buffer_attr attr = {
         .maxlength = (uint32_t)-1,
-        .tlength = 240 * sizeof(int16_t) * playback->channels * 4,  /* 20ms buffer */
+        .tlength = 240 * sizeof(int16_t) * playback->channels * 4, /* 20ms buffer */
         .prebuf = (uint32_t)-1,
         .minreq = (uint32_t)-1,
-        .fragsize = (uint32_t)-1
-    };
+        .fragsize = (uint32_t)-1};
 
     /* Create PulseAudio stream */
     int error;
-    playback->stream = pa_simple_new(
-        NULL,                       /* Use default server */
-        "RootStream",               /* Application name */
-        PA_STREAM_PLAYBACK,         /* Playback mode */
-        NULL,                       /* Use default device */
-        "Audio Playback",           /* Stream description */
-        &ss,                        /* Sample format */
-        NULL,                       /* Use default channel map */
-        &attr,                      /* Buffer attributes */
-        &error                      /* Error code */
+    playback->stream = pa_simple_new(NULL,               /* Use default server */
+                                     "RootStream",       /* Application name */
+                                     PA_STREAM_PLAYBACK, /* Playback mode */
+                                     NULL,               /* Use default device */
+                                     "Audio Playback",   /* Stream description */
+                                     &ss,                /* Sample format */
+                                     NULL,               /* Use default channel map */
+                                     &attr,              /* Buffer attributes */
+                                     &error              /* Error code */
     );
 
     if (!playback->stream) {
-        fprintf(stderr, "ERROR: Cannot open PulseAudio stream: %s\n",
-                pa_strerror(error));
+        fprintf(stderr, "ERROR: Cannot open PulseAudio stream: %s\n", pa_strerror(error));
         free(playback);
         return -1;
     }
@@ -123,8 +114,8 @@ int audio_playback_init_pulse(rootstream_ctx_t *ctx) {
     /* Store in context (reuse tray menu field) */
     ctx->tray.menu = playback;
 
-    printf("✓ PulseAudio playback ready: %d Hz, %d channels\n",
-           playback->sample_rate, playback->channels);
+    printf("✓ PulseAudio playback ready: %d Hz, %d channels\n", playback->sample_rate,
+           playback->channels);
 
     return 0;
 #else
@@ -142,14 +133,13 @@ int audio_playback_init_pulse(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success, -1 on error
  */
-int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples,
-                               size_t num_samples) {
+int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples) {
 #ifdef HAVE_PULSEAUDIO
     if (!ctx || !samples || num_samples == 0) {
         return -1;
     }
 
-    audio_playback_pulse_ctx_t *playback = (audio_playback_pulse_ctx_t*)ctx->tray.menu;
+    audio_playback_pulse_ctx_t *playback = (audio_playback_pulse_ctx_t *)ctx->tray.menu;
     if (!playback || !playback->initialized || !playback->stream) {
         return -1;
     }
@@ -159,8 +149,7 @@ int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples,
     int error;
 
     if (pa_simple_write(playback->stream, samples, bytes_to_write, &error) < 0) {
-        fprintf(stderr, "ERROR: PulseAudio write failed: %s\n",
-                pa_strerror(error));
+        fprintf(stderr, "ERROR: PulseAudio write failed: %s\n", pa_strerror(error));
         return -1;
     }
 
@@ -182,7 +171,7 @@ void audio_playback_cleanup_pulse(rootstream_ctx_t *ctx) {
         return;
     }
 
-    audio_playback_pulse_ctx_t *playback = (audio_playback_pulse_ctx_t*)ctx->tray.menu;
+    audio_playback_pulse_ctx_t *playback = (audio_playback_pulse_ctx_t *)ctx->tray.menu;
 
     if (playback->stream) {
         /* Drain any remaining audio */

@@ -11,8 +11,9 @@
 #ifndef ROOTSTREAM_EVENT_EXPORT_H
 #define ROOTSTREAM_EVENT_EXPORT_H
 
-#include "event_ring.h"
 #include <stddef.h>
+
+#include "event_ring.h"
 
 #ifdef __cplusplus
 extern "C" {

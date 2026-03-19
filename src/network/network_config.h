@@ -5,8 +5,8 @@
 #ifndef NETWORK_CONFIG_H
 #define NETWORK_CONFIG_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,20 +19,20 @@ typedef struct {
     uint32_t max_bitrate_kbps;
     float switch_up_threshold;
     float switch_down_threshold;
-    
+
     /* QoS settings */
     bool enable_qos;
     uint8_t video_dscp;
     uint8_t audio_dscp;
-    
+
     /* Loss recovery */
     bool enable_fec;
     uint8_t fec_redundancy_percent;
-    
+
     /* Buffer settings */
     uint32_t jitter_buffer_target_ms;
     uint32_t jitter_buffer_max_ms;
-    
+
     /* Socket tuning */
     bool tune_socket;
     uint32_t socket_send_buf_kb;
@@ -44,7 +44,7 @@ typedef struct {
 typedef struct network_config_manager network_config_manager_t;
 
 /* Create network config manager */
-network_config_manager_t* network_config_create(void);
+network_config_manager_t *network_config_create(void);
 
 /* Destroy network config manager */
 void network_config_destroy(network_config_manager_t *config);

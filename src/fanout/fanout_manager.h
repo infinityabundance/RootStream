@@ -18,10 +18,11 @@
 #ifndef ROOTSTREAM_FANOUT_MANAGER_H
 #define ROOTSTREAM_FANOUT_MANAGER_H
 
-#include "session_table.h"
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "session_table.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,10 +30,10 @@ extern "C" {
 
 /** Frame type tags */
 typedef enum {
-    FANOUT_FRAME_VIDEO_KEY   = 0,  /**< IDR / keyframe */
-    FANOUT_FRAME_VIDEO_DELTA = 1,  /**< P- or B-frame */
-    FANOUT_FRAME_AUDIO       = 2,
-    FANOUT_FRAME_DATA        = 3,  /**< Control / metadata */
+    FANOUT_FRAME_VIDEO_KEY = 0,   /**< IDR / keyframe */
+    FANOUT_FRAME_VIDEO_DELTA = 1, /**< P- or B-frame */
+    FANOUT_FRAME_AUDIO = 2,
+    FANOUT_FRAME_DATA = 3, /**< Control / metadata */
 } fanout_frame_type_t;
 
 /** Delivery statistics snapshot */
@@ -40,7 +41,7 @@ typedef struct {
     uint64_t frames_in;        /**< Total frames submitted */
     uint64_t frames_delivered; /**< Total frames sent to ≥1 client */
     uint64_t frames_dropped;   /**< Total frames dropped (congestion) */
-    size_t   active_sessions;  /**< Current active session count */
+    size_t active_sessions;    /**< Current active session count */
 } fanout_stats_t;
 
 /** Opaque fanout manager handle */
@@ -74,9 +75,7 @@ void fanout_manager_destroy(fanout_manager_t *mgr);
  * @param type        Frame type (key/delta/audio/data)
  * @return            Number of sessions the frame was delivered to
  */
-int fanout_manager_deliver(fanout_manager_t   *mgr,
-                           const uint8_t      *frame_data,
-                           size_t              frame_size,
+int fanout_manager_deliver(fanout_manager_t *mgr, const uint8_t *frame_data, size_t frame_size,
                            fanout_frame_type_t type);
 
 /**
@@ -85,8 +84,7 @@ int fanout_manager_deliver(fanout_manager_t   *mgr,
  * @param mgr   Fanout manager
  * @param stats Output statistics snapshot
  */
-void fanout_manager_get_stats(const fanout_manager_t *mgr,
-                               fanout_stats_t         *stats);
+void fanout_manager_get_stats(const fanout_manager_t *mgr, fanout_stats_t *stats);
 
 /**
  * fanout_manager_reset_stats — zero all delivery counters

@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_FRC_STATS_H
 #define ROOTSTREAM_FRC_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +22,7 @@ typedef struct {
     uint64_t frames_presented;  /**< Frames sent to the encoder/network */
     uint64_t frames_dropped;    /**< Frames discarded (encoder too fast) */
     uint64_t frames_duplicated; /**< Frames repeated (encoder too slow) */
-    double   actual_fps;        /**< Smoothed actual output frame rate */
+    double actual_fps;          /**< Smoothed actual output frame rate */
 } frc_stats_snapshot_t;
 
 /** Opaque FRC stats */
@@ -52,11 +52,7 @@ void frc_stats_destroy(frc_stats_t *st);
  * @param now_ns     Current monotonic time in nanoseconds (for fps calc)
  * @return           0 on success, -1 on NULL
  */
-int frc_stats_record(frc_stats_t *st,
-                      int          presented,
-                      int          dropped,
-                      int          duplicated,
-                      uint64_t     now_ns);
+int frc_stats_record(frc_stats_t *st, int presented, int dropped, int duplicated, uint64_t now_ns);
 
 /**
  * frc_stats_snapshot — copy current statistics

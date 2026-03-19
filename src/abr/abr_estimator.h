@@ -12,19 +12,19 @@
 #ifndef ROOTSTREAM_ABR_ESTIMATOR_H
 #define ROOTSTREAM_ABR_ESTIMATOR_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** EWMA smoothing factor (α): higher = more responsive, lower = smoother */
-#define ABR_EWMA_ALPHA_DEFAULT  0.125f
+#define ABR_EWMA_ALPHA_DEFAULT 0.125f
 
 /** Minimum number of samples before estimate is considered valid */
-#define ABR_ESTIMATOR_MIN_SAMPLES  3
+#define ABR_ESTIMATOR_MIN_SAMPLES 3
 
 /** Opaque bandwidth estimator */
 typedef struct abr_estimator_s abr_estimator_t;

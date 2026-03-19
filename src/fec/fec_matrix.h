@@ -18,15 +18,15 @@
 #ifndef ROOTSTREAM_FEC_MATRIX_H
 #define ROOTSTREAM_FEC_MATRIX_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define FEC_MAX_K        16   /**< Maximum source packets per group */
-#define FEC_MAX_R        4    /**< Maximum repair packets per group */
+#define FEC_MAX_K 16          /**< Maximum source packets per group */
+#define FEC_MAX_R 4           /**< Maximum repair packets per group */
 #define FEC_MAX_PKT_SIZE 1472 /**< Maximum payload bytes per packet (UDP MTU) */
 
 /**
@@ -39,11 +39,8 @@ extern "C" {
  * @param pkt_size    Payload size in bytes (<= FEC_MAX_PKT_SIZE)
  * @return            0 on success, -1 on error
  */
-int fec_build_repair(const uint8_t *const *sources,
-                       int                   k,
-                       int                   repair_idx,
-                       uint8_t              *out,
-                       size_t                pkt_size);
+int fec_build_repair(const uint8_t *const *sources, int k, int repair_idx, uint8_t *out,
+                     size_t pkt_size);
 
 /**
  * fec_repair_covers — return 1 if source[src_idx] contributes to repair[r]

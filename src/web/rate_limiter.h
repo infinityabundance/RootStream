@@ -1,14 +1,14 @@
 /**
  * PHASE 19: Web Dashboard - Rate Limiter
- * 
+ *
  * Provides rate limiting for API requests
  */
 
 #ifndef RATE_LIMITER_H
 #define RATE_LIMITER_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,4 +43,4 @@ void rate_limiter_cleanup(rate_limiter_t *limiter);
 }
 #endif
 
-#endif // RATE_LIMITER_H
+#endif  // RATE_LIMITER_H

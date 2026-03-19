@@ -6,11 +6,12 @@
  * obvious with minimal runtime overhead.
  */
 
-#include "../include/rootstream.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../include/rootstream.h"
 
 static int compare_u64(const void *a, const void *b) {
     const uint64_t lhs = *(const uint64_t *)a;
@@ -45,11 +46,8 @@ static uint64_t percentile_value(uint64_t *values, size_t count, double percenti
     return values[rank];
 }
 
-static void fill_metric_samples(const latency_stats_t *stats,
-                                uint64_t *capture,
-                                uint64_t *encode,
-                                uint64_t *send,
-                                uint64_t *total) {
+static void fill_metric_samples(const latency_stats_t *stats, uint64_t *capture, uint64_t *encode,
+                                uint64_t *send, uint64_t *total) {
     size_t sample_count = stats->count;
     bool wrapped = stats->count >= stats->capacity;
 
@@ -123,7 +121,8 @@ static void latency_report(latency_stats_t *stats, uint64_t now_ms) {
     stats->last_report_ms = now_ms;
 }
 
-int latency_init(latency_stats_t *stats, size_t capacity, uint64_t report_interval_ms, bool enabled) {
+int latency_init(latency_stats_t *stats, size_t capacity, uint64_t report_interval_ms,
+                 bool enabled) {
     if (!stats) {
         fprintf(stderr, "ERROR: Latency stats init failed (NULL context)\n");
         return -1;

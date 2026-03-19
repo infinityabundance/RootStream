@@ -29,14 +29,15 @@
  */
 
 #include "fc_engine.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 /* ── internal struct ──────────────────────────────────────────────── */
 
 struct fc_engine_s {
-    fc_params_t  params;  /* immutable copy of caller-supplied config */
-    uint32_t     credit;  /* current available send credit (bytes)     */
+    fc_params_t params; /* immutable copy of caller-supplied config */
+    uint32_t credit;    /* current available send credit (bytes)     */
 };
 
 /* ── lifecycle ────────────────────────────────────────────────────── */
@@ -46,17 +47,21 @@ fc_engine_t *fc_engine_create(const fc_params_t *p) {
      * A zero window_bytes would allow infinite credit after replenish.
      * A zero send_budget would start the engine with no credit at all,
      * causing the very first send attempt to stall before any data flows. */
-    if (!p || p->window_bytes == 0 || p->send_budget == 0) return NULL;
+    if (!p || p->window_bytes == 0 || p->send_budget == 0)
+        return NULL;
 
     fc_engine_t *e = malloc(sizeof(*e));
-    if (!e) return NULL;         /* OOM: caller must handle NULL return */
+    if (!e)
+        return NULL; /* OOM: caller must handle NULL return */
 
-    e->params = *p;              /* snapshot the config; caller may free p */
-    e->credit = p->send_budget;  /* start with one epoch's worth of credit */
+    e->params = *p;             /* snapshot the config; caller may free p */
+    e->credit = p->send_budget; /* start with one epoch's worth of credit */
     return e;
 }
 
-void fc_engine_destroy(fc_engine_t *e) { free(e); }
+void fc_engine_destroy(fc_engine_t *e) {
+    free(e);
+}
 
 /* ── credit management ────────────────────────────────────────────── */
 
@@ -64,7 +69,8 @@ bool fc_engine_can_send(const fc_engine_t *e, uint32_t bytes) {
     /* Non-destructive probe: does NOT change credit.
      * Callers use this to skip building a frame when credit is low,
      * avoiding the cost of encoding only to immediately drop it. */
-    if (!e) return false;
+    if (!e)
+        return false;
     return e->credit >= bytes;
 }
 
@@ -74,13 +80,15 @@ int fc_engine_consume(fc_engine_t *e, uint32_t bytes) {
      * Returning -1 on insufficient credit (rather than clamping to 0)
      * forces the caller to handle the "shouldn't have called this"
      * programming error explicitly. */
-    if (!e || e->credit < bytes) return -1;
+    if (!e || e->credit < bytes)
+        return -1;
     e->credit -= bytes;
     return 0;
 }
 
 uint32_t fc_engine_replenish(fc_engine_t *e, uint32_t bytes) {
-    if (!e) return 0;
+    if (!e)
+        return 0;
 
     uint32_t cap = e->params.window_bytes;
 
@@ -88,9 +96,7 @@ uint32_t fc_engine_replenish(fc_engine_t *e, uint32_t bytes) {
      * If the caller passes fewer bytes than credit_step (e.g., a
      * small ACK for just 10 bytes), we still grant credit_step.
      * This prevents micro-grants that would never unblock a full MTU. */
-    uint32_t added = (bytes < e->params.credit_step)
-                     ? e->params.credit_step
-                     : bytes;
+    uint32_t added = (bytes < e->params.credit_step) ? e->params.credit_step : bytes;
 
     /* Cap at window_bytes to prevent unbounded credit accumulation.
      * Accumulation would allow a stalled sender to burst far more than
@@ -110,6 +116,6 @@ void fc_engine_reset(fc_engine_t *e) {
      * window_bytes is the in-flight cap; send_budget is the per-epoch
      * grant.  Resetting to window_bytes would allow an immediate burst
      * equal to the entire receive window, likely causing congestion. */
-    if (e) e->credit = e->params.send_budget;
+    if (e)
+        e->credit = e->params.send_budget;
 }
-

@@ -1,13 +1,13 @@
 #ifndef RECORDING_CONTROL_WIDGET_H
 #define RECORDING_CONTROL_WIDGET_H
 
-#include <QWidget>
-#include <QTimer>
-#include <QPushButton>
-#include <QLabel>
-#include <QComboBox>
-#include <QProgressBar>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QLabel>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QTimer>
+#include <QWidget>
 
 extern "C" {
 #include "../recording_types.h"
@@ -16,7 +16,7 @@ extern "C" {
 class RecordingControlWidget : public QWidget {
     Q_OBJECT
 
-public:
+   public:
     explicit RecordingControlWidget(QWidget *parent = nullptr);
     ~RecordingControlWidget();
 
@@ -26,7 +26,7 @@ public:
     void updateRecordingInfo(const recording_info_t *info);
     void updateStats(uint64_t file_size, uint32_t queue_depth, uint32_t frame_drops);
 
-signals:
+   signals:
     void startRecordingRequested(RecordingPreset preset, const QString &filename);
     void stopRecordingRequested();
     void pauseRecordingRequested();
@@ -34,14 +34,14 @@ signals:
     void replayBufferSaveRequested();
     void chapterMarkerRequested(const QString &title);
 
-private slots:
+   private slots:
     void onStartStopClicked();
     void onPauseResumeClicked();
     void onSaveReplayClicked();
     void onAddChapterClicked();
     void updateTimer();
 
-private:
+   private:
     void setupUI();
     void updateButtons();
     QString formatDuration(uint64_t duration_us);
@@ -52,21 +52,21 @@ private:
     QPushButton *pauseResumeButton;
     QPushButton *saveReplayButton;
     QPushButton *addChapterButton;
-    
+
     QComboBox *presetComboBox;
     QCheckBox *replayBufferCheckBox;
-    
+
     QLabel *statusLabel;
     QLabel *durationLabel;
     QLabel *fileSizeLabel;
     QLabel *bitrateLabel;
     QLabel *queueDepthLabel;
     QLabel *frameDropsLabel;
-    
+
     QProgressBar *queueProgressBar;
-    
+
     QTimer *updateTimer;
-    
+
     // State
     bool isRecording;
     bool isPaused;

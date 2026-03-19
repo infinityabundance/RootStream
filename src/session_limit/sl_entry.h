@@ -11,29 +11,29 @@
 #ifndef ROOTSTREAM_SL_ENTRY_H
 #define ROOTSTREAM_SL_ENTRY_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SL_IP_MAX  48   /**< Max remote IP string length (IPv6) */
+#define SL_IP_MAX 48 /**< Max remote IP string length (IPv6) */
 
 /** Session state */
 typedef enum {
     SL_CONNECTING = 0,
-    SL_ACTIVE     = 1,
-    SL_CLOSING    = 2,
+    SL_ACTIVE = 1,
+    SL_CLOSING = 2,
 } sl_state_t;
 
 /** Single session entry */
 typedef struct {
-    uint64_t   session_id;
-    char       remote_ip[SL_IP_MAX];
-    uint64_t   start_us;
+    uint64_t session_id;
+    char remote_ip[SL_IP_MAX];
+    uint64_t start_us;
     sl_state_t state;
-    bool       in_use;
+    bool in_use;
 } sl_entry_t;
 
 /**
@@ -45,10 +45,7 @@ typedef struct {
  * @param start_us   Session start time (µs)
  * @return           0 on success, -1 on NULL
  */
-int sl_entry_init(sl_entry_t *e,
-                   uint64_t    session_id,
-                   const char *remote_ip,
-                   uint64_t    start_us);
+int sl_entry_init(sl_entry_t *e, uint64_t session_id, const char *remote_ip, uint64_t start_us);
 
 /**
  * sl_state_name — human-readable state string

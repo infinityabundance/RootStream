@@ -20,8 +20,8 @@
 #ifndef ROOTSTREAM_WATERMARK_STRENGTH_H
 #define ROOTSTREAM_WATERMARK_STRENGTH_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,15 +29,15 @@ extern "C" {
 
 /** Embedding mode */
 typedef enum {
-    WATERMARK_MODE_LSB = 0,  /**< Spatial LSB (invisible, fragile) */
-    WATERMARK_MODE_DCT = 1,  /**< DCT-domain QIM (robust) */
+    WATERMARK_MODE_LSB = 0, /**< Spatial LSB (invisible, fragile) */
+    WATERMARK_MODE_DCT = 1, /**< DCT-domain QIM (robust) */
 } watermark_mode_t;
 
 /** Strength parameters returned by the selector */
 typedef struct {
     watermark_mode_t mode;
-    int              dct_delta;   /**< QIM step size (mode=DCT only) */
-    bool             apply;       /**< False = skip watermarking this frame */
+    int dct_delta; /**< QIM step size (mode=DCT only) */
+    bool apply;    /**< False = skip watermarking this frame */
 } watermark_strength_t;
 
 /**
@@ -48,9 +48,7 @@ typedef struct {
  * @param out           Output strength parameters
  * @return              0 on success, -1 on NULL args
  */
-int watermark_strength_select(int                  quality_hint,
-                               bool                 is_keyframe,
-                               watermark_strength_t *out);
+int watermark_strength_select(int quality_hint, bool is_keyframe, watermark_strength_t *out);
 
 /**
  * watermark_strength_mode_name — return human-readable mode name

@@ -10,16 +10,17 @@
 #ifndef ROOTSTREAM_RATE_LIMITER_H
 #define ROOTSTREAM_RATE_LIMITER_H
 
-#include "token_bucket.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "token_bucket.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RATE_LIMITER_MAX_VIEWERS  256
+#define RATE_LIMITER_MAX_VIEWERS 256
 
 /** Opaque rate limiter registry */
 typedef struct rate_limiter_s rate_limiter_t;
@@ -31,8 +32,7 @@ typedef struct rate_limiter_s rate_limiter_t;
  * @param default_burst     Default burst capacity for new viewers
  * @return                  Non-NULL handle, or NULL on error
  */
-rate_limiter_t *rate_limiter_create(double default_rate_bps,
-                                      double default_burst);
+rate_limiter_t *rate_limiter_create(double default_rate_bps, double default_burst);
 
 /**
  * rate_limiter_destroy — free all buckets and the registry
@@ -51,9 +51,7 @@ void rate_limiter_destroy(rate_limiter_t *rl);
  * @param now_us     Current time in µs
  * @return           0 on success, -1 if registry full / NULL args
  */
-int rate_limiter_add_viewer(rate_limiter_t *rl,
-                              uint64_t        viewer_id,
-                              uint64_t        now_us);
+int rate_limiter_add_viewer(rate_limiter_t *rl, uint64_t viewer_id, uint64_t now_us);
 
 /**
  * rate_limiter_remove_viewer — unregister a viewer
@@ -73,10 +71,7 @@ int rate_limiter_remove_viewer(rate_limiter_t *rl, uint64_t viewer_id);
  * @param now_us     Current time in µs
  * @return           true if allowed, false if throttled or viewer not found
  */
-bool rate_limiter_consume(rate_limiter_t *rl,
-                            uint64_t        viewer_id,
-                            double          bytes,
-                            uint64_t        now_us);
+bool rate_limiter_consume(rate_limiter_t *rl, uint64_t viewer_id, double bytes, uint64_t now_us);
 
 /**
  * rate_limiter_viewer_count — number of registered viewers

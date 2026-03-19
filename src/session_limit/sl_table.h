@@ -11,14 +11,15 @@
 #ifndef ROOTSTREAM_SL_TABLE_H
 #define ROOTSTREAM_SL_TABLE_H
 
-#include "sl_entry.h"
 #include <stddef.h>
+
+#include "sl_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SL_MAX_SLOTS   32   /**< Hard upper limit of tracked sessions */
+#define SL_MAX_SLOTS 32 /**< Hard upper limit of tracked sessions */
 
 /** Opaque session table */
 typedef struct sl_table_s sl_table_t;
@@ -45,10 +46,8 @@ void sl_table_destroy(sl_table_t *t);
  * @param start_us   Start timestamp (µs)
  * @return           Pointer to new entry, or NULL if cap reached / OOM
  */
-sl_entry_t *sl_table_add(sl_table_t *t,
-                           uint64_t    session_id,
-                           const char *remote_ip,
-                           uint64_t    start_us);
+sl_entry_t *sl_table_add(sl_table_t *t, uint64_t session_id, const char *remote_ip,
+                         uint64_t start_us);
 
 /**
  * sl_table_remove — remove session by ID
@@ -74,9 +73,7 @@ int sl_table_count(const sl_table_t *t);
 /**
  * sl_table_foreach — iterate active entries
  */
-void sl_table_foreach(sl_table_t *t,
-                       void (*cb)(sl_entry_t *e, void *user),
-                       void *user);
+void sl_table_foreach(sl_table_t *t, void (*cb)(sl_entry_t *e, void *user), void *user);
 
 #ifdef __cplusplus
 }

@@ -12,24 +12,24 @@
 #ifndef ROOTSTREAM_PROBE_ESTIMATOR_H
 #define ROOTSTREAM_PROBE_ESTIMATOR_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** EWMA smoothing factor for OWD (α = 1/8) */
-#define PROBE_OWD_ALPHA  0.125
+#define PROBE_OWD_ALPHA 0.125
 
 /** Bandwidth estimate snapshot */
 typedef struct {
-    double   owd_us;           /**< Smoothed one-way delay (µs) */
-    double   owd_min_us;       /**< Minimum observed OWD (µs) */
-    double   owd_max_us;       /**< Maximum observed OWD (µs) */
-    double   bw_bps;           /**< Estimated available bandwidth (bits/s) */
-    uint64_t sample_count;     /**< Total observations fed */
+    double owd_us;         /**< Smoothed one-way delay (µs) */
+    double owd_min_us;     /**< Minimum observed OWD (µs) */
+    double owd_max_us;     /**< Maximum observed OWD (µs) */
+    double bw_bps;         /**< Estimated available bandwidth (bits/s) */
+    uint64_t sample_count; /**< Total observations fed */
 } probe_estimate_t;
 
 /** Opaque estimator */
@@ -58,10 +58,8 @@ void probe_estimator_destroy(probe_estimator_t *pe);
  * @param size_bytes   Payload size (use PROBE_PKT_SIZE for plain probes)
  * @return             0 on success, -1 on error
  */
-int probe_estimator_observe(probe_estimator_t *pe,
-                              uint64_t            send_ts_us,
-                              uint64_t            recv_ts_us,
-                              uint32_t            size_bytes);
+int probe_estimator_observe(probe_estimator_t *pe, uint64_t send_ts_us, uint64_t recv_ts_us,
+                            uint32_t size_bytes);
 
 /**
  * probe_estimator_snapshot — copy current estimates

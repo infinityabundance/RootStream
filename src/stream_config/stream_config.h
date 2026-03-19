@@ -28,54 +28,54 @@
 #ifndef ROOTSTREAM_STREAM_CONFIG_H
 #define ROOTSTREAM_STREAM_CONFIG_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SCFG_MAGIC         0x53434647UL  /* 'SCFG' */
-#define SCFG_HDR_SIZE      32
+#define SCFG_MAGIC 0x53434647UL /* 'SCFG' */
+#define SCFG_HDR_SIZE 32
 
 /* ── Video codec constants ──────────────────────────────────────── */
-#define SCFG_VCODEC_RAW    0
-#define SCFG_VCODEC_H264   1
-#define SCFG_VCODEC_H265   2
-#define SCFG_VCODEC_AV1    3
-#define SCFG_VCODEC_VP9    4
+#define SCFG_VCODEC_RAW 0
+#define SCFG_VCODEC_H264 1
+#define SCFG_VCODEC_H265 2
+#define SCFG_VCODEC_AV1 3
+#define SCFG_VCODEC_VP9 4
 
 /* ── Audio codec constants ──────────────────────────────────────── */
-#define SCFG_ACODEC_PCM    0
-#define SCFG_ACODEC_OPUS   1
-#define SCFG_ACODEC_AAC    2
-#define SCFG_ACODEC_FLAC   3
+#define SCFG_ACODEC_PCM 0
+#define SCFG_ACODEC_OPUS 1
+#define SCFG_ACODEC_AAC 2
+#define SCFG_ACODEC_FLAC 3
 
 /* ── Transport protocol constants ───────────────────────────────── */
-#define SCFG_PROTO_UDP     0
-#define SCFG_PROTO_TCP     1
-#define SCFG_PROTO_QUIC    2
+#define SCFG_PROTO_UDP 0
+#define SCFG_PROTO_TCP 1
+#define SCFG_PROTO_QUIC 2
 
 /* ── Flags ──────────────────────────────────────────────────────── */
-#define SCFG_FLAG_ENCRYPTED  0x01  /**< Enable transport encryption */
-#define SCFG_FLAG_RECORD     0x02  /**< Enable local recording */
-#define SCFG_FLAG_HW_ENCODE  0x04  /**< Prefer hardware encoder */
+#define SCFG_FLAG_ENCRYPTED 0x01 /**< Enable transport encryption */
+#define SCFG_FLAG_RECORD 0x02    /**< Enable local recording */
+#define SCFG_FLAG_HW_ENCODE 0x04 /**< Prefer hardware encoder */
 
 /** Stream configuration record */
 typedef struct {
-    uint8_t  video_codec;
-    uint8_t  audio_codec;
+    uint8_t video_codec;
+    uint8_t audio_codec;
     uint16_t video_width;
     uint16_t video_height;
-    uint8_t  video_fps;
-    uint8_t  audio_channels;
+    uint8_t video_fps;
+    uint8_t audio_channels;
     uint32_t video_bitrate_kbps;
     uint32_t audio_bitrate_kbps;
     uint32_t audio_sample_rate;
     uint16_t transport_port;
-    uint8_t  transport_proto;
-    uint8_t  flags;
+    uint8_t transport_proto;
+    uint8_t flags;
 } stream_config_t;
 
 /**
@@ -86,9 +86,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written (SCFG_HDR_SIZE), or -1 on error
  */
-int stream_config_encode(const stream_config_t *cfg,
-                           uint8_t               *buf,
-                           size_t                 buf_sz);
+int stream_config_encode(const stream_config_t *cfg, uint8_t *buf, size_t buf_sz);
 
 /**
  * stream_config_decode — parse @cfg from @buf
@@ -98,9 +96,7 @@ int stream_config_encode(const stream_config_t *cfg,
  * @param cfg     Output config
  * @return        0 on success, -1 on error
  */
-int stream_config_decode(const uint8_t  *buf,
-                           size_t          buf_sz,
-                           stream_config_t *cfg);
+int stream_config_decode(const uint8_t *buf, size_t buf_sz, stream_config_t *cfg);
 
 /**
  * stream_config_equals — return true if two configs are identical

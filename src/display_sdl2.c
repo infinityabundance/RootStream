@@ -11,10 +11,11 @@
  * - Present to screen with vsync
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../include/rootstream.h"
 
 /* SDL2 headers */
 #include <SDL2/SDL.h>
@@ -32,25 +33,19 @@ typedef struct {
 } sdl2_display_ctx_t;
 
 /* Forward SDL2 input event to host */
-static void forward_input_event(rootstream_ctx_t *ctx, uint8_t type,
-                                uint16_t code, int32_t value) {
+static void forward_input_event(rootstream_ctx_t *ctx, uint8_t type, uint16_t code, int32_t value) {
     if (!ctx || ctx->num_peers == 0) {
         return;
     }
 
     /* Create input event packet */
-    input_event_pkt_t event_pkt = {
-        .type = type,
-        .code = code,
-        .value = value
-    };
+    input_event_pkt_t event_pkt = {.type = type, .code = code, .value = value};
 
     /* Send to first connected peer (typically there's only one for client) */
     for (int i = 0; i < ctx->num_peers; i++) {
         peer_t *peer = &ctx->peers[i];
         if (peer->state == PEER_CONNECTED) {
-            rootstream_net_send_encrypted(ctx, peer, PKT_INPUT,
-                                         &event_pkt, sizeof(event_pkt));
+            rootstream_net_send_encrypted(ctx, peer, PKT_INPUT, &event_pkt, sizeof(event_pkt));
             break;
         }
     }
@@ -60,21 +55,36 @@ static void forward_input_event(rootstream_ctx_t *ctx, uint8_t type,
 static uint16_t sdl_to_linux_keycode(SDL_Keycode sdl_key) {
     /* Common key mappings (simplified - full mapping would be much longer) */
     switch (sdl_key) {
-        case SDLK_ESCAPE: return KEY_ESC;
-        case SDLK_RETURN: return KEY_ENTER;
-        case SDLK_BACKSPACE: return KEY_BACKSPACE;
-        case SDLK_TAB: return KEY_TAB;
-        case SDLK_SPACE: return KEY_SPACE;
-        case SDLK_LEFT: return KEY_LEFT;
-        case SDLK_RIGHT: return KEY_RIGHT;
-        case SDLK_UP: return KEY_UP;
-        case SDLK_DOWN: return KEY_DOWN;
-        case SDLK_LSHIFT: return KEY_LEFTSHIFT;
-        case SDLK_RSHIFT: return KEY_RIGHTSHIFT;
-        case SDLK_LCTRL: return KEY_LEFTCTRL;
-        case SDLK_RCTRL: return KEY_RIGHTCTRL;
-        case SDLK_LALT: return KEY_LEFTALT;
-        case SDLK_RALT: return KEY_RIGHTALT;
+        case SDLK_ESCAPE:
+            return KEY_ESC;
+        case SDLK_RETURN:
+            return KEY_ENTER;
+        case SDLK_BACKSPACE:
+            return KEY_BACKSPACE;
+        case SDLK_TAB:
+            return KEY_TAB;
+        case SDLK_SPACE:
+            return KEY_SPACE;
+        case SDLK_LEFT:
+            return KEY_LEFT;
+        case SDLK_RIGHT:
+            return KEY_RIGHT;
+        case SDLK_UP:
+            return KEY_UP;
+        case SDLK_DOWN:
+            return KEY_DOWN;
+        case SDLK_LSHIFT:
+            return KEY_LEFTSHIFT;
+        case SDLK_RSHIFT:
+            return KEY_RIGHTSHIFT;
+        case SDLK_LCTRL:
+            return KEY_LEFTCTRL;
+        case SDLK_RCTRL:
+            return KEY_RIGHTCTRL;
+        case SDLK_LALT:
+            return KEY_LEFTALT;
+        case SDLK_RALT:
+            return KEY_RIGHTALT;
 
         /* Letters (a-z) */
         default:
@@ -89,7 +99,7 @@ static uint16_t sdl_to_linux_keycode(SDL_Keycode sdl_key) {
             if (sdl_key >= SDLK_F1 && sdl_key <= SDLK_F12) {
                 return KEY_F1 + (sdl_key - SDLK_F1);
             }
-            return 0;  /* Unknown key */
+            return 0; /* Unknown key */
     }
 }
 
@@ -102,8 +112,7 @@ static uint16_t sdl_to_linux_keycode(SDL_Keycode sdl_key) {
  * @param height Window height
  * @return       0 on success, -1 on error
  */
-int display_init(rootstream_ctx_t *ctx, const char *title,
-                int width, int height) {
+int display_init(rootstream_ctx_t *ctx, const char *title, int width, int height) {
     if (!ctx || !title) {
         fprintf(stderr, "ERROR: Invalid arguments to display_init\n");
         return -1;
@@ -129,13 +138,8 @@ int display_init(rootstream_ctx_t *ctx, const char *title,
     disp->height = height;
 
     /* Create window */
-    disp->window = SDL_CreateWindow(
-        title,
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        width, height,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
-    );
+    disp->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width,
+                                    height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     if (!disp->window) {
         fprintf(stderr, "ERROR: SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -145,10 +149,8 @@ int display_init(rootstream_ctx_t *ctx, const char *title,
     }
 
     /* Create renderer with vsync for smooth playback */
-    disp->renderer = SDL_CreateRenderer(
-        disp->window, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
+    disp->renderer =
+        SDL_CreateRenderer(disp->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     if (!disp->renderer) {
         fprintf(stderr, "ERROR: SDL_CreateRenderer failed: %s\n", SDL_GetError());
@@ -159,12 +161,9 @@ int display_init(rootstream_ctx_t *ctx, const char *title,
     }
 
     /* Create texture for YUV (NV12) frames */
-    disp->texture = SDL_CreateTexture(
-        disp->renderer,
-        SDL_PIXELFORMAT_NV12,  /* NV12 format from VA-API decoder */
-        SDL_TEXTUREACCESS_STREAMING,
-        width, height
-    );
+    disp->texture = SDL_CreateTexture(disp->renderer,
+                                      SDL_PIXELFORMAT_NV12, /* NV12 format from VA-API decoder */
+                                      SDL_TEXTUREACCESS_STREAMING, width, height);
 
     if (!disp->texture) {
         fprintf(stderr, "ERROR: SDL_CreateTexture failed: %s\n", SDL_GetError());
@@ -197,19 +196,15 @@ int display_present_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame) {
         return -1;
     }
 
-    sdl2_display_ctx_t *disp = (sdl2_display_ctx_t*)ctx->tray.gtk_app;
+    sdl2_display_ctx_t *disp = (sdl2_display_ctx_t *)ctx->tray.gtk_app;
     if (!disp || !disp->initialized) {
         fprintf(stderr, "ERROR: Display not initialized\n");
         return -1;
     }
 
     /* Update texture with frame data (NV12 format) */
-    int ret = SDL_UpdateTexture(
-        disp->texture,
-        NULL,  /* Update entire texture */
-        frame->data,
-        frame->pitch
-    );
+    int ret = SDL_UpdateTexture(disp->texture, NULL, /* Update entire texture */
+                                frame->data, frame->pitch);
 
     if (ret < 0) {
         fprintf(stderr, "ERROR: SDL_UpdateTexture failed: %s\n", SDL_GetError());
@@ -254,7 +249,7 @@ int display_poll_events(rootstream_ctx_t *ctx) {
                 {
                     uint16_t linux_key = sdl_to_linux_keycode(event.key.keysym.sym);
                     if (linux_key != 0) {
-                        forward_input_event(ctx, EV_KEY, linux_key, 1);  /* 1 = pressed */
+                        forward_input_event(ctx, EV_KEY, linux_key, 1); /* 1 = pressed */
                     }
                 }
                 break;
@@ -264,7 +259,7 @@ int display_poll_events(rootstream_ctx_t *ctx) {
                 {
                     uint16_t linux_key = sdl_to_linux_keycode(event.key.keysym.sym);
                     if (linux_key != 0) {
-                        forward_input_event(ctx, EV_KEY, linux_key, 0);  /* 0 = released */
+                        forward_input_event(ctx, EV_KEY, linux_key, 0); /* 0 = released */
                     }
                 }
                 break;
@@ -279,10 +274,13 @@ int display_poll_events(rootstream_ctx_t *ctx) {
                 /* Forward mouse button press */
                 {
                     uint16_t btn = BTN_LEFT;
-                    if (event.button.button == SDL_BUTTON_LEFT) btn = BTN_LEFT;
-                    else if (event.button.button == SDL_BUTTON_RIGHT) btn = BTN_RIGHT;
-                    else if (event.button.button == SDL_BUTTON_MIDDLE) btn = BTN_MIDDLE;
-                    forward_input_event(ctx, EV_KEY, btn, 1);  /* 1 = pressed */
+                    if (event.button.button == SDL_BUTTON_LEFT)
+                        btn = BTN_LEFT;
+                    else if (event.button.button == SDL_BUTTON_RIGHT)
+                        btn = BTN_RIGHT;
+                    else if (event.button.button == SDL_BUTTON_MIDDLE)
+                        btn = BTN_MIDDLE;
+                    forward_input_event(ctx, EV_KEY, btn, 1); /* 1 = pressed */
                 }
                 break;
 
@@ -290,10 +288,13 @@ int display_poll_events(rootstream_ctx_t *ctx) {
                 /* Forward mouse button release */
                 {
                     uint16_t btn = BTN_LEFT;
-                    if (event.button.button == SDL_BUTTON_LEFT) btn = BTN_LEFT;
-                    else if (event.button.button == SDL_BUTTON_RIGHT) btn = BTN_RIGHT;
-                    else if (event.button.button == SDL_BUTTON_MIDDLE) btn = BTN_MIDDLE;
-                    forward_input_event(ctx, EV_KEY, btn, 0);  /* 0 = released */
+                    if (event.button.button == SDL_BUTTON_LEFT)
+                        btn = BTN_LEFT;
+                    else if (event.button.button == SDL_BUTTON_RIGHT)
+                        btn = BTN_RIGHT;
+                    else if (event.button.button == SDL_BUTTON_MIDDLE)
+                        btn = BTN_MIDDLE;
+                    forward_input_event(ctx, EV_KEY, btn, 0); /* 0 = released */
                 }
                 break;
 
@@ -307,8 +308,8 @@ int display_poll_events(rootstream_ctx_t *ctx) {
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                     /* Window resized - texture will scale automatically */
-                    printf("INFO: Window resized to %dx%d\n",
-                           event.window.data1, event.window.data2);
+                    printf("INFO: Window resized to %dx%d\n", event.window.data1,
+                           event.window.data2);
                 }
                 break;
 
@@ -328,7 +329,7 @@ void display_cleanup(rootstream_ctx_t *ctx) {
         return;
     }
 
-    sdl2_display_ctx_t *disp = (sdl2_display_ctx_t*)ctx->tray.gtk_app;
+    sdl2_display_ctx_t *disp = (sdl2_display_ctx_t *)ctx->tray.gtk_app;
 
     if (disp->texture) {
         SDL_DestroyTexture(disp->texture);

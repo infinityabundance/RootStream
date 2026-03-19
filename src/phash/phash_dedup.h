@@ -14,10 +14,11 @@
 #ifndef ROOTSTREAM_PHASH_DEDUP_H
 #define ROOTSTREAM_PHASH_DEDUP_H
 
-#include "phash.h"
-#include "phash_index.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "phash.h"
+#include "phash_index.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,10 +57,7 @@ void phash_dedup_destroy(phash_dedup_t *d);
  * @return            true  = duplicate (frame should be skipped/dropped)
  *                    false = unique frame (has been indexed)
  */
-bool phash_dedup_push(phash_dedup_t *d,
-                       uint64_t       hash,
-                       uint64_t       frame_id,
-                       uint64_t      *out_match);
+bool phash_dedup_push(phash_dedup_t *d, uint64_t hash, uint64_t frame_id, uint64_t *out_match);
 
 /**
  * phash_dedup_reset — clear all indexed hashes

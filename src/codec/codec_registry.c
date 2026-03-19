@@ -42,9 +42,10 @@
  */
 
 #include "codec_registry.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 /* ── Internal struct ──────────────────────────────────────────────── */
 
@@ -52,8 +53,8 @@ struct creg_registry_s {
     /* Indexed by codec_id — element 0 = RAW, 1 = H264, …, 7 = LIBDAVE.
      * in_use[i] = true means slot i has a registered entry. */
     creg_entry_t entries[CREG_VCODEC_MAX];
-    bool         in_use[CREG_VCODEC_MAX];
-    int          count;  /* number of registered entries */
+    bool in_use[CREG_VCODEC_MAX];
+    int count; /* number of registered entries */
 };
 
 /* ── Forward declarations for default probe stubs ─────────────────── */
@@ -63,7 +64,7 @@ struct creg_registry_s {
  * via creg_register() at init time, so the actual probe logic lives there. */
 static bool probe_always_false(uint8_t codec_id) {
     (void)codec_id;
-    return false;  /* stub: codec not compiled in or not yet implemented */
+    return false; /* stub: codec not compiled in or not yet implemented */
 }
 
 static bool probe_always_true(uint8_t codec_id) {
@@ -86,8 +87,10 @@ void creg_destroy(creg_registry_t *r) {
 /* ── Registration ─────────────────────────────────────────────────── */
 
 int creg_register(creg_registry_t *r, const creg_entry_t *entry) {
-    if (!r || !entry) return -1;
-    if (entry->codec_id >= CREG_VCODEC_MAX) return -1;  /* out of range */
+    if (!r || !entry)
+        return -1;
+    if (entry->codec_id >= CREG_VCODEC_MAX)
+        return -1; /* out of range */
 
     /* Overwrite any existing entry for this codec_id (idempotent) */
     r->entries[entry->codec_id] = *entry;
@@ -103,8 +106,10 @@ int creg_register(creg_registry_t *r, const creg_entry_t *entry) {
 /* ── Query ────────────────────────────────────────────────────────── */
 
 const creg_entry_t *creg_lookup(const creg_registry_t *r, uint8_t codec_id) {
-    if (!r || codec_id >= CREG_VCODEC_MAX) return NULL;
-    if (!r->in_use[codec_id]) return NULL;
+    if (!r || codec_id >= CREG_VCODEC_MAX)
+        return NULL;
+    if (!r->in_use[codec_id])
+        return NULL;
     return &r->entries[codec_id];
 }
 
@@ -130,11 +135,13 @@ int creg_count(const creg_registry_t *r) {
 /* ── Probing ──────────────────────────────────────────────────────── */
 
 int creg_probe_all(creg_registry_t *r) {
-    if (!r) return 0;
+    if (!r)
+        return 0;
     int available = 0;
 
     for (int i = 0; i < CREG_VCODEC_MAX; i++) {
-        if (!r->in_use[i]) continue;
+        if (!r->in_use[i])
+            continue;
 
         creg_entry_t *e = &r->entries[i];
 
@@ -150,13 +157,13 @@ int creg_probe_all(creg_registry_t *r) {
         /* hw_preferred: true if any hardware backend bit is set AND the
          * codec is available for encoding */
         if (e->encode_available) {
-            uint8_t hw_mask = CREG_BACKEND_VAAPI | CREG_BACKEND_NVENC |
-                              CREG_BACKEND_QSV   | CREG_BACKEND_VIDEOTB |
-                              CREG_BACKEND_MEDIACODEC | CREG_BACKEND_V4L2;
+            uint8_t hw_mask = CREG_BACKEND_VAAPI | CREG_BACKEND_NVENC | CREG_BACKEND_QSV |
+                              CREG_BACKEND_VIDEOTB | CREG_BACKEND_MEDIACODEC | CREG_BACKEND_V4L2;
             e->hw_preferred = (e->encoder_backends & hw_mask) != 0;
         }
 
-        if (e->encode_available || e->decode_available) available++;
+        if (e->encode_available || e->decode_available)
+            available++;
     }
     return available;
 }
@@ -164,7 +171,8 @@ int creg_probe_all(creg_registry_t *r) {
 /* ── Default registrations ────────────────────────────────────────── */
 
 int creg_register_all_defaults(creg_registry_t *r) {
-    if (!r) return 0;
+    if (!r)
+        return 0;
     int n = 0;
 
     /* ── RAW (pass-through) ──
@@ -172,17 +180,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
      * No library dependency. */
     {
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_RAW,
-            .name             = "raw",
-            .long_name        = "Uncompressed / pass-through",
+            .codec_id = CREG_VCODEC_RAW,
+            .name = "raw",
+            .long_name = "Uncompressed / pass-through",
             .encoder_backends = CREG_BACKEND_SW,
             .decoder_backends = CREG_BACKEND_SW,
             .encode_available = true,
             .decode_available = true,
-            .hw_preferred     = false,
-            .probe_fn         = probe_always_true,
+            .hw_preferred = false,
+            .probe_fn = probe_always_true,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── H.264 / AVC ──
@@ -203,17 +212,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
         enc_backends |= CREG_BACKEND_QSV;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_H264,
-            .name             = "h264",
-            .long_name        = "H.264 / AVC (libx264 + hardware)",
+            .codec_id = CREG_VCODEC_H264,
+            .name = "h264",
+            .long_name = "H.264 / AVC (libx264 + hardware)",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
-            .encode_available = true,   /* libx264 always present at link time */
+            .encode_available = true, /* libx264 always present at link time */
             .decode_available = true,
-            .hw_preferred     = false,  /* updated by creg_probe_all() */
-            .probe_fn         = NULL,   /* libx264 compile-time guarantee */
+            .hw_preferred = false, /* updated by creg_probe_all() */
+            .probe_fn = NULL,      /* libx264 compile-time guarantee */
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── H.265 / HEVC ──
@@ -222,7 +232,7 @@ int creg_register_all_defaults(creg_registry_t *r) {
     {
         uint8_t enc_backends = CREG_BACKEND_NONE;
         uint8_t dec_backends = CREG_BACKEND_NONE;
-        bool    avail        = false;
+        bool avail = false;
 #ifdef HAVE_X265
         enc_backends |= CREG_BACKEND_SW;
         dec_backends |= CREG_BACKEND_SW;
@@ -238,17 +248,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
         avail = true;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_H265,
-            .name             = "h265",
-            .long_name        = "H.265 / HEVC (libx265 + hardware)",
+            .codec_id = CREG_VCODEC_H265,
+            .name = "h265",
+            .long_name = "H.265 / HEVC (libx265 + hardware)",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
             .encode_available = avail,
             .decode_available = avail,
-            .hw_preferred     = false,
-            .probe_fn         = NULL,
+            .hw_preferred = false,
+            .probe_fn = NULL,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── AV1 ──
@@ -258,8 +269,8 @@ int creg_register_all_defaults(creg_registry_t *r) {
     {
         uint8_t enc_backends = CREG_BACKEND_NONE;
         uint8_t dec_backends = CREG_BACKEND_NONE;
-        bool    enc_avail    = false;
-        bool    dec_avail    = false;
+        bool enc_avail = false;
+        bool dec_avail = false;
 #ifdef HAVE_LIBAOM
         enc_backends |= CREG_BACKEND_SW;
         dec_backends |= CREG_BACKEND_SW;
@@ -283,17 +294,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
         enc_avail = true;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_AV1,
-            .name             = "av1",
-            .long_name        = "AV1 (libaom / SVT-AV1 / dav1d / hardware)",
+            .codec_id = CREG_VCODEC_AV1,
+            .name = "av1",
+            .long_name = "AV1 (libaom / SVT-AV1 / dav1d / hardware)",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
             .encode_available = enc_avail,
             .decode_available = dec_avail,
-            .hw_preferred     = false,
-            .probe_fn         = NULL,
+            .hw_preferred = false,
+            .probe_fn = NULL,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── VP9 ──
@@ -302,7 +314,7 @@ int creg_register_all_defaults(creg_registry_t *r) {
     {
         uint8_t enc_backends = CREG_BACKEND_NONE;
         uint8_t dec_backends = CREG_BACKEND_NONE;
-        bool    avail        = false;
+        bool avail = false;
 #ifdef HAVE_LIBVPX
         enc_backends |= CREG_BACKEND_SW;
         dec_backends |= CREG_BACKEND_SW;
@@ -318,17 +330,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
         avail = true;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_VP9,
-            .name             = "vp9",
-            .long_name        = "VP9 (libvpx + hardware VAAPI/NVENC)",
+            .codec_id = CREG_VCODEC_VP9,
+            .name = "vp9",
+            .long_name = "VP9 (libvpx + hardware VAAPI/NVENC)",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
             .encode_available = avail,
             .decode_available = avail,
-            .hw_preferred     = false,
-            .probe_fn         = NULL,
+            .hw_preferred = false,
+            .probe_fn = NULL,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── H.266 / VVC ──
@@ -339,24 +352,25 @@ int creg_register_all_defaults(creg_registry_t *r) {
     {
         uint8_t enc_backends = CREG_BACKEND_NONE;
         uint8_t dec_backends = CREG_BACKEND_NONE;
-        bool    avail        = false;
+        bool avail = false;
 #ifdef HAVE_VVENC
         enc_backends |= CREG_BACKEND_SW;
         dec_backends |= CREG_BACKEND_SW;
         avail = true;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_VVC,
-            .name             = "vvc",
-            .long_name        = "H.266 / VVC (VVenC + VVdeC)",
+            .codec_id = CREG_VCODEC_VVC,
+            .name = "vvc",
+            .long_name = "H.266 / VVC (VVenC + VVdeC)",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
             .encode_available = avail,
             .decode_available = avail,
-            .hw_preferred     = false,
-            .probe_fn         = NULL,
+            .hw_preferred = false,
+            .probe_fn = NULL,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── AV2 ──
@@ -366,17 +380,18 @@ int creg_register_all_defaults(creg_registry_t *r) {
      * where no AV2 implementation exists yet. */
     {
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_AV2,
-            .name             = "av2",
-            .long_name        = "AV2 (future spec — stub)",
+            .codec_id = CREG_VCODEC_AV2,
+            .name = "av2",
+            .long_name = "AV2 (future spec — stub)",
             .encoder_backends = CREG_BACKEND_NONE,
             .decoder_backends = CREG_BACKEND_NONE,
             .encode_available = false,
             .decode_available = false,
-            .hw_preferred     = false,
-            .probe_fn         = probe_always_false,
+            .hw_preferred = false,
+            .probe_fn = probe_always_false,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* ── libdave (Discord) ──
@@ -386,24 +401,25 @@ int creg_register_all_defaults(creg_registry_t *r) {
     {
         uint8_t enc_backends = CREG_BACKEND_NONE;
         uint8_t dec_backends = CREG_BACKEND_NONE;
-        bool    avail        = false;
+        bool avail = false;
 #ifdef HAVE_LIBDAVE
         enc_backends |= CREG_BACKEND_SW;
         dec_backends |= CREG_BACKEND_SW;
         avail = true;
 #endif
         creg_entry_t e = {
-            .codec_id         = CREG_VCODEC_LIBDAVE,
-            .name             = "libdave",
-            .long_name        = "Discord libdave packetised media",
+            .codec_id = CREG_VCODEC_LIBDAVE,
+            .name = "libdave",
+            .long_name = "Discord libdave packetised media",
             .encoder_backends = enc_backends,
             .decoder_backends = dec_backends,
             .encode_available = avail,
             .decode_available = avail,
-            .hw_preferred     = false,
-            .probe_fn         = NULL,
+            .hw_preferred = false,
+            .probe_fn = NULL,
         };
-        creg_register(r, &e); n++;
+        creg_register(r, &e);
+        n++;
     }
 
     /* Run hardware probing for all registered codecs */
@@ -414,13 +430,14 @@ int creg_register_all_defaults(creg_registry_t *r) {
 
 /* ── Enumeration ──────────────────────────────────────────────────── */
 
-void creg_foreach(const creg_registry_t *r,
-                  bool (*fn)(const creg_entry_t *e, void *user),
-                  void *user)
-{
-    if (!r || !fn) return;
+void creg_foreach(const creg_registry_t *r, bool (*fn)(const creg_entry_t *e, void *user),
+                  void *user) {
+    if (!r || !fn)
+        return;
     for (int i = 0; i < CREG_VCODEC_MAX; i++) {
-        if (!r->in_use[i]) continue;
-        if (!fn(&r->entries[i], user)) break;  /* false = stop early */
+        if (!r->in_use[i])
+            continue;
+        if (!fn(&r->entries[i], user))
+            break; /* false = stop early */
     }
 }

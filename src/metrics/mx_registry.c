@@ -29,14 +29,15 @@
  */
 
 #include "mx_registry.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 /* ── internal struct ──────────────────────────────────────────────── */
 
 struct mx_registry_s {
-    mx_gauge_t gauges[MX_MAX_GAUGES];  /* flat gauge array, zero-initialised */
-    int        count;                  /* number of currently registered gauges */
+    mx_gauge_t gauges[MX_MAX_GAUGES]; /* flat gauge array, zero-initialised */
+    int count;                        /* number of currently registered gauges */
 };
 
 /* ── lifecycle ────────────────────────────────────────────────────── */
@@ -67,8 +68,7 @@ mx_gauge_t *mx_registry_register(mx_registry_t *r, const char *name) {
      * Duplicate names would create two gauges with the same label,
      * making dashboard queries ambiguous ("which latency_us?"). */
     for (int i = 0; i < MX_MAX_GAUGES; i++)
-        if (r->gauges[i].in_use &&
-            strncmp(r->gauges[i].name, name, MX_GAUGE_NAME_MAX) == 0)
+        if (r->gauges[i].in_use && strncmp(r->gauges[i].name, name, MX_GAUGE_NAME_MAX) == 0)
             return NULL;
 
     /* Pass 2: find the first free slot.
@@ -78,34 +78,34 @@ mx_gauge_t *mx_registry_register(mx_registry_t *r, const char *name) {
      * duration of the process. */
     for (int i = 0; i < MX_MAX_GAUGES; i++) {
         if (!r->gauges[i].in_use) {
-            if (mx_gauge_init(&r->gauges[i], name) != 0) return NULL;
+            if (mx_gauge_init(&r->gauges[i], name) != 0)
+                return NULL;
             r->count++;
-            return &r->gauges[i];  /* pointer into the array — stable */
+            return &r->gauges[i]; /* pointer into the array — stable */
         }
     }
-    return NULL;  /* should not reach here: count guard above prevents this */
+    return NULL; /* should not reach here: count guard above prevents this */
 }
 
 /* ── lookup ───────────────────────────────────────────────────────── */
 
 mx_gauge_t *mx_registry_lookup(mx_registry_t *r, const char *name) {
-    if (!r || !name) return NULL;
+    if (!r || !name)
+        return NULL;
     /* Linear scan — acceptable for ≤64 gauges.  Callers on hot paths
      * should cache the returned pointer rather than calling lookup
      * every frame. */
     for (int i = 0; i < MX_MAX_GAUGES; i++)
-        if (r->gauges[i].in_use &&
-            strncmp(r->gauges[i].name, name, MX_GAUGE_NAME_MAX) == 0)
+        if (r->gauges[i].in_use && strncmp(r->gauges[i].name, name, MX_GAUGE_NAME_MAX) == 0)
             return &r->gauges[i];
     return NULL;
 }
 
 /* ── snapshot ─────────────────────────────────────────────────────── */
 
-int mx_registry_snapshot_all(const mx_registry_t *r,
-                              mx_gauge_t          *out,
-                              int                  max_out) {
-    if (!r || !out || max_out <= 0) return 0;
+int mx_registry_snapshot_all(const mx_registry_t *r, mx_gauge_t *out, int max_out) {
+    if (!r || !out || max_out <= 0)
+        return 0;
 
     int n = 0;
     /* Copy all in-use gauges into the caller's array.
@@ -113,7 +113,7 @@ int mx_registry_snapshot_all(const mx_registry_t *r,
      * all gauge values at this instant; subsequent gauge mutations do
      * not retroactively change the snapshot. */
     for (int i = 0; i < MX_MAX_GAUGES && n < max_out; i++)
-        if (r->gauges[i].in_use) out[n++] = r->gauges[i];
+        if (r->gauges[i].in_use)
+            out[n++] = r->gauges[i];
     return n;
 }
-

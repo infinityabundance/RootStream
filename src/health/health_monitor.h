@@ -13,23 +13,24 @@
 #ifndef ROOTSTREAM_HEALTH_MONITOR_H
 #define ROOTSTREAM_HEALTH_MONITOR_H
 
-#include "health_metric.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "health_metric.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HEALTH_MAX_METRICS  32   /**< Maximum registered metrics */
+#define HEALTH_MAX_METRICS 32 /**< Maximum registered metrics */
 
 /** Health evaluation summary */
 typedef struct {
-    hm_level_t overall;   /**< Worst level across all metrics */
-    int        n_ok;
-    int        n_warn;
-    int        n_crit;
-    int        n_metrics; /**< Total registered */
+    hm_level_t overall; /**< Worst level across all metrics */
+    int n_ok;
+    int n_warn;
+    int n_crit;
+    int n_metrics; /**< Total registered */
 } health_summary_t;
 
 /** Opaque health monitor */
@@ -56,9 +57,7 @@ void health_monitor_destroy(health_monitor_t *hm);
  * @return      Pointer to the registered metric (owned by monitor),
  *              or NULL if full or duplicate name
  */
-health_metric_t *health_monitor_register(health_monitor_t *hm,
-                                           const char       *name,
-                                           hm_kind_t         kind);
+health_metric_t *health_monitor_register(health_monitor_t *hm, const char *name, hm_kind_t kind);
 
 /**
  * health_monitor_get — look up metric by name
@@ -90,9 +89,8 @@ int health_monitor_metric_count(const health_monitor_t *hm);
  * @param cb    Callback called once per registered metric
  * @param user  User pointer forwarded to callback
  */
-void health_monitor_foreach(health_monitor_t *hm,
-                               void (*cb)(const health_metric_t *m, void *user),
-                               void *user);
+void health_monitor_foreach(health_monitor_t *hm, void (*cb)(const health_metric_t *m, void *user),
+                            void *user);
 
 #ifdef __cplusplus
 }

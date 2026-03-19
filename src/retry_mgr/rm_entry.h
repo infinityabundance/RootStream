@@ -16,23 +16,23 @@
 #ifndef ROOTSTREAM_RM_ENTRY_H
 #define ROOTSTREAM_RM_ENTRY_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RM_MAX_BACKOFF_US  30000000ULL  /**< Hard cap on inter-retry delay (30 s) */
+#define RM_MAX_BACKOFF_US 30000000ULL /**< Hard cap on inter-retry delay (30 s) */
 
 /** Retry state for one request */
 typedef struct {
-    uint64_t request_id;      /**< Unique request identifier */
-    uint32_t attempt_count;   /**< Attempts made so far (0 = not yet tried) */
-    uint32_t max_attempts;    /**< Maximum attempts before giving up */
-    uint64_t base_delay_us;   /**< Initial back-off delay (µs) */
-    uint64_t next_retry_us;   /**< Wall-clock µs when next attempt is due */
-    bool     in_use;
+    uint64_t request_id;    /**< Unique request identifier */
+    uint32_t attempt_count; /**< Attempts made so far (0 = not yet tried) */
+    uint32_t max_attempts;  /**< Maximum attempts before giving up */
+    uint64_t base_delay_us; /**< Initial back-off delay (µs) */
+    uint64_t next_retry_us; /**< Wall-clock µs when next attempt is due */
+    bool in_use;
 } rm_entry_t;
 
 /**
@@ -46,11 +46,8 @@ typedef struct {
  * @param max_attempts  Maximum attempts (> 0)
  * @return              0 on success, -1 on NULL or invalid params
  */
-int rm_entry_init(rm_entry_t *e,
-                  uint64_t    request_id,
-                  uint64_t    now_us,
-                  uint64_t    base_delay_us,
-                  uint32_t    max_attempts);
+int rm_entry_init(rm_entry_t *e, uint64_t request_id, uint64_t now_us, uint64_t base_delay_us,
+                  uint32_t max_attempts);
 
 /**
  * rm_entry_advance — record one attempt and compute next_retry_us

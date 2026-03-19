@@ -23,8 +23,9 @@
 #ifndef ROOTSTREAM_HEALTH_REPORT_H
 #define ROOTSTREAM_HEALTH_REPORT_H
 
-#include "health_monitor.h"
 #include <stddef.h>
+
+#include "health_monitor.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -20,8 +20,8 @@
 #ifndef ROOTSTREAM_QUALITY_METRICS_H
 #define ROOTSTREAM_QUALITY_METRICS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,11 +37,7 @@ extern "C" {
  * @param stride   Row stride in bytes (>= width)
  * @return         PSNR in dB; returns 1000.0 (sentinel for ∞) when MSE == 0
  */
-double quality_psnr(const uint8_t *ref,
-                    const uint8_t *dist,
-                    int            width,
-                    int            height,
-                    int            stride);
+double quality_psnr(const uint8_t *ref, const uint8_t *dist, int width, int height, int stride);
 
 /**
  * quality_ssim — compute SSIM between two luma frames (0.0–1.0)
@@ -55,11 +51,7 @@ double quality_psnr(const uint8_t *ref,
  * @param stride   Row stride in bytes
  * @return         SSIM index in [0, 1]
  */
-double quality_ssim(const uint8_t *ref,
-                    const uint8_t *dist,
-                    int            width,
-                    int            height,
-                    int            stride);
+double quality_ssim(const uint8_t *ref, const uint8_t *dist, int width, int height, int stride);
 
 /**
  * quality_mse — compute Mean Squared Error between two luma planes
@@ -67,11 +59,7 @@ double quality_ssim(const uint8_t *ref,
  * @param ref, dist, width, height, stride  Same semantics as above
  * @return  MSE (non-negative double)
  */
-double quality_mse(const uint8_t *ref,
-                   const uint8_t *dist,
-                   int            width,
-                   int            height,
-                   int            stride);
+double quality_mse(const uint8_t *ref, const uint8_t *dist, int width, int height, int stride);
 
 #ifdef __cplusplus
 }

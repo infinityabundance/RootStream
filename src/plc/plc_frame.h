@@ -21,19 +21,19 @@
 #ifndef ROOTSTREAM_PLC_FRAME_H
 #define ROOTSTREAM_PLC_FRAME_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PLC_FRAME_MAGIC           0x504C4346UL  /* 'PLCF' */
-#define PLC_FRAME_HDR_SIZE        24
-#define PLC_MAX_CHANNELS          2
-#define PLC_MAX_SAMPLES_PER_CH    1024          /* ~21ms at 48 kHz */
-#define PLC_MAX_FRAME_SAMPLES     (PLC_MAX_CHANNELS * PLC_MAX_SAMPLES_PER_CH)
+#define PLC_FRAME_MAGIC 0x504C4346UL /* 'PLCF' */
+#define PLC_FRAME_HDR_SIZE 24
+#define PLC_MAX_CHANNELS 2
+#define PLC_MAX_SAMPLES_PER_CH 1024 /* ~21ms at 48 kHz */
+#define PLC_MAX_FRAME_SAMPLES (PLC_MAX_CHANNELS * PLC_MAX_SAMPLES_PER_CH)
 
 /** PCM audio frame */
 typedef struct {
@@ -41,8 +41,8 @@ typedef struct {
     uint32_t seq_num;
     uint32_t sample_rate;
     uint16_t channels;
-    uint16_t num_samples;          /**< Samples per channel */
-    int16_t  samples[PLC_MAX_FRAME_SAMPLES]; /**< Interleaved */
+    uint16_t num_samples;                   /**< Samples per channel */
+    int16_t samples[PLC_MAX_FRAME_SAMPLES]; /**< Interleaved */
 } plc_frame_t;
 
 /**
@@ -53,9 +53,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 on error
  */
-int plc_frame_encode(const plc_frame_t *frame,
-                      uint8_t           *buf,
-                      size_t             buf_sz);
+int plc_frame_encode(const plc_frame_t *frame, uint8_t *buf, size_t buf_sz);
 
 /**
  * plc_frame_decode — parse @frame from @buf
@@ -65,9 +63,7 @@ int plc_frame_encode(const plc_frame_t *frame,
  * @param frame   Output frame
  * @return        0 on success, -1 on error
  */
-int plc_frame_decode(const uint8_t *buf,
-                      size_t         buf_sz,
-                      plc_frame_t   *frame);
+int plc_frame_decode(const uint8_t *buf, size_t buf_sz, plc_frame_t *frame);
 
 /**
  * plc_frame_byte_size — total encoded size for a given frame

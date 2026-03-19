@@ -11,8 +11,9 @@
 #ifndef ROOTSTREAM_LADDER_SELECTOR_H
 #define ROOTSTREAM_LADDER_SELECTOR_H
 
-#include "ladder_rung.h"
 #include <stdint.h>
+
+#include "ladder_rung.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,10 +31,7 @@ extern "C" {
  * @param margin        Safety margin in [0, 1) (e.g. 0.2 = 20% headroom)
  * @return              Index of selected rung (0..n-1), or 0 if none fit
  */
-int ladder_select(const ladder_rung_t *rungs,
-                    int                  n,
-                    uint32_t             estimated_bw,
-                    float                margin);
+int ladder_select(const ladder_rung_t *rungs, int n, uint32_t estimated_bw, float margin);
 
 #ifdef __cplusplus
 }

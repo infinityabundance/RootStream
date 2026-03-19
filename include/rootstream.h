@@ -1,26 +1,26 @@
 #ifndef ROOTSTREAM_H
 #define ROOTSTREAM_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /* Platform abstraction for cross-platform socket types */
 #include "../src/platform/platform.h"
 
 /* Cross-platform packed struct support */
 #ifdef _MSC_VER
-  #define PACKED_STRUCT __pragma(pack(push, 1)) struct
-  #define PACKED_STRUCT_END __pragma(pack(pop))
+#define PACKED_STRUCT __pragma(pack(push, 1)) struct
+#define PACKED_STRUCT_END __pragma(pack(pop))
 #else
-  #define PACKED_STRUCT struct __attribute__((packed))
-  #define PACKED_STRUCT_END
+#define PACKED_STRUCT struct __attribute__((packed))
+#define PACKED_STRUCT_END
 #endif
 
 /*
  * ============================================================================
  * RootStream - Secure Peer-to-Peer Game Streaming
  * ============================================================================
- * 
+ *
  * A lightweight, encrypted streaming solution with:
  * - Ed25519 public/private key authentication
  * - No accounts, no servers, just peer-to-peer
@@ -28,18 +28,18 @@
  * - Auto-discovery on local network (mDNS)
  * - Direct kernel DRM capture (no compositor)
  * - VA-API hardware encoding
- * 
+ *
  * Architecture:
  *   [DRM Capture] → [VA-API Encode] → [Encrypt] → [UDP] → [Network]
  *                                                              ↓
  *   [Display] ← [VA-API Decode] ← [Decrypt] ← [UDP] ← [Receive]
- * 
+ *
  * Security:
  *   - Each device has Ed25519 keypair (32-byte public, 32-byte private)
  *   - All packets encrypted with ChaCha20-Poly1305
  *   - Perfect forward secrecy with ephemeral keys
  *   - No central authority, no account database
- * 
+ *
  * RootStream Code Format:
  *   <base64_public_key>@<hostname>
  *   Example: kXx7Y...Qp9w@gaming-pc
@@ -65,10 +65,10 @@
 #define ROOTSTREAM_CODE_MAX_LEN 128
 
 /* Simple fallback selection macro (PHASE 0)
- * 
+ *
  * This macro simplifies backend initialization with automatic fallback.
  * Reserved for future phases (1-6) when additional fallback backends are added.
- * 
+ *
  * Example usage (future):
  *   int result;
  *   const char *name;
@@ -77,28 +77,29 @@
  *       ctx->active_backend.some_name = name;
  *   }
  */
-#define TRY_INIT_BACKEND(ctx, primary_fn, primary_name, fallback_fn, fallback_name, result_ptr, name_ptr) \
-    do { \
-        if ((primary_fn)(ctx) == 0) { \
-            *(name_ptr) = (primary_name); \
-            *(result_ptr) = 1; /* Mark as initialized */ \
-        } else if ((fallback_fn) != NULL && (fallback_fn)(ctx) == 0) { \
-            printf("INFO: Primary failed, using fallback: %s\n", (fallback_name)); \
-            *(name_ptr) = (fallback_name); \
-            *(result_ptr) = 1; \
-        } else { \
-            printf("ERROR: Both primary and fallback failed\n"); \
-            *(result_ptr) = 0; \
-        } \
-    } while(0)
+#define TRY_INIT_BACKEND(ctx, primary_fn, primary_name, fallback_fn, fallback_name, result_ptr, \
+                         name_ptr)                                                              \
+    do {                                                                                        \
+        if ((primary_fn)(ctx) == 0) {                                                           \
+            *(name_ptr) = (primary_name);                                                       \
+            *(result_ptr) = 1; /* Mark as initialized */                                        \
+        } else if ((fallback_fn) != NULL && (fallback_fn)(ctx) == 0) {                          \
+            printf("INFO: Primary failed, using fallback: %s\n", (fallback_name));              \
+            *(name_ptr) = (fallback_name);                                                      \
+            *(result_ptr) = 1;                                                                  \
+        } else {                                                                                \
+            printf("ERROR: Both primary and fallback failed\n");                                \
+            *(result_ptr) = 0;                                                                  \
+        }                                                                                       \
+    } while (0)
 
 /* ============================================================================
  * CAPTURE - Multi-backend framebuffer capture
  * ============================================================================ */
 
 typedef enum {
-    CAPTURE_DRM_KMS,      /* Direct kernel DRM/KMS (default) */
-    CAPTURE_MMAP,         /* Memory mapped framebuffer fallback */
+    CAPTURE_DRM_KMS, /* Direct kernel DRM/KMS (default) */
+    CAPTURE_MMAP,    /* Memory mapped framebuffer fallback */
 } capture_mode_t;
 
 /* Forward declarations */
@@ -114,53 +115,53 @@ typedef struct capture_backend {
 } capture_backend_t;
 
 typedef struct {
-    int fd;                    /* DRM device file descriptor */
-    uint32_t connector_id;     /* DRM connector ID */
-    uint32_t crtc_id;          /* CRTC ID */
-    uint32_t fb_id;            /* Framebuffer ID */
-    uint32_t width;            /* Display width in pixels */
-    uint32_t height;           /* Display height in pixels */
-    uint32_t refresh_rate;     /* Display refresh rate (Hz) */
-    char name[64];             /* Display name (e.g., "HDMI-A-1") */
+    int fd;                /* DRM device file descriptor */
+    uint32_t connector_id; /* DRM connector ID */
+    uint32_t crtc_id;      /* CRTC ID */
+    uint32_t fb_id;        /* Framebuffer ID */
+    uint32_t width;        /* Display width in pixels */
+    uint32_t height;       /* Display height in pixels */
+    uint32_t refresh_rate; /* Display refresh rate (Hz) */
+    char name[64];         /* Display name (e.g., "HDMI-A-1") */
 } display_info_t;
 
 typedef struct frame_buffer {
-    uint8_t *data;             /* Frame pixel data (RGBA) */
-    uint32_t size;             /* Total size in bytes */
-    uint32_t capacity;         /* Allocated buffer size in bytes */
-    uint32_t width;            /* Frame width */
-    uint32_t height;           /* Frame height */
-    uint32_t pitch;            /* Bytes per row (stride) */
-    uint32_t format;           /* Pixel format — use FRAME_FORMAT_* constants */
-    uint64_t timestamp;        /* Capture timestamp (microseconds) */
-    bool is_keyframe;          /* True if this is an I-frame/IDR */
+    uint8_t *data;      /* Frame pixel data (RGBA) */
+    uint32_t size;      /* Total size in bytes */
+    uint32_t capacity;  /* Allocated buffer size in bytes */
+    uint32_t width;     /* Frame width */
+    uint32_t height;    /* Frame height */
+    uint32_t pitch;     /* Bytes per row (stride) */
+    uint32_t format;    /* Pixel format — use FRAME_FORMAT_* constants */
+    uint64_t timestamp; /* Capture timestamp (microseconds) */
+    bool is_keyframe;   /* True if this is an I-frame/IDR */
 } frame_buffer_t;
 
 /* Pixel format constants for frame_buffer_t.format */
-#define FRAME_FORMAT_RGBA  0   /* 32-bit RGBA, 4 bytes/pixel */
-#define FRAME_FORMAT_NV12  1   /* YUV 4:2:0, Y plane + interleaved UV */
-#define FRAME_FORMAT_BGRA  2   /* 32-bit BGRA (Windows / Direct3D) */
-#define FRAME_FORMAT_P010  3   /* 10-bit NV12 (HDR) */
+#define FRAME_FORMAT_RGBA 0 /* 32-bit RGBA, 4 bytes/pixel */
+#define FRAME_FORMAT_NV12 1 /* YUV 4:2:0, Y plane + interleaved UV */
+#define FRAME_FORMAT_BGRA 2 /* 32-bit BGRA (Windows / Direct3D) */
+#define FRAME_FORMAT_P010 3 /* 10-bit NV12 (HDR) */
 
 /* ============================================================================
  * LATENCY - Stage timing and reporting
  * ============================================================================ */
 
 typedef struct {
-    uint64_t capture_us;        /* Capture duration */
-    uint64_t encode_us;         /* Encode duration */
-    uint64_t send_us;           /* Send duration (all peers) */
-    uint64_t total_us;          /* Capture → send duration */
+    uint64_t capture_us; /* Capture duration */
+    uint64_t encode_us;  /* Encode duration */
+    uint64_t send_us;    /* Send duration (all peers) */
+    uint64_t total_us;   /* Capture → send duration */
 } latency_sample_t;
 
 typedef struct {
-    bool enabled;               /* Enable latency logging */
-    size_t capacity;            /* Ring buffer capacity */
-    size_t count;               /* Samples stored */
-    size_t cursor;              /* Next insert position */
-    uint64_t report_interval_ms;/* How often to print stats */
-    uint64_t last_report_ms;    /* Last report timestamp */
-    latency_sample_t *samples;  /* Sample ring buffer */
+    bool enabled;                /* Enable latency logging */
+    size_t capacity;             /* Ring buffer capacity */
+    size_t count;                /* Samples stored */
+    size_t cursor;               /* Next insert position */
+    uint64_t report_interval_ms; /* How often to print stats */
+    uint64_t last_report_ms;     /* Last report timestamp */
+    latency_sample_t *samples;   /* Sample ring buffer */
 } latency_stats_t;
 
 /* ============================================================================
@@ -168,50 +169,49 @@ typedef struct {
  * ============================================================================ */
 
 typedef enum {
-    ENCODER_VAAPI,        /* VA-API (Intel/AMD) */
-    ENCODER_NVENC,        /* NVENC (NVIDIA) */
-    ENCODER_FFMPEG,       /* FFmpeg/libx264 software encoder */
-    ENCODER_RAW           /* Raw frame pass-through (debug) */
+    ENCODER_VAAPI,  /* VA-API (Intel/AMD) */
+    ENCODER_NVENC,  /* NVENC (NVIDIA) */
+    ENCODER_FFMPEG, /* FFmpeg/libx264 software encoder */
+    ENCODER_RAW     /* Raw frame pass-through (debug) */
 } encoder_type_t;
 
 typedef enum {
-    CODEC_H264,           /* H.264/AVC */
-    CODEC_H265            /* H.265/HEVC */
+    CODEC_H264, /* H.264/AVC */
+    CODEC_H265  /* H.265/HEVC */
 } codec_type_t;
 
 typedef struct {
-    encoder_type_t type;       /* Encoder type */
-    codec_type_t codec;        /* Video codec */
-    int device_fd;             /* Encoder device file descriptor */
-    void *hw_ctx;              /* Hardware context (opaque) */
+    encoder_type_t type; /* Encoder type */
+    codec_type_t codec;  /* Video codec */
+    int device_fd;       /* Encoder device file descriptor */
+    void *hw_ctx;        /* Hardware context (opaque) */
 
     /* Encoding parameters */
-    uint32_t bitrate;          /* Target bitrate (bits/sec) */
-    uint32_t framerate;        /* Target framerate (fps) */
-    uint8_t quality;           /* Quality level 0-100 */
-    bool low_latency;          /* Enable low-latency mode */
-    bool force_keyframe;       /* Force next frame as keyframe */
-    size_t max_output_size;    /* Max encoded output size (bytes) */
+    uint32_t bitrate;       /* Target bitrate (bits/sec) */
+    uint32_t framerate;     /* Target framerate (fps) */
+    uint8_t quality;        /* Quality level 0-100 */
+    bool low_latency;       /* Enable low-latency mode */
+    bool force_keyframe;    /* Force next frame as keyframe */
+    size_t max_output_size; /* Max encoded output size (bytes) */
 } encoder_ctx_t;
 
 /* Forward declaration for encoder_backend_t */
 typedef struct encoder_backend_t encoder_backend_t;
 
 typedef struct {
-    codec_type_t codec;        /* Video codec */
-    void *backend_ctx;         /* Backend-specific context (opaque) */
-    int width;                 /* Frame width */
-    int height;                /* Frame height */
-    bool initialized;          /* Decoder initialized? */
+    codec_type_t codec; /* Video codec */
+    void *backend_ctx;  /* Backend-specific context (opaque) */
+    int width;          /* Frame width */
+    int height;         /* Frame height */
+    bool initialized;   /* Decoder initialized? */
 } decoder_ctx_t;
 
 typedef struct {
-    void *backend_ctx;         /* Backend-specific context (opaque) */
-    int sample_rate;           /* Audio sample rate */
-    int channels;              /* Number of channels */
-    bool initialized;          /* Audio initialized? */
+    void *backend_ctx; /* Backend-specific context (opaque) */
+    int sample_rate;   /* Audio sample rate */
+    int channels;      /* Number of channels */
+    bool initialized;  /* Audio initialized? */
 } audio_playback_ctx_t;
-
 
 /* ============================================================================
  * CRYPTOGRAPHY - Ed25519 keypairs and encryption
@@ -220,14 +220,14 @@ typedef struct {
 typedef struct {
     uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];   /* Ed25519 public key */
     uint8_t secret_key[CRYPTO_SECRET_KEY_BYTES];   /* Ed25519 private key */
-    char identity[128];                             /* Hostname/device name */
+    char identity[128];                            /* Hostname/device name */
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN]; /* Public shareable code */
 } keypair_t;
 
 typedef struct {
-    uint8_t shared_key[CRYPTO_SHARED_KEY_BYTES];   /* Shared encryption key */
-    uint64_t nonce_counter;                         /* Nonce counter for packets */
-    bool authenticated;                             /* Peer authenticated? */
+    uint8_t shared_key[CRYPTO_SHARED_KEY_BYTES]; /* Shared encryption key */
+    uint64_t nonce_counter;                      /* Nonce counter for packets */
+    bool authenticated;                          /* Peer authenticated? */
 } crypto_session_t;
 
 /* ============================================================================
@@ -236,41 +236,43 @@ typedef struct {
 
 /* Packet header (always plaintext for routing) */
 typedef PACKED_STRUCT {
-    uint32_t magic;            /* 0x524F4F54 "ROOT" */
-    uint8_t version;           /* Protocol version (1) */
-    uint8_t type;              /* Packet type (see below) */
-    uint16_t flags;            /* Packet flags */
-    uint64_t nonce;            /* Encryption nonce */
-    uint16_t payload_size;     /* Encrypted payload size */
+    uint32_t magic;                /* 0x524F4F54 "ROOT" */
+    uint8_t version;               /* Protocol version (1) */
+    uint8_t type;                  /* Packet type (see below) */
+    uint16_t flags;                /* Packet flags */
+    uint64_t nonce;                /* Encryption nonce */
+    uint16_t payload_size;         /* Encrypted payload size */
     uint8_t mac[CRYPTO_MAC_BYTES]; /* Authentication tag */
-} packet_header_t;
+}
+packet_header_t;
 PACKED_STRUCT_END
 
 /* Packet types */
-#define PKT_HANDSHAKE     0x01  /* Initial key exchange */
-#define PKT_VIDEO         0x02  /* Encrypted video frame */
-#define PKT_AUDIO         0x03  /* Encrypted audio frame */
-#define PKT_INPUT         0x04  /* Encrypted input events */
-#define PKT_CONTROL       0x05  /* Control messages */
-#define PKT_PING          0x06  /* Keepalive ping */
-#define PKT_PONG          0x07  /* Keepalive pong */
+#define PKT_HANDSHAKE 0x01 /* Initial key exchange */
+#define PKT_VIDEO 0x02     /* Encrypted video frame */
+#define PKT_AUDIO 0x03     /* Encrypted audio frame */
+#define PKT_INPUT 0x04     /* Encrypted input events */
+#define PKT_CONTROL 0x05   /* Control messages */
+#define PKT_PING 0x06      /* Keepalive ping */
+#define PKT_PONG 0x07      /* Keepalive pong */
 
 /* Control command types for PKT_CONTROL */
 typedef enum {
-    CTRL_PAUSE           = 0x01,  /* Pause streaming */
-    CTRL_RESUME          = 0x02,  /* Resume streaming */
-    CTRL_SET_BITRATE     = 0x03,  /* Change target bitrate */
-    CTRL_SET_FPS         = 0x04,  /* Change target framerate */
+    CTRL_PAUSE = 0x01,            /* Pause streaming */
+    CTRL_RESUME = 0x02,           /* Resume streaming */
+    CTRL_SET_BITRATE = 0x03,      /* Change target bitrate */
+    CTRL_SET_FPS = 0x04,          /* Change target framerate */
     CTRL_REQUEST_KEYFRAME = 0x05, /* Request immediate keyframe */
-    CTRL_SET_QUALITY     = 0x06,  /* Change quality level */
-    CTRL_DISCONNECT      = 0x07,  /* Graceful disconnect */
+    CTRL_SET_QUALITY = 0x06,      /* Change quality level */
+    CTRL_DISCONNECT = 0x07,       /* Graceful disconnect */
 } control_cmd_t;
 
 /* Control packet payload (encrypted) */
 typedef PACKED_STRUCT {
-    uint8_t cmd;       /* control_cmd_t command */
-    uint32_t value;    /* Command-specific value */
-} control_packet_t;
+    uint8_t cmd;    /* control_cmd_t command */
+    uint32_t value; /* Command-specific value */
+}
+control_packet_t;
 PACKED_STRUCT_END
 
 /* Fragmented video payload header (inside encrypted payload) */
@@ -281,7 +283,8 @@ typedef PACKED_STRUCT {
     uint16_t chunk_size;   /* Size of this chunk */
     uint16_t flags;        /* Reserved for future use */
     uint64_t timestamp_us; /* Capture timestamp */
-} video_chunk_header_t;
+}
+video_chunk_header_t;
 PACKED_STRUCT_END
 
 /* Audio payload header (inside encrypted payload) */
@@ -290,15 +293,17 @@ typedef PACKED_STRUCT {
     uint32_t sample_rate;  /* Samples per second */
     uint16_t channels;     /* Channel count */
     uint16_t samples;      /* Samples per channel */
-} audio_packet_header_t;
+}
+audio_packet_header_t;
 PACKED_STRUCT_END
 
 /* Encrypted input event payload */
 typedef PACKED_STRUCT {
-    uint8_t type;              /* EV_KEY, EV_REL, etc */
-    uint16_t code;             /* Key/button code */
-    int32_t value;             /* Value/delta */
-} input_event_pkt_t;
+    uint8_t type;  /* EV_KEY, EV_REL, etc */
+    uint16_t code; /* Key/button code */
+    int32_t value; /* Value/delta */
+}
+input_event_pkt_t;
 PACKED_STRUCT_END
 
 /* ============================================================================
@@ -310,18 +315,18 @@ PACKED_STRUCT_END
 
 /* Input backend types */
 typedef enum {
-    INPUT_BACKEND_UINPUT,      /* Linux uinput (primary) */
-    INPUT_BACKEND_XDOTOOL,     /* Linux xdotool (fallback) */
-    INPUT_BACKEND_LOGGING,     /* Log-only (fallback) */
+    INPUT_BACKEND_UINPUT,  /* Linux uinput (primary) */
+    INPUT_BACKEND_XDOTOOL, /* Linux xdotool (fallback) */
+    INPUT_BACKEND_LOGGING, /* Log-only (fallback) */
 } input_backend_type_t;
 
 /* Input event extended structure for manager */
 typedef struct {
-    input_event_pkt_t event;   /* Network packet event */
-    uint32_t client_id;        /* Which client sent this */
-    uint16_t sequence_number;  /* For deduplication */
-    uint64_t timestamp_us;     /* Client-side timestamp */
-    uint64_t received_us;      /* Host receive timestamp */
+    input_event_pkt_t event;  /* Network packet event */
+    uint32_t client_id;       /* Which client sent this */
+    uint16_t sequence_number; /* For deduplication */
+    uint64_t timestamp_us;    /* Client-side timestamp */
+    uint64_t received_us;     /* Host receive timestamp */
 } input_event_ext_t;
 
 /* Client tracking for input management */
@@ -337,20 +342,20 @@ typedef struct {
 /* Input manager context */
 typedef struct {
     input_backend_type_t backend_type;
-    int device_fd_kbd;         /* Keyboard device FD */
-    int device_fd_mouse;       /* Mouse device FD */
-    int device_fd_gamepad;     /* Gamepad device FD */
-    
+    int device_fd_kbd;     /* Keyboard device FD */
+    int device_fd_mouse;   /* Mouse device FD */
+    int device_fd_gamepad; /* Gamepad device FD */
+
     /* Multi-client tracking */
     input_client_info_t clients[INPUT_MAX_CLIENTS];
     int active_client_count;
-    
+
     /* Statistics */
     uint64_t total_inputs_processed;
     uint64_t duplicate_inputs_detected;
     uint64_t total_latency_us;
     uint32_t latency_samples;
-    
+
     /* Configuration */
     bool initialized;
 } input_manager_ctx_t;
@@ -360,48 +365,48 @@ typedef struct {
  * ============================================================================ */
 
 typedef enum {
-    PEER_DISCOVERED,           /* Found via mDNS */
-    PEER_CONNECTING,           /* Handshake in progress */
-    PEER_HANDSHAKE_SENT,       /* Sent handshake, awaiting response */
-    PEER_HANDSHAKE_RECEIVED,   /* Received handshake, session established */
-    PEER_CONNECTED,            /* Fully authenticated */
-    PEER_DISCONNECTED,         /* Lost connection */
-    PEER_FAILED,               /* Max reconnection attempts exceeded */
+    PEER_DISCOVERED,         /* Found via mDNS */
+    PEER_CONNECTING,         /* Handshake in progress */
+    PEER_HANDSHAKE_SENT,     /* Sent handshake, awaiting response */
+    PEER_HANDSHAKE_RECEIVED, /* Received handshake, session established */
+    PEER_CONNECTED,          /* Fully authenticated */
+    PEER_DISCONNECTED,       /* Lost connection */
+    PEER_FAILED,             /* Max reconnection attempts exceeded */
 } peer_state_t;
 
 /* Network transport types (PHASE 4) */
 typedef enum {
-    TRANSPORT_UDP = 1,         /* UDP P2P (primary) */
-    TRANSPORT_TCP = 2,         /* TCP fallback */
+    TRANSPORT_UDP = 1, /* UDP P2P (primary) */
+    TRANSPORT_TCP = 2, /* TCP fallback */
 } transport_type_t;
 
 typedef struct {
-    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];  /* Peer's code */
-    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];    /* Peer's public key */
-    struct sockaddr_storage addr;                    /* Network address */
-    socklen_t addr_len;                              /* Address length */
-    crypto_session_t session;                        /* Encryption session */
-    peer_state_t state;                              /* Connection state */
-    uint64_t last_seen;                              /* Last packet time (ms) */
-    uint64_t handshake_sent_time;                    /* Handshake timestamp for timeout */
-    char hostname[64];                               /* Peer hostname */
-    bool is_streaming;                               /* Currently streaming? */
-    uint32_t video_tx_frame_id;                      /* Outgoing video frame counter */
-    uint32_t video_rx_frame_id;                      /* Current incoming frame id */
-    uint8_t *video_rx_buffer;                        /* Reassembly buffer */
-    size_t video_rx_capacity;                        /* Reassembly buffer size */
-    size_t video_rx_expected;                        /* Expected frame size */
-    size_t video_rx_received;                        /* Bytes received so far */
-    uint64_t last_sent;                              /* Last outbound packet time (ms) */
-    uint64_t last_ping;                              /* Last keepalive ping time (ms) */
-    uint8_t protocol_version;                       /* Peer protocol version */
-    uint8_t protocol_flags;                         /* Peer protocol flags */
-    
+    char rootstream_code[ROOTSTREAM_CODE_MAX_LEN]; /* Peer's code */
+    uint8_t public_key[CRYPTO_PUBLIC_KEY_BYTES];   /* Peer's public key */
+    struct sockaddr_storage addr;                  /* Network address */
+    socklen_t addr_len;                            /* Address length */
+    crypto_session_t session;                      /* Encryption session */
+    peer_state_t state;                            /* Connection state */
+    uint64_t last_seen;                            /* Last packet time (ms) */
+    uint64_t handshake_sent_time;                  /* Handshake timestamp for timeout */
+    char hostname[64];                             /* Peer hostname */
+    bool is_streaming;                             /* Currently streaming? */
+    uint32_t video_tx_frame_id;                    /* Outgoing video frame counter */
+    uint32_t video_rx_frame_id;                    /* Current incoming frame id */
+    uint8_t *video_rx_buffer;                      /* Reassembly buffer */
+    size_t video_rx_capacity;                      /* Reassembly buffer size */
+    size_t video_rx_expected;                      /* Expected frame size */
+    size_t video_rx_received;                      /* Bytes received so far */
+    uint64_t last_sent;                            /* Last outbound packet time (ms) */
+    uint64_t last_ping;                            /* Last keepalive ping time (ms) */
+    uint8_t protocol_version;                      /* Peer protocol version */
+    uint8_t protocol_flags;                        /* Peer protocol flags */
+
     /* Network resilience (PHASE 4) */
-    transport_type_t transport;                      /* Current transport (UDP/TCP) */
-    void *transport_priv;                            /* Transport-specific private data */
-    void *reconnect_ctx;                             /* Reconnection tracking */
-    uint64_t last_received;                          /* Last inbound packet time (ms) */
+    transport_type_t transport; /* Current transport (UDP/TCP) */
+    void *transport_priv;       /* Transport-specific private data */
+    void *reconnect_ctx;        /* Reconnection tracking */
+    uint64_t last_received;     /* Last inbound packet time (ms) */
 } peer_t;
 
 /* ============================================================================
@@ -411,7 +416,7 @@ typedef struct {
 /* Peer history entry for quick reconnection (PHASE 5) */
 typedef struct {
     char hostname[256];
-    char address[256];         /* IP:port format */
+    char address[256]; /* IP:port format */
     uint16_t port;
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];
 } peer_history_entry_t;
@@ -419,34 +424,34 @@ typedef struct {
 /* Enhanced peer cache entry with TTL and statistics (PHASE 17) */
 typedef struct {
     char hostname[256];
-    char ip_address[64];       /* String IP address */
+    char ip_address[64]; /* String IP address */
     uint16_t port;
     char rootstream_code[ROOTSTREAM_CODE_MAX_LEN];
-    char capability[32];       /* "host", "client", or "both" */
-    char version[16];          /* Protocol version */
-    uint32_t max_peers;        /* Advertised max peer capacity */
-    char bandwidth[32];        /* Advertised bandwidth */
-    uint64_t discovered_time_us;    /* When first discovered */
-    uint64_t last_seen_time_us;     /* Last advertisement/update */
-    uint32_t ttl_seconds;      /* Time-to-live */
-    bool is_online;            /* Currently online */
-    uint32_t contact_count;    /* Times successfully contacted */
-    uint32_t failure_count;    /* Connection failures */
+    char capability[32];         /* "host", "client", or "both" */
+    char version[16];            /* Protocol version */
+    uint32_t max_peers;          /* Advertised max peer capacity */
+    char bandwidth[32];          /* Advertised bandwidth */
+    uint64_t discovered_time_us; /* When first discovered */
+    uint64_t last_seen_time_us;  /* Last advertisement/update */
+    uint32_t ttl_seconds;        /* Time-to-live */
+    bool is_online;              /* Currently online */
+    uint32_t contact_count;      /* Times successfully contacted */
+    uint32_t failure_count;      /* Connection failures */
 } peer_cache_entry_t;
 
 #define MAX_CACHED_PEERS 64
 
 typedef struct {
-    void *avahi_client;        /* Avahi client (opaque) */
-    void *avahi_group;         /* Avahi entry group (opaque) */
-    void *avahi_browser;       /* Avahi service browser (opaque) */
-    bool running;              /* Discovery active? */
-    
+    void *avahi_client;  /* Avahi client (opaque) */
+    void *avahi_group;   /* Avahi entry group (opaque) */
+    void *avahi_browser; /* Avahi service browser (opaque) */
+    bool running;        /* Discovery active? */
+
     /* Enhanced discovery features (PHASE 17) */
     peer_cache_entry_t peer_cache[MAX_CACHED_PEERS];
     int num_cached_peers;
-    uint64_t last_cache_cleanup_us;  /* Last cache expiry check */
-    
+    uint64_t last_cache_cleanup_us; /* Last cache expiry check */
+
     /* Discovery statistics */
     uint64_t total_discoveries;
     uint64_t total_losses;
@@ -460,18 +465,18 @@ typedef struct {
  * ============================================================================ */
 
 typedef enum {
-    STATUS_IDLE,          /* Not streaming */
-    STATUS_HOSTING,       /* Hosting stream */
-    STATUS_CONNECTED,     /* Connected to peer */
-    STATUS_ERROR,         /* Error state */
+    STATUS_IDLE,      /* Not streaming */
+    STATUS_HOSTING,   /* Hosting stream */
+    STATUS_CONNECTED, /* Connected to peer */
+    STATUS_ERROR,     /* Error state */
 } tray_status_t;
 
 typedef struct {
-    void *gtk_app;            /* GtkApplication (opaque) */
-    void *tray_icon;          /* GtkStatusIcon (opaque) */
-    void *menu;               /* GtkMenu (opaque) */
-    void *qr_window;          /* QR code display window (opaque) */
-    tray_status_t status;     /* Current status */
+    void *gtk_app;        /* GtkApplication (opaque) */
+    void *tray_icon;      /* GtkStatusIcon (opaque) */
+    void *menu;           /* GtkMenu (opaque) */
+    void *qr_window;      /* QR code display window (opaque) */
+    tray_status_t status; /* Current status */
 } tray_ctx_t;
 
 /* ============================================================================
@@ -482,20 +487,20 @@ typedef struct {
 
 typedef struct {
     /* Video settings */
-    uint32_t video_bitrate;    /* Target bitrate (bits/sec) */
-    uint32_t video_framerate;  /* Target framerate (fps) */
-    char video_codec[16];      /* Codec: "h264", "h265" */
-    int display_index;         /* Preferred display index */
+    uint32_t video_bitrate;   /* Target bitrate (bits/sec) */
+    uint32_t video_framerate; /* Target framerate (fps) */
+    char video_codec[16];     /* Codec: "h264", "h265" */
+    int display_index;        /* Preferred display index */
 
     /* Audio settings */
-    bool audio_enabled;        /* Enable audio streaming */
-    uint32_t audio_bitrate;    /* Audio bitrate (bits/sec) */
-    int audio_channels;        /* Audio channel count (1=mono, 2=stereo) */
-    int audio_sample_rate;     /* Audio sample rate (Hz, e.g. 48000) */
+    bool audio_enabled;     /* Enable audio streaming */
+    uint32_t audio_bitrate; /* Audio bitrate (bits/sec) */
+    int audio_channels;     /* Audio channel count (1=mono, 2=stereo) */
+    int audio_sample_rate;  /* Audio sample rate (Hz, e.g. 48000) */
 
     /* Network settings */
-    uint16_t network_port;     /* UDP port */
-    bool discovery_enabled;    /* Enable mDNS discovery */
+    uint16_t network_port;  /* UDP port */
+    bool discovery_enabled; /* Enable mDNS discovery */
 
     /* Connection history */
     char peer_history[MAX_PEER_HISTORY][ROOTSTREAM_CODE_MAX_LEN];
@@ -508,12 +513,12 @@ typedef struct {
  * ============================================================================ */
 
 typedef struct {
-    int fd;                    /* Recording file descriptor */
-    bool active;               /* Recording in progress */
-    uint64_t start_time_us;    /* Recording start timestamp */
-    uint64_t frame_count;      /* Frames written */
-    uint64_t bytes_written;    /* Total bytes written */
-    char filename[256];        /* Output filename */
+    int fd;                 /* Recording file descriptor */
+    bool active;            /* Recording in progress */
+    uint64_t start_time_us; /* Recording start timestamp */
+    uint64_t frame_count;   /* Frames written */
+    uint64_t bytes_written; /* Total bytes written */
+    char filename[256];     /* Output filename */
 } recording_ctx_t;
 
 /* ============================================================================
@@ -545,18 +550,18 @@ typedef struct {
 
 typedef struct rootstream_ctx {
     /* Identity */
-    keypair_t keypair;         /* This device's keys */
+    keypair_t keypair; /* This device's keys */
 
     /* Configuration */
-    settings_t settings;       /* User settings from config.ini */
+    settings_t settings; /* User settings from config.ini */
 
     /* Capture & Encoding */
     capture_mode_t capture_mode;
-    const capture_backend_t *capture_backend;  /* Currently active backend */
+    const capture_backend_t *capture_backend; /* Currently active backend */
     display_info_t display;
     frame_buffer_t current_frame;
     encoder_ctx_t encoder;
-    const encoder_backend_t *encoder_backend;  /* Currently active encoder backend */
+    const encoder_backend_t *encoder_backend; /* Currently active encoder backend */
 
     /* Decoding (client) */
     decoder_ctx_t decoder;
@@ -569,35 +574,35 @@ typedef struct rootstream_ctx {
     const audio_playback_backend_t *audio_playback_backend;
 
     /* Network */
-    rs_socket_t sock_fd;       /* UDP socket */
-    uint16_t port;             /* Listening port */
+    rs_socket_t sock_fd; /* UDP socket */
+    uint16_t port;       /* Listening port */
 
     /* Peer connection target (client mode) */
-    char peer_host[256];       /* Peer hostname or IP (client mode) */
-    int peer_port;             /* Peer port number (client mode) */
+    char peer_host[256]; /* Peer hostname or IP (client mode) */
+    int peer_port;       /* Peer port number (client mode) */
 
     /* Current decoded audio buffer (client mode) */
     struct {
-        uint8_t *data;         /* Encoded audio packet data */
-        size_t   size;         /* Encoded audio packet size */
-        size_t   capacity;     /* Allocated buffer capacity */
+        uint8_t *data;   /* Encoded audio packet data */
+        size_t size;     /* Encoded audio packet size */
+        size_t capacity; /* Allocated buffer capacity */
     } current_audio;
 
     /* Peers */
-    peer_t peers[MAX_PEERS];   /* Connected peers */
-    int num_peers;             /* Number of active peers */
+    peer_t peers[MAX_PEERS]; /* Connected peers */
+    int num_peers;           /* Number of active peers */
 
     /* Discovery */
     discovery_ctx_t discovery;
-    
+
     /* Peer history (PHASE 5) */
     peer_history_entry_t peer_history_entries[MAX_PEER_HISTORY];
     int num_peer_history;
 
     /* Input */
-    int uinput_kbd_fd;         /* Virtual keyboard */
-    int uinput_mouse_fd;       /* Virtual mouse */
-    
+    int uinput_kbd_fd;   /* Virtual keyboard */
+    int uinput_mouse_fd; /* Virtual mouse */
+
     /* Input Manager (PHASE 15) */
     input_manager_ctx_t *input_manager;
 
@@ -608,11 +613,11 @@ typedef struct rootstream_ctx {
     recording_ctx_t recording;
 
     /* State */
-    bool running;              /* Main loop running? */
-    bool is_service;           /* Running as systemd service? */
-    uint64_t frames_captured;  /* Statistics (host) */
-    uint64_t frames_encoded;   /* Statistics (host) */
-    uint64_t frames_received;  /* Statistics (client) */
+    bool running;             /* Main loop running? */
+    bool is_service;          /* Running as systemd service? */
+    uint64_t frames_captured; /* Statistics (host) */
+    uint64_t frames_encoded;  /* Statistics (host) */
+    uint64_t frames_received; /* Statistics (client) */
     uint64_t bytes_sent;
     uint64_t bytes_received;
     latency_stats_t latency;   /* Latency instrumentation */
@@ -622,29 +627,29 @@ typedef struct rootstream_ctx {
 
     /* Backend tracking (added in PHASE 0) */
     struct {
-        const char *capture_name;      /* Name of active capture backend */
-        const char *encoder_name;      /* Name of active encoder backend */
-        const char *audio_cap_name;    /* Name of active audio capture backend */
-        const char *audio_play_name;   /* Name of active audio playback backend */
-        const char *decoder_name;      /* Name of active decoder backend */
-        const char *display_name;      /* Name of active display backend */
-        const char *discovery_name;    /* Name of active discovery backend (PHASE 6) */
-        const char *input_name;        /* Name of active input backend (PHASE 6) */
-        const char *gui_name;          /* Name of active GUI backend (PHASE 6) */
+        const char *capture_name;    /* Name of active capture backend */
+        const char *encoder_name;    /* Name of active encoder backend */
+        const char *audio_cap_name;  /* Name of active audio capture backend */
+        const char *audio_play_name; /* Name of active audio playback backend */
+        const char *decoder_name;    /* Name of active decoder backend */
+        const char *display_name;    /* Name of active display backend */
+        const char *discovery_name;  /* Name of active discovery backend (PHASE 6) */
+        const char *input_name;      /* Name of active input backend (PHASE 6) */
+        const char *gui_name;        /* Name of active GUI backend (PHASE 6) */
     } active_backend;
 
     /* User preferences for backend override */
     struct {
-        const char *capture_override;  /* User-specified capture backend */
-        const char *encoder_override;  /* User-specified encoder backend */
-        const char *input_override;    /* User-specified input backend (PHASE 6) */
-        const char *gui_override;      /* User-specified GUI backend (PHASE 6) */
-        bool verbose;                  /* Print fallback attempts */
+        const char *capture_override; /* User-specified capture backend */
+        const char *encoder_override; /* User-specified encoder backend */
+        const char *input_override;   /* User-specified input backend (PHASE 6) */
+        const char *gui_override;     /* User-specified GUI backend (PHASE 6) */
+        bool verbose;                 /* Print fallback attempts */
     } backend_prefs;
 
     /* Private data pointers for fallback backends (PHASE 6) */
-    void *input_priv;                  /* Input backend private data */
-    void *tray_priv;                   /* Tray/GUI backend private data */
+    void *input_priv; /* Input backend private data */
+    void *tray_priv;  /* Tray/GUI backend private data */
 } rootstream_ctx_t;
 
 /* Encoder backend abstraction for multi-tier fallback */
@@ -652,7 +657,8 @@ struct encoder_backend_t {
     const char *name;
     int (*init_fn)(rootstream_ctx_t *ctx, codec_type_t codec);
     int (*encode_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size);
-    int (*encode_ex_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size, bool *is_keyframe);
+    int (*encode_ex_fn)(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out, size_t *out_size,
+                        bool *is_keyframe);
     void (*cleanup_fn)(rootstream_ctx_t *ctx);
     bool (*is_available_fn)(void);
 };
@@ -671,19 +677,14 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname);
 int crypto_load_keypair(keypair_t *kp, const char *config_dir);
 int crypto_save_keypair(const keypair_t *kp, const char *config_dir);
 int crypto_verify_peer(const uint8_t *public_key, size_t key_len);
-int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
-                              char *output, size_t output_len);
-int crypto_create_session(crypto_session_t *session, 
-                          const uint8_t *my_secret,
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len, char *output,
+                              size_t output_len);
+int crypto_create_session(crypto_session_t *session, const uint8_t *my_secret,
                           const uint8_t *peer_public);
-int crypto_encrypt_packet(const crypto_session_t *session,
-                         const void *plaintext, size_t plain_len,
-                         void *ciphertext, size_t *cipher_len,
-                         uint64_t nonce);
-int crypto_decrypt_packet(const crypto_session_t *session,
-                         const void *ciphertext, size_t cipher_len,
-                         void *plaintext, size_t *plain_len,
-                         uint64_t nonce);
+int crypto_encrypt_packet(const crypto_session_t *session, const void *plaintext, size_t plain_len,
+                          void *ciphertext, size_t *cipher_len, uint64_t nonce);
+int crypto_decrypt_packet(const crypto_session_t *session, const void *ciphertext,
+                          size_t cipher_len, void *plaintext, size_t *plain_len, uint64_t nonce);
 
 /* --- Capture (existing, polished) --- */
 int rootstream_detect_displays(display_info_t *displays, int max_displays);
@@ -710,10 +711,10 @@ void rootstream_capture_cleanup_dummy(rootstream_ctx_t *ctx);
 
 /* --- Encoding (existing, polished) --- */
 int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type, codec_type_t codec);
-int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                           uint8_t *out, size_t *out_size);
-int rootstream_encode_frame_ex(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                              uint8_t *out, size_t *out_size, bool *is_keyframe);
+int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                            size_t *out_size);
+int rootstream_encode_frame_ex(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                               size_t *out_size, bool *is_keyframe);
 void rootstream_encoder_cleanup(rootstream_ctx_t *ctx);
 
 /* VA-API encoder */
@@ -721,37 +722,34 @@ bool rootstream_encoder_vaapi_available(void);
 
 /* NVENC encoder */
 int rootstream_encoder_init_nvenc(rootstream_ctx_t *ctx, codec_type_t codec);
-int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                  uint8_t *out, size_t *out_size);
+int rootstream_encode_frame_nvenc(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                  size_t *out_size);
 void rootstream_encoder_cleanup_nvenc(rootstream_ctx_t *ctx);
 bool rootstream_encoder_nvenc_available(void);
 
 /* FFmpeg/libx264 software encoder */
 int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec);
-int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                   uint8_t *out, size_t *out_size);
-int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                      uint8_t *out, size_t *out_size, bool *is_keyframe);
+int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                   size_t *out_size);
+int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                      size_t *out_size, bool *is_keyframe);
 void rootstream_encoder_cleanup_ffmpeg(rootstream_ctx_t *ctx);
 bool rootstream_encoder_ffmpeg_available(void);
 
 /* Raw pass-through encoder (debug) */
 int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec);
-int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                uint8_t *out, size_t *out_size);
+int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                size_t *out_size);
 void rootstream_encoder_cleanup_raw(rootstream_ctx_t *ctx);
-
 
 /* --- Decoding (Phase 1) --- */
 int rootstream_decoder_init(rootstream_ctx_t *ctx);
-int rootstream_decode_frame(rootstream_ctx_t *ctx,
-                           const uint8_t *in, size_t in_size,
-                           frame_buffer_t *out);
+int rootstream_decode_frame(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_size,
+                            frame_buffer_t *out);
 void rootstream_decoder_cleanup(rootstream_ctx_t *ctx);
 
 /* --- Display (Phase 1) --- */
-int display_init(rootstream_ctx_t *ctx, const char *title,
-                int width, int height);
+int display_init(rootstream_ctx_t *ctx, const char *title, int width, int height);
 int display_present_frame(rootstream_ctx_t *ctx, frame_buffer_t *frame);
 int display_poll_events(rootstream_ctx_t *ctx);
 void display_cleanup(rootstream_ctx_t *ctx);
@@ -759,10 +757,10 @@ void display_cleanup(rootstream_ctx_t *ctx);
 /* --- Audio (Phase 2) --- */
 int rootstream_opus_encoder_init(rootstream_ctx_t *ctx);
 int rootstream_opus_decoder_init(rootstream_ctx_t *ctx);
-int rootstream_opus_encode(rootstream_ctx_t *ctx, const int16_t *pcm,
-               uint8_t *out, size_t *out_len);
-int rootstream_opus_decode(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_len,
-               int16_t *pcm, size_t *pcm_len);
+int rootstream_opus_encode(rootstream_ctx_t *ctx, const int16_t *pcm, uint8_t *out,
+                           size_t *out_len);
+int rootstream_opus_decode(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_len, int16_t *pcm,
+                           size_t *pcm_len);
 void rootstream_opus_cleanup(rootstream_ctx_t *ctx);
 int rootstream_opus_get_frame_size(void);
 int rootstream_opus_get_sample_rate(void);
@@ -770,46 +768,39 @@ int rootstream_opus_get_channels(void);
 
 /* Audio capture/playback - backward compatibility */
 int audio_capture_init(rootstream_ctx_t *ctx);
-int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples,
-                       size_t *num_samples);
+int audio_capture_frame(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
 void audio_capture_cleanup(rootstream_ctx_t *ctx);
 
 int audio_playback_init(rootstream_ctx_t *ctx);
-int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples,
-                        size_t num_samples);
+int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples);
 void audio_playback_cleanup(rootstream_ctx_t *ctx);
 
 /* Audio backends - ALSA */
 bool audio_capture_alsa_available(void);
 int audio_capture_init_alsa(rootstream_ctx_t *ctx);
-int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
-                             size_t *num_samples);
+int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
 void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx);
 
 bool audio_playback_alsa_available(void);
 int audio_playback_init_alsa(rootstream_ctx_t *ctx);
-int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples,
-                              size_t num_samples);
+int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples);
 void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx);
 
 /* Audio backends - PulseAudio */
 bool audio_capture_pulse_available(void);
 int audio_capture_init_pulse(rootstream_ctx_t *ctx);
-int audio_capture_frame_pulse(rootstream_ctx_t *ctx, int16_t *samples,
-                              size_t *num_samples);
+int audio_capture_frame_pulse(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
 void audio_capture_cleanup_pulse(rootstream_ctx_t *ctx);
 
 bool audio_playback_pulse_available(void);
 int audio_playback_init_pulse(rootstream_ctx_t *ctx);
-int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples,
-                               size_t num_samples);
+int audio_playback_write_pulse(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples);
 void audio_playback_cleanup_pulse(rootstream_ctx_t *ctx);
 
 /* Audio backends - PipeWire */
 bool audio_capture_pipewire_available(void);
 int audio_capture_init_pipewire(rootstream_ctx_t *ctx);
-int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
-                                 size_t *num_samples);
+int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
 void audio_capture_cleanup_pipewire(rootstream_ctx_t *ctx);
 
 bool audio_playback_pipewire_available(void);
@@ -820,27 +811,24 @@ void audio_playback_cleanup_pipewire(rootstream_ctx_t *ctx);
 
 /* Audio backends - Dummy (silent/discard) */
 int audio_capture_init_dummy(rootstream_ctx_t *ctx);
-int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples,
-                              size_t *num_samples);
+int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples);
 void audio_capture_cleanup_dummy(rootstream_ctx_t *ctx);
 
 int audio_playback_init_dummy(rootstream_ctx_t *ctx);
-int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples,
-                               size_t num_samples);
+int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples);
 void audio_playback_cleanup_dummy(rootstream_ctx_t *ctx);
 
 /* --- Recording (Phase 7) --- */
 int recording_init(rootstream_ctx_t *ctx, const char *filename);
-int recording_write_frame(rootstream_ctx_t *ctx, const uint8_t *data,
-                          size_t size, bool is_keyframe);
+int recording_write_frame(rootstream_ctx_t *ctx, const uint8_t *data, size_t size,
+                          bool is_keyframe);
 void recording_cleanup(rootstream_ctx_t *ctx);
 
 /* --- Network --- */
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port);
-int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
-                                  uint8_t type, const void *data, size_t size);
-int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
-                              const uint8_t *data, size_t size,
+int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer, uint8_t type,
+                                  const void *data, size_t size);
+int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer, const uint8_t *data, size_t size,
                               uint64_t timestamp_us);
 int rootstream_net_recv(rootstream_ctx_t *ctx, int timeout_ms);
 int rootstream_net_handshake(rootstream_ctx_t *ctx, peer_t *peer);
@@ -849,10 +837,9 @@ int rootstream_net_validate_packet(const uint8_t *buffer, size_t len);
 
 /* --- Network TCP Fallback (PHASE 4) --- */
 int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer);
-int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
-                           const uint8_t *data, size_t size);
-int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
-                           uint8_t *buffer, size_t *buffer_len);
+int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer, const uint8_t *data, size_t size);
+int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer, uint8_t *buffer,
+                            size_t *buffer_len);
 void rootstream_net_tcp_cleanup(peer_t *peer);
 bool rootstream_net_tcp_is_healthy(peer_t *peer);
 
@@ -863,14 +850,13 @@ void peer_reconnect_cleanup(peer_t *peer);
 void peer_reconnect_reset(peer_t *peer);
 
 /* --- Peer Management --- */
-peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
-peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key);
+peer_t *rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
+peer_t *rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key);
 void rootstream_remove_peer(rootstream_ctx_t *ctx, peer_t *peer);
 int rootstream_connect_to_peer(rootstream_ctx_t *ctx, const char *rootstream_code);
 
 /* --- Control Commands --- */
-int rootstream_send_control(rootstream_ctx_t *ctx, peer_t *peer,
-                           control_cmd_t cmd, uint32_t value);
+int rootstream_send_control(rootstream_ctx_t *ctx, peer_t *peer, control_cmd_t cmd, uint32_t value);
 int rootstream_pause_stream(rootstream_ctx_t *ctx, peer_t *peer);
 int rootstream_resume_stream(rootstream_ctx_t *ctx, peer_t *peer);
 int rootstream_request_keyframe(rootstream_ctx_t *ctx, peer_t *peer);
@@ -887,27 +873,24 @@ int discovery_broadcast_listen(rootstream_ctx_t *ctx, int timeout_ms);
 
 /* Discovery - Manual (PHASE 5) */
 int discovery_manual_add_peer(rootstream_ctx_t *ctx, const char *address_or_code);
-int discovery_save_peer_to_history(rootstream_ctx_t *ctx, const char *hostname,
-                                   uint16_t port, const char *rootstream_code);
+int discovery_save_peer_to_history(rootstream_ctx_t *ctx, const char *hostname, uint16_t port,
+                                   const char *rootstream_code);
 void discovery_list_peer_history(rootstream_ctx_t *ctx);
 int discovery_parse_address(const char *address, char *hostname, uint16_t *port);
-int discovery_parse_rootstream_code(rootstream_ctx_t *ctx, const char *code, 
-                                    char *hostname, uint16_t *port);
+int discovery_parse_rootstream_code(rootstream_ctx_t *ctx, const char *code, char *hostname,
+                                    uint16_t *port);
 
 /* Discovery - Enhanced Cache (PHASE 17) */
 int discovery_cache_add_peer(rootstream_ctx_t *ctx, const peer_cache_entry_t *entry);
 int discovery_cache_update_peer(rootstream_ctx_t *ctx, const char *hostname,
-                               uint64_t last_seen_time_us);
+                                uint64_t last_seen_time_us);
 int discovery_cache_remove_peer(rootstream_ctx_t *ctx, const char *hostname);
-peer_cache_entry_t* discovery_cache_get_peer(rootstream_ctx_t *ctx, const char *hostname);
-int discovery_cache_get_all(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
-                           int max_entries);
-int discovery_cache_get_online(rootstream_ctx_t *ctx, peer_cache_entry_t *entries,
-                               int max_entries);
+peer_cache_entry_t *discovery_cache_get_peer(rootstream_ctx_t *ctx, const char *hostname);
+int discovery_cache_get_all(rootstream_ctx_t *ctx, peer_cache_entry_t *entries, int max_entries);
+int discovery_cache_get_online(rootstream_ctx_t *ctx, peer_cache_entry_t *entries, int max_entries);
 void discovery_cache_expire_old_entries(rootstream_ctx_t *ctx);
 void discovery_cache_cleanup(rootstream_ctx_t *ctx);
 void discovery_print_stats(rootstream_ctx_t *ctx);
-
 
 /* --- Input (existing, polished) --- */
 int rootstream_input_init(rootstream_ctx_t *ctx);
@@ -983,19 +966,20 @@ int qrcode_display(rootstream_ctx_t *ctx, const char *rootstream_code);
 void qrcode_print_terminal(const char *data);
 
 /* --- Configuration --- */
-const char* config_get_dir(void);
+const char *config_get_dir(void);
 int config_load(rootstream_ctx_t *ctx);
 int config_save(rootstream_ctx_t *ctx);
 void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_code);
 
 /* --- Utilities --- */
-const char* rootstream_get_error(void);
+const char *rootstream_get_error(void);
 void rootstream_print_stats(rootstream_ctx_t *ctx);
 uint64_t get_timestamp_ms(void);
 uint64_t get_timestamp_us(void);
 
 /* --- Latency instrumentation --- */
-int latency_init(latency_stats_t *stats, size_t capacity, uint64_t report_interval_ms, bool enabled);
+int latency_init(latency_stats_t *stats, size_t capacity, uint64_t report_interval_ms,
+                 bool enabled);
 void latency_cleanup(latency_stats_t *stats);
 void latency_record(latency_stats_t *stats, const latency_sample_t *sample);
 

@@ -9,13 +9,14 @@
 #define RS_PLATFORM_LINUX 1
 #endif
 
-#include "platform.h"
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <sys/stat.h>
-#include <pwd.h>
+#include <time.h>
+
+#include "platform.h"
 
 /* ============================================================================
  * Platform Initialization
@@ -55,8 +56,7 @@ int rs_socket_bind(rs_socket_t sock, const struct sockaddr *addr, socklen_t addr
     return bind(sock, addr, addrlen);
 }
 
-int rs_socket_setopt(rs_socket_t sock, int level, int optname,
-                     const void *optval, size_t optlen) {
+int rs_socket_setopt(rs_socket_t sock, int level, int optname, const void *optval, size_t optlen) {
     return setsockopt(sock, level, optname, optval, (socklen_t)optlen);
 }
 
@@ -82,7 +82,7 @@ int rs_socket_error(void) {
     return errno;
 }
 
-const char* rs_socket_strerror(int err) {
+const char *rs_socket_strerror(int err) {
     return strerror(err);
 }
 
@@ -120,7 +120,7 @@ void rs_sleep_us(uint32_t us) {
  * File System Implementation
  * ============================================================================ */
 
-const char* rs_config_dir(void) {
+const char *rs_config_dir(void) {
     static char config_dir[512] = {0};
 
     if (config_dir[0] != '\0') {
@@ -187,7 +187,7 @@ char rs_path_separator(void) {
     return '/';
 }
 
-char* rs_path_join(char *buf, size_t buflen, const char *base, const char *name) {
+char *rs_path_join(char *buf, size_t buflen, const char *base, const char *name) {
     if (!buf || buflen == 0 || !base || !name) {
         return NULL;
     }

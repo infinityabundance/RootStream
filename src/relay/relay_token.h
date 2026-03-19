@@ -15,16 +15,16 @@
 #ifndef ROOTSTREAM_RELAY_TOKEN_H
 #define ROOTSTREAM_RELAY_TOKEN_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RELAY_TOKEN_BYTES   32   /**< Token length in bytes */
-#define RELAY_KEY_BYTES     32   /**< HMAC key length in bytes */
+#define RELAY_TOKEN_BYTES 32 /**< Token length in bytes */
+#define RELAY_KEY_BYTES 32   /**< HMAC key length in bytes */
 
 /**
  * relay_token_generate — generate a 32-byte auth token
@@ -37,10 +37,8 @@ extern "C" {
  * @param nonce       8-byte session nonce
  * @param out_token   Output buffer, must be >= RELAY_TOKEN_BYTES
  */
-void relay_token_generate(const uint8_t *key,
-                           const uint8_t *peer_pubkey,
-                           const uint8_t *nonce,
-                           uint8_t       *out_token);
+void relay_token_generate(const uint8_t *key, const uint8_t *peer_pubkey, const uint8_t *nonce,
+                          uint8_t *out_token);
 
 /**
  * relay_token_validate — constant-time token comparison
@@ -49,8 +47,7 @@ void relay_token_generate(const uint8_t *key,
  * @param provided  32-byte token from the client
  * @return          true if tokens match, false otherwise
  */
-bool relay_token_validate(const uint8_t *expected,
-                           const uint8_t *provided);
+bool relay_token_validate(const uint8_t *expected, const uint8_t *provided);
 
 #ifdef __cplusplus
 }

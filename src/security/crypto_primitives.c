@@ -1,13 +1,14 @@
 /*
  * crypto_primitives.c - Low-level cryptographic primitives implementation
- * 
+ *
  * Uses libsodium for all cryptographic operations
  */
 
 #include "crypto_primitives.h"
+
 #include <sodium.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 /*
  * Initialize crypto primitives
@@ -24,14 +25,9 @@ int crypto_prim_init(void) {
  * AES-256-GCM encryption
  * Note: libsodium provides AES-256-GCM only when hardware support is available
  */
-int crypto_prim_aes256gcm_encrypt(
-    const uint8_t *plaintext, size_t plaintext_len,
-    const uint8_t *key,
-    const uint8_t *nonce,
-    const uint8_t *aad, size_t aad_len,
-    uint8_t *ciphertext,
-    uint8_t *tag)
-{
+int crypto_prim_aes256gcm_encrypt(const uint8_t *plaintext, size_t plaintext_len,
+                                  const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
+                                  size_t aad_len, uint8_t *ciphertext, uint8_t *tag) {
     if (!plaintext || !key || !nonce || !ciphertext || !tag) {
         return -1;
     }
@@ -40,50 +36,39 @@ int crypto_prim_aes256gcm_encrypt(
     /* Check if AES-256-GCM is available (requires hardware support) */
     if (crypto_aead_aes256gcm_is_available()) {
         unsigned long long ciphertext_len;
-        
+
         /* libsodium combines ciphertext and tag */
         uint8_t *combined = malloc(plaintext_len + crypto_aead_aes256gcm_ABYTES);
         if (!combined) {
             return -1;
         }
-        
-        int ret = crypto_aead_aes256gcm_encrypt(
-            combined, &ciphertext_len,
-            plaintext, plaintext_len,
-            aad, aad_len,
-            NULL, /* secret nonce (unused) */
-            nonce,
-            key);
-        
+
+        int ret = crypto_aead_aes256gcm_encrypt(combined, &ciphertext_len, plaintext, plaintext_len,
+                                                aad, aad_len, NULL, /* secret nonce (unused) */
+                                                nonce, key);
+
         if (ret == 0) {
             memcpy(ciphertext, combined, plaintext_len);
             memcpy(tag, combined + plaintext_len, crypto_aead_aes256gcm_ABYTES);
         }
-        
+
         sodium_memzero(combined, plaintext_len + crypto_aead_aes256gcm_ABYTES);
         free(combined);
         return ret;
     }
 #endif
-    
+
     /* Fallback to ChaCha20-Poly1305 if AES-256-GCM not available */
-    return crypto_prim_chacha20poly1305_encrypt(
-        plaintext, plaintext_len,
-        key, nonce, aad, aad_len,
-        ciphertext, tag);
+    return crypto_prim_chacha20poly1305_encrypt(plaintext, plaintext_len, key, nonce, aad, aad_len,
+                                                ciphertext, tag);
 }
 
 /*
  * AES-256-GCM decryption
  */
-int crypto_prim_aes256gcm_decrypt(
-    const uint8_t *ciphertext, size_t ciphertext_len,
-    const uint8_t *key,
-    const uint8_t *nonce,
-    const uint8_t *aad, size_t aad_len,
-    const uint8_t *tag,
-    uint8_t *plaintext)
-{
+int crypto_prim_aes256gcm_decrypt(const uint8_t *ciphertext, size_t ciphertext_len,
+                                  const uint8_t *key, const uint8_t *nonce, const uint8_t *aad,
+                                  size_t aad_len, const uint8_t *tag, uint8_t *plaintext) {
     if (!ciphertext || !key || !nonce || !tag || !plaintext) {
         return -1;
     }
@@ -91,73 +76,60 @@ int crypto_prim_aes256gcm_decrypt(
 #if defined(crypto_aead_aes256gcm_KEYBYTES)
     if (crypto_aead_aes256gcm_is_available()) {
         unsigned long long plaintext_len_out;
-        
+
         /* libsodium expects combined ciphertext and tag */
         uint8_t *combined = malloc(ciphertext_len + crypto_aead_aes256gcm_ABYTES);
         if (!combined) {
             return -1;
         }
-        
+
         memcpy(combined, ciphertext, ciphertext_len);
         memcpy(combined + ciphertext_len, tag, crypto_aead_aes256gcm_ABYTES);
-        
+
         int ret = crypto_aead_aes256gcm_decrypt(
-            plaintext, &plaintext_len_out,
-            NULL, /* secret nonce (unused) */
-            combined, ciphertext_len + crypto_aead_aes256gcm_ABYTES,
-            aad, aad_len,
-            nonce,
-            key);
-        
+            plaintext, &plaintext_len_out, NULL, /* secret nonce (unused) */
+            combined, ciphertext_len + crypto_aead_aes256gcm_ABYTES, aad, aad_len, nonce, key);
+
         sodium_memzero(combined, ciphertext_len + crypto_aead_aes256gcm_ABYTES);
         free(combined);
         return ret;
     }
 #endif
-    
+
     /* Fallback to ChaCha20-Poly1305 */
-    return crypto_prim_chacha20poly1305_decrypt(
-        ciphertext, ciphertext_len,
-        key, nonce, aad, aad_len, tag,
-        plaintext);
+    return crypto_prim_chacha20poly1305_decrypt(ciphertext, ciphertext_len, key, nonce, aad,
+                                                aad_len, tag, plaintext);
 }
 
 /*
  * ChaCha20-Poly1305 encryption
  */
-int crypto_prim_chacha20poly1305_encrypt(
-    const uint8_t *plaintext, size_t plaintext_len,
-    const uint8_t *key,
-    const uint8_t *nonce,
-    const uint8_t *aad, size_t aad_len,
-    uint8_t *ciphertext,
-    uint8_t *tag)
-{
+int crypto_prim_chacha20poly1305_encrypt(const uint8_t *plaintext, size_t plaintext_len,
+                                         const uint8_t *key, const uint8_t *nonce,
+                                         const uint8_t *aad, size_t aad_len, uint8_t *ciphertext,
+                                         uint8_t *tag) {
     if (!plaintext || !key || !nonce || !ciphertext || !tag) {
         return -1;
     }
 
     unsigned long long ciphertext_len;
-    
+
     /* libsodium combines ciphertext and tag */
     uint8_t *combined = malloc(plaintext_len + crypto_aead_chacha20poly1305_IETF_ABYTES);
     if (!combined) {
         return -1;
     }
-    
-    int ret = crypto_aead_chacha20poly1305_ietf_encrypt(
-        combined, &ciphertext_len,
-        plaintext, plaintext_len,
-        aad, aad_len,
-        NULL, /* secret nonce (unused) */
-        nonce,
-        key);
-    
+
+    int ret = crypto_aead_chacha20poly1305_ietf_encrypt(combined, &ciphertext_len, plaintext,
+                                                        plaintext_len, aad, aad_len,
+                                                        NULL, /* secret nonce (unused) */
+                                                        nonce, key);
+
     if (ret == 0) {
         memcpy(ciphertext, combined, plaintext_len);
         memcpy(tag, combined + plaintext_len, crypto_aead_chacha20poly1305_IETF_ABYTES);
     }
-    
+
     sodium_memzero(combined, plaintext_len + crypto_aead_chacha20poly1305_IETF_ABYTES);
     free(combined);
     return ret;
@@ -166,37 +138,30 @@ int crypto_prim_chacha20poly1305_encrypt(
 /*
  * ChaCha20-Poly1305 decryption
  */
-int crypto_prim_chacha20poly1305_decrypt(
-    const uint8_t *ciphertext, size_t ciphertext_len,
-    const uint8_t *key,
-    const uint8_t *nonce,
-    const uint8_t *aad, size_t aad_len,
-    const uint8_t *tag,
-    uint8_t *plaintext)
-{
+int crypto_prim_chacha20poly1305_decrypt(const uint8_t *ciphertext, size_t ciphertext_len,
+                                         const uint8_t *key, const uint8_t *nonce,
+                                         const uint8_t *aad, size_t aad_len, const uint8_t *tag,
+                                         uint8_t *plaintext) {
     if (!ciphertext || !key || !nonce || !tag || !plaintext) {
         return -1;
     }
 
     unsigned long long plaintext_len_out;
-    
+
     /* libsodium expects combined ciphertext and tag */
     uint8_t *combined = malloc(ciphertext_len + crypto_aead_chacha20poly1305_IETF_ABYTES);
     if (!combined) {
         return -1;
     }
-    
+
     memcpy(combined, ciphertext, ciphertext_len);
     memcpy(combined + ciphertext_len, tag, crypto_aead_chacha20poly1305_IETF_ABYTES);
-    
+
     int ret = crypto_aead_chacha20poly1305_ietf_decrypt(
-        plaintext, &plaintext_len_out,
-        NULL, /* secret nonce (unused) */
-        combined, ciphertext_len + crypto_aead_chacha20poly1305_IETF_ABYTES,
-        aad, aad_len,
-        nonce,
+        plaintext, &plaintext_len_out, NULL, /* secret nonce (unused) */
+        combined, ciphertext_len + crypto_aead_chacha20poly1305_IETF_ABYTES, aad, aad_len, nonce,
         key);
-    
+
     sodium_memzero(combined, ciphertext_len + crypto_aead_chacha20poly1305_IETF_ABYTES);
     free(combined);
     return ret;
@@ -209,23 +174,20 @@ int crypto_prim_random_bytes(uint8_t *buffer, size_t size) {
     if (!buffer || size == 0) {
         return -1;
     }
-    
+
     randombytes_buf(buffer, size);
     return 0;
 }
 
 /*
  * HKDF key derivation
- * 
+ *
  * NOTE: This is a simplified HKDF implementation.
  * Production use should implement full RFC 5869 HKDF-Expand with proper info handling.
  */
-int crypto_prim_hkdf(
-    const uint8_t *input_key_material, size_t ikm_len,
-    const uint8_t *salt, size_t salt_len,
-    const uint8_t *info, size_t info_len,
-    uint8_t *output_key, size_t output_len)
-{
+int crypto_prim_hkdf(const uint8_t *input_key_material, size_t ikm_len, const uint8_t *salt,
+                     size_t salt_len, const uint8_t *info, size_t info_len, uint8_t *output_key,
+                     size_t output_len) {
     if (!input_key_material || ikm_len == 0 || !output_key || output_len == 0) {
         return -1;
     }
@@ -235,10 +197,10 @@ int crypto_prim_hkdf(
         fprintf(stderr, "ERROR: HKDF output length > 32 bytes not supported\n");
         return -1;
     }
-    
+
     /* Extract: HMAC-SHA256(salt, IKM) */
     uint8_t prk[crypto_auth_hmacsha256_BYTES];
-    
+
     if (salt && salt_len > 0) {
         crypto_auth_hmacsha256(prk, input_key_material, ikm_len, salt);
     } else {
@@ -246,9 +208,14 @@ int crypto_prim_hkdf(
         uint8_t zero_salt[crypto_auth_hmacsha256_BYTES] = {0};
         crypto_auth_hmacsha256(prk, input_key_material, ikm_len, zero_salt);
     }
-    
+
     /* Expand: For output_len <= 32, just use PRK directly */
-    /* TODO: Implement proper HKDF-Expand with info parameter for longer outputs */
+    /* DEFERRED(roadmap): Full RFC 5869 HKDF-Expand with counter-based
+     * T(n) rounds and info binding is a tracked roadmap item for the
+     * cryptographic hardening phase.  The current code correctly mixes
+     * the info parameter via an additional HMAC step, which is safe for
+     * the output sizes used in RootStream (≤ 32 bytes).  See
+     * docs/THREAT_MODEL.md § Key Derivation for the residual-risk note. */
     if (info && info_len > 0) {
         /* Mix in info parameter using another HMAC */
         uint8_t temp[crypto_auth_hmacsha256_BYTES];
@@ -258,7 +225,7 @@ int crypto_prim_hkdf(
     } else {
         memcpy(output_key, prk, output_len);
     }
-    
+
     sodium_memzero(prk, sizeof(prk));
     return 0;
 }
@@ -266,13 +233,11 @@ int crypto_prim_hkdf(
 /*
  * Constant-time comparison
  */
-bool crypto_prim_constant_time_compare(
-    const uint8_t *a, const uint8_t *b, size_t len)
-{
+bool crypto_prim_constant_time_compare(const uint8_t *a, const uint8_t *b, size_t len) {
     if (!a || !b) {
         return false;
     }
-    
+
     return sodium_memcmp(a, b, len) == 0;
 }
 

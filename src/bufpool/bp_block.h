@@ -13,8 +13,8 @@
 #ifndef ROOTSTREAM_BP_BLOCK_H
 #define ROOTSTREAM_BP_BLOCK_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,9 +22,9 @@ extern "C" {
 
 /** Single buffer pool block */
 typedef struct {
-    void   *data;     /**< Pointer into pool's backing store */
-    size_t  size;     /**< Block size in bytes */
-    bool    in_use;
+    void *data;  /**< Pointer into pool's backing store */
+    size_t size; /**< Block size in bytes */
+    bool in_use;
 } bp_block_t;
 
 #ifdef __cplusplus

@@ -1,15 +1,15 @@
 /**
  * PHASE 19: Web Dashboard - REST API Server
- * 
+ *
  * Provides HTTP/HTTPS REST API for monitoring and control
  */
 
 #ifndef API_SERVER_H
 #define API_SERVER_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,7 +20,7 @@ extern "C" {
  */
 typedef struct {
     const char *path;
-    const char *method;         // GET, POST, PUT, DELETE
+    const char *method;  // GET, POST, PUT, DELETE
     const char *query_string;
     const char *body_data;
     size_t body_size;
@@ -31,16 +31,14 @@ typedef struct {
 /**
  * Request handler callback
  */
-typedef int (*request_handler_t)(const http_request_t *req,
-                                 char **response_body,
-                                 size_t *response_size,
-                                 char **content_type);
+typedef int (*request_handler_t)(const http_request_t *req, char **response_body,
+                                 size_t *response_size, char **content_type);
 
 /**
  * API server configuration
  */
 typedef struct {
-    uint16_t port;              // Default 8080
+    uint16_t port;  // Default 8080
     bool enable_https;
     const char *cert_file;
     const char *key_file;
@@ -61,9 +59,7 @@ api_server_t *api_server_init(const api_server_config_t *config);
 /**
  * Register route handler
  */
-int api_server_register_route(api_server_t *server,
-                              const char *path,
-                              const char *method,
+int api_server_register_route(api_server_t *server, const char *path, const char *method,
                               request_handler_t handler);
 
 /**
@@ -84,22 +80,17 @@ void api_server_cleanup(api_server_t *server);
 /**
  * Helper: Send JSON response
  */
-int api_send_json_response(char **response_body,
-                           size_t *response_size,
-                           char **content_type,
+int api_send_json_response(char **response_body, size_t *response_size, char **content_type,
                            const char *json_string);
 
 /**
  * Helper: Send error response
  */
-int api_send_error_response(char **response_body,
-                            size_t *response_size,
-                            char **content_type,
-                            int status_code,
-                            const char *error_message);
+int api_send_error_response(char **response_body, size_t *response_size, char **content_type,
+                            int status_code, const char *error_message);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // API_SERVER_H
+#endif  // API_SERVER_H

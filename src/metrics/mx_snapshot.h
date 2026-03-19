@@ -10,10 +10,11 @@
 #ifndef ROOTSTREAM_MX_SNAPSHOT_H
 #define ROOTSTREAM_MX_SNAPSHOT_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "mx_gauge.h"
 #include "mx_registry.h"
-#include <stdint.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,9 +22,9 @@ extern "C" {
 
 /** A single point-in-time metrics snapshot */
 typedef struct {
-    uint64_t    timestamp_us;              /**< Wall-clock capture time (µs) */
-    mx_gauge_t  gauges[MX_MAX_GAUGES];    /**< Captured gauge array */
-    int         gauge_count;               /**< Number of valid entries */
+    uint64_t timestamp_us;            /**< Wall-clock capture time (µs) */
+    mx_gauge_t gauges[MX_MAX_GAUGES]; /**< Captured gauge array */
+    int gauge_count;                  /**< Number of valid entries */
 } mx_snapshot_t;
 
 /**
@@ -44,9 +45,7 @@ int mx_snapshot_init(mx_snapshot_t *s);
  * @param max_out  Capacity of @out
  * @return         Number of entries written, or -1 on NULL
  */
-int mx_snapshot_dump(const mx_snapshot_t *s,
-                     mx_gauge_t          *out,
-                     int                  max_out);
+int mx_snapshot_dump(const mx_snapshot_t *s, mx_gauge_t *out, int max_out);
 
 #ifdef __cplusplus
 }

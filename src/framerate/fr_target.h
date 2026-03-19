@@ -18,16 +18,16 @@
 extern "C" {
 #endif
 
-#define FR_TARGET_EWMA_ALPHA  0.1   /**< EWMA smoothing factor */
+#define FR_TARGET_EWMA_ALPHA 0.1 /**< EWMA smoothing factor */
 
 /** Target FPS tracker */
 typedef struct {
-    double   target_fps;       /**< Configured target fps */
-    double   avg_interval_us;  /**< EWMA of inter-frame interval (µs) */
-    double   actual_fps;       /**< Computed actual fps = 1e6/avg_interval_us */
-    uint64_t last_mark_us;     /**< Timestamp of last mark (µs) */
-    uint64_t frame_count;      /**< Total frames marked */
-    int      initialised;
+    double target_fps;      /**< Configured target fps */
+    double avg_interval_us; /**< EWMA of inter-frame interval (µs) */
+    double actual_fps;      /**< Computed actual fps = 1e6/avg_interval_us */
+    uint64_t last_mark_us;  /**< Timestamp of last mark (µs) */
+    uint64_t frame_count;   /**< Total frames marked */
+    int initialised;
 } fr_target_t;
 
 /**

@@ -1,9 +1,9 @@
 #ifndef RECORDING_TYPES_H
 #define RECORDING_TYPES_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>  // For size_t
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,26 +16,26 @@ extern "C" {
 #define MAX_AUDIO_TRACKS 4
 
 enum VideoCodec {
-    VIDEO_CODEC_H264,      // Primary (fast, universal)
-    VIDEO_CODEC_VP9,       // Open-source (better compression)
-    VIDEO_CODEC_AV1,       // Future (best compression)
+    VIDEO_CODEC_H264,  // Primary (fast, universal)
+    VIDEO_CODEC_VP9,   // Open-source (better compression)
+    VIDEO_CODEC_AV1,   // Future (best compression)
 };
 
 enum AudioCodec {
-    AUDIO_CODEC_OPUS,      // Passthrough (no re-encode)
-    AUDIO_CODEC_AAC,       // Fallback (compatible)
+    AUDIO_CODEC_OPUS,  // Passthrough (no re-encode)
+    AUDIO_CODEC_AAC,   // Fallback (compatible)
 };
 
 enum RecordingPreset {
-    PRESET_FAST,           // H.264, 1-pass, ~20Mbps
-    PRESET_BALANCED,       // H.264, 2-pass, ~8-10Mbps
-    PRESET_HIGH_QUALITY,   // VP9, ~5-8Mbps
-    PRESET_ARCHIVAL,       // AV1, ~2-4Mbps
+    PRESET_FAST,          // H.264, 1-pass, ~20Mbps
+    PRESET_BALANCED,      // H.264, 2-pass, ~8-10Mbps
+    PRESET_HIGH_QUALITY,  // VP9, ~5-8Mbps
+    PRESET_ARCHIVAL,      // AV1, ~2-4Mbps
 };
 
 enum ContainerFormat {
-    CONTAINER_MP4,         // Universal (H.264/AAC)
-    CONTAINER_MATROSKA,    // Advanced (any codec combo)
+    CONTAINER_MP4,       // Universal (H.264/AAC)
+    CONTAINER_MATROSKA,  // Advanced (any codec combo)
 };
 
 typedef struct {
@@ -46,25 +46,25 @@ typedef struct {
     uint64_t start_time_us;
     uint64_t duration_us;
     uint64_t file_size_bytes;
-    
+
     enum VideoCodec video_codec;
     enum AudioCodec audio_codec;
     enum ContainerFormat container;
     enum RecordingPreset preset;
-    
+
     uint32_t video_width;
     uint32_t video_height;
     uint32_t video_fps;
     uint32_t video_bitrate_kbps;
-    
+
     uint32_t audio_sample_rate;
     uint8_t audio_channels;
     uint32_t audio_bitrate_kbps;
-    
+
     bool is_complete;
     bool is_paused;
-    
-    char metadata[512];    // Game name, etc
+
+    char metadata[512];  // Game name, etc
 } recording_info_t;
 
 typedef struct {
@@ -88,24 +88,24 @@ typedef struct {
 
 typedef struct {
     uint32_t track_id;
-    char name[128];        // e.g., "Game Audio", "Microphone"
+    char name[128];  // e.g., "Game Audio", "Microphone"
     uint8_t channels;
     uint32_t sample_rate;
     bool enabled;
-    float volume;          // 0.0 - 1.0
+    float volume;  // 0.0 - 1.0
 } audio_track_info_t;
 
 typedef struct {
     chapter_marker_t markers[MAX_CHAPTER_MARKERS];
     uint32_t marker_count;
-    
+
     audio_track_info_t tracks[MAX_AUDIO_TRACKS];
     uint32_t track_count;
-    
+
     char game_name[256];
     char game_version[64];
     char player_name[128];
-    char tags[512];        // Comma-separated tags
+    char tags[512];  // Comma-separated tags
     uint64_t session_id;
 } recording_metadata_t;
 

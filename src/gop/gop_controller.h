@@ -21,9 +21,10 @@
 #ifndef ROOTSTREAM_GOP_CONTROLLER_H
 #define ROOTSTREAM_GOP_CONTROLLER_H
 
-#include "gop_policy.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "gop_policy.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,16 +32,16 @@ extern "C" {
 
 /** IDR decision */
 typedef enum {
-    GOP_DECISION_P_FRAME = 0,  /**< Encode as P/B frame */
-    GOP_DECISION_IDR     = 1,  /**< Force IDR (keyframe) */
+    GOP_DECISION_P_FRAME = 0, /**< Encode as P/B frame */
+    GOP_DECISION_IDR = 1,     /**< Force IDR (keyframe) */
 } gop_decision_t;
 
 /** Reason for forced IDR */
 typedef enum {
-    GOP_REASON_NATURAL       = 0,  /**< max_gop interval reached */
-    GOP_REASON_SCENE_CHANGE  = 1,  /**< Scene-change score exceeded threshold */
-    GOP_REASON_LOSS_RECOVERY = 2,  /**< Loss-driven recovery IDR */
-    GOP_REASON_NONE          = 3,  /**< Not an IDR */
+    GOP_REASON_NATURAL = 0,       /**< max_gop interval reached */
+    GOP_REASON_SCENE_CHANGE = 1,  /**< Scene-change score exceeded threshold */
+    GOP_REASON_LOSS_RECOVERY = 2, /**< Loss-driven recovery IDR */
+    GOP_REASON_NONE = 3,          /**< Not an IDR */
 } gop_reason_t;
 
 /** Opaque GOP controller */
@@ -68,8 +69,7 @@ void gop_controller_destroy(gop_controller_t *gc);
  * @param policy  New policy
  * @return        0 on success, -1 on invalid policy
  */
-int gop_controller_update_policy(gop_controller_t  *gc,
-                                   const gop_policy_t *policy);
+int gop_controller_update_policy(gop_controller_t *gc, const gop_policy_t *policy);
 
 /**
  * gop_controller_next_frame — decide IDR for the next frame
@@ -81,11 +81,8 @@ int gop_controller_update_policy(gop_controller_t  *gc,
  * @param reason_out  If non-NULL, set to the IDR reason (NONE for P-frame)
  * @return            GOP_DECISION_IDR or GOP_DECISION_P_FRAME
  */
-gop_decision_t gop_controller_next_frame(gop_controller_t *gc,
-                                           float             scene_score,
-                                           uint64_t          rtt_us,
-                                           float             loss,
-                                           gop_reason_t     *reason_out);
+gop_decision_t gop_controller_next_frame(gop_controller_t *gc, float scene_score, uint64_t rtt_us,
+                                         float loss, gop_reason_t *reason_out);
 
 /**
  * gop_controller_force_idr — inject an external IDR (e.g. from PLI request)

@@ -3,10 +3,12 @@
  */
 
 #include "attack_prevention.h"
-#include "crypto_primitives.h"
-#include <string.h>
+
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+
+#include "crypto_primitives.h"
 
 #define MAX_NONCES 1024
 #define MAX_FAILED_ATTEMPTS 256
@@ -57,31 +59,28 @@ bool attack_prevention_check_nonce(const uint8_t *nonce, size_t nonce_len) {
     if (!nonce || nonce_len == 0) {
         return false;
     }
-    
+
     /* Check if nonce already used */
     for (int i = 0; i < g_nonce_count && i < MAX_NONCES; i++) {
         if (g_nonce_cache[i].used &&
             crypto_prim_constant_time_compare(g_nonce_cache[i].nonce, nonce,
-                                             nonce_len < 32 ? nonce_len : 32)) {
-            return false;  /* Replay detected */
+                                              nonce_len < 32 ? nonce_len : 32)) {
+            return false; /* Replay detected */
         }
     }
-    
+
     /* Add to cache */
     if (g_nonce_count < MAX_NONCES) {
-        memcpy(g_nonce_cache[g_nonce_count].nonce, nonce,
-               nonce_len < 32 ? nonce_len : 32);
+        memcpy(g_nonce_cache[g_nonce_count].nonce, nonce, nonce_len < 32 ? nonce_len : 32);
         g_nonce_cache[g_nonce_count].used = true;
         g_nonce_count++;
     } else {
         /* Cache full, replace oldest (FIFO) */
-        memmove(&g_nonce_cache[0], &g_nonce_cache[1],
-                sizeof(g_nonce_cache[0]) * (MAX_NONCES - 1));
-        memcpy(g_nonce_cache[MAX_NONCES - 1].nonce, nonce,
-               nonce_len < 32 ? nonce_len : 32);
+        memmove(&g_nonce_cache[0], &g_nonce_cache[1], sizeof(g_nonce_cache[0]) * (MAX_NONCES - 1));
+        memcpy(g_nonce_cache[MAX_NONCES - 1].nonce, nonce, nonce_len < 32 ? nonce_len : 32);
         g_nonce_cache[MAX_NONCES - 1].used = true;
     }
-    
+
     return true;
 }
 
@@ -92,24 +91,23 @@ int attack_prevention_record_failed_login(const char *username) {
     if (!username) {
         return -1;
     }
-    
+
     /* Find existing entry */
     for (int i = 0; i < g_failed_count; i++) {
         if (strcmp(g_failed_attempts[i].username, username) == 0) {
             g_failed_attempts[i].failed_attempts++;
-            
+
             /* Lock account if threshold exceeded */
             if (g_failed_attempts[i].failed_attempts >= LOCKOUT_THRESHOLD) {
                 struct timespec ts;
                 clock_gettime(CLOCK_REALTIME, &ts);
                 uint64_t now_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-                g_failed_attempts[i].lockout_until_us = now_us +
-                                                        LOCKOUT_DURATION_SEC * 1000000;
+                g_failed_attempts[i].lockout_until_us = now_us + LOCKOUT_DURATION_SEC * 1000000;
             }
             return 0;
         }
     }
-    
+
     /* Add new entry */
     if (g_failed_count < MAX_FAILED_ATTEMPTS) {
         strncpy(g_failed_attempts[g_failed_count].username, username, 63);
@@ -118,7 +116,7 @@ int attack_prevention_record_failed_login(const char *username) {
         g_failed_attempts[g_failed_count].lockout_until_us = 0;
         g_failed_count++;
     }
-    
+
     return 0;
 }
 
@@ -129,19 +127,19 @@ bool attack_prevention_is_account_locked(const char *username) {
     if (!username) {
         return false;
     }
-    
+
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     uint64_t now_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    
+
     for (int i = 0; i < g_failed_count; i++) {
         if (strcmp(g_failed_attempts[i].username, username) == 0) {
             if (g_failed_attempts[i].lockout_until_us > now_us) {
-                return true;  /* Account locked */
+                return true; /* Account locked */
             }
         }
     }
-    
+
     return false;
 }
 
@@ -152,7 +150,7 @@ int attack_prevention_reset_failed_attempts(const char *username) {
     if (!username) {
         return -1;
     }
-    
+
     for (int i = 0; i < g_failed_count; i++) {
         if (strcmp(g_failed_attempts[i].username, username) == 0) {
             g_failed_attempts[i].failed_attempts = 0;
@@ -160,7 +158,7 @@ int attack_prevention_reset_failed_attempts(const char *username) {
             return 0;
         }
     }
-    
+
     return 0;
 }
 
@@ -171,12 +169,12 @@ bool attack_prevention_is_rate_limited(const char *client_id, uint32_t max_per_m
     if (!client_id) {
         return false;
     }
-    
+
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     uint64_t now_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    uint64_t window_us = 60 * 1000000;  /* 1 minute */
-    
+    uint64_t window_us = 60 * 1000000; /* 1 minute */
+
     /* Find existing entry */
     for (int i = 0; i < g_rate_limit_count; i++) {
         if (strcmp(g_rate_limits[i].client_id, client_id) == 0) {
@@ -187,15 +185,15 @@ bool attack_prevention_is_rate_limited(const char *client_id, uint32_t max_per_m
                 g_rate_limits[i].window_start_us = now_us;
                 return false;
             }
-            
+
             /* Increment counter */
             g_rate_limits[i].request_count++;
-            
+
             /* Check limit */
             return g_rate_limits[i].request_count > max_per_min;
         }
     }
-    
+
     /* Add new entry */
     if (g_rate_limit_count < MAX_RATE_LIMIT_ENTRIES) {
         strncpy(g_rate_limits[g_rate_limit_count].client_id, client_id, 127);
@@ -204,7 +202,7 @@ bool attack_prevention_is_rate_limited(const char *client_id, uint32_t max_per_m
         g_rate_limits[g_rate_limit_count].window_start_us = now_us;
         g_rate_limit_count++;
     }
-    
+
     return false;
 }
 

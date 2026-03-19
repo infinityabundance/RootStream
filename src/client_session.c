@@ -43,57 +43,61 @@
  *    - rs_client_session_is_running: thread-safe (atomic load)
  */
 
-#include "../include/rootstream_client_session.h"
-#include "../include/rootstream.h"
+#include <stdatomic.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdatomic.h>
+
+#include "../include/rootstream.h"
+#include "../include/rootstream_client_session.h"
 
 /* ── Internal session struct ──────────────────────────────────────── */
 
 struct rs_client_session_s {
     /* Configuration copy (caller-supplied strings stored by pointer — see
      * header: caller guarantees lifetime) */
-    rs_client_config_t     cfg;
+    rs_client_config_t cfg;
 
     /* Callbacks */
-    rs_on_video_frame_fn   on_video;
-    void                  *on_video_user;
-    rs_on_audio_frame_fn   on_audio;
-    void                  *on_audio_user;
-    rs_on_state_change_fn  on_state;
-    void                  *on_state_user;
+    rs_on_video_frame_fn on_video;
+    void *on_video_user;
+    rs_on_audio_frame_fn on_audio;
+    void *on_audio_user;
+    rs_on_state_change_fn on_state;
+    void *on_state_user;
 
     /* Control flags */
-    atomic_int             stop_requested;   /**< Non-zero = exit run loop */
-    atomic_int             is_running;       /**< Non-zero while run() executing */
+    atomic_int stop_requested; /**< Non-zero = exit run loop */
+    atomic_int is_running;     /**< Non-zero while run() executing */
 
     /* Core streaming context — the same rootstream_ctx_t that
      * service_run_client() allocated and operated on.  This keeps all
      * protocol, crypto, and decoder state in one place. */
-    rootstream_ctx_t      *ctx;
+    rootstream_ctx_t *ctx;
 
     /* Decoder backend name string (set once decode is initialised) */
-    const char            *decoder_name;
+    const char *decoder_name;
 };
 
 /* ── Internal helpers ─────────────────────────────────────────────── */
 
 /* Notify state-change subscribers.  msg is a short human-readable string. */
 static void notify_state(rs_client_session_t *s, const char *msg) {
-    if (s && s->on_state) s->on_state(s->on_state_user, msg);
+    if (s && s->on_state)
+        s->on_state(s->on_state_user, msg);
 }
 
 /* ── Lifecycle ────────────────────────────────────────────────────── */
 
 rs_client_session_t *rs_client_session_create(const rs_client_config_t *cfg) {
-    if (!cfg) return NULL;
+    if (!cfg)
+        return NULL;
 
     rs_client_session_t *s = calloc(1, sizeof(*s));
-    if (!s) return NULL;
+    if (!s)
+        return NULL;
 
-    s->cfg = *cfg;  /* shallow copy — string pointers remain caller-owned */
+    s->cfg = *cfg; /* shallow copy — string pointers remain caller-owned */
     atomic_store(&s->stop_requested, 0);
     atomic_store(&s->is_running, 0);
     s->decoder_name = "unknown";
@@ -109,18 +113,18 @@ rs_client_session_t *rs_client_session_create(const rs_client_config_t *cfg) {
 
     /* Copy connection config into the core context */
     if (cfg->peer_host) {
-        strncpy(s->ctx->peer_host, cfg->peer_host,
-                sizeof(s->ctx->peer_host) - 1);
+        strncpy(s->ctx->peer_host, cfg->peer_host, sizeof(s->ctx->peer_host) - 1);
     }
-    s->ctx->peer_port         = cfg->peer_port;
-    s->ctx->running           = 1;
+    s->ctx->peer_port = cfg->peer_port;
+    s->ctx->running = 1;
     s->ctx->settings.audio_enabled = cfg->audio_enabled;
 
     return s;
 }
 
 void rs_client_session_destroy(rs_client_session_t *s) {
-    if (!s) return;
+    if (!s)
+        return;
 
     /* If run() is still executing, request a stop and wait for the atomic
      * flag to clear.  This is a best-effort wait; callers should join the
@@ -134,34 +138,35 @@ void rs_client_session_destroy(rs_client_session_t *s) {
 
 /* ── Callback registration ────────────────────────────────────────── */
 
-void rs_client_session_set_video_callback(rs_client_session_t  *s,
-                                          rs_on_video_frame_fn  cb,
-                                          void                 *user) {
-    if (!s) return;
-    s->on_video      = cb;
+void rs_client_session_set_video_callback(rs_client_session_t *s, rs_on_video_frame_fn cb,
+                                          void *user) {
+    if (!s)
+        return;
+    s->on_video = cb;
     s->on_video_user = user;
 }
 
-void rs_client_session_set_audio_callback(rs_client_session_t  *s,
-                                          rs_on_audio_frame_fn  cb,
-                                          void                 *user) {
-    if (!s) return;
-    s->on_audio      = cb;
+void rs_client_session_set_audio_callback(rs_client_session_t *s, rs_on_audio_frame_fn cb,
+                                          void *user) {
+    if (!s)
+        return;
+    s->on_audio = cb;
     s->on_audio_user = user;
 }
 
-void rs_client_session_set_state_callback(rs_client_session_t   *s,
-                                          rs_on_state_change_fn  cb,
-                                          void                  *user) {
-    if (!s) return;
-    s->on_state      = cb;
+void rs_client_session_set_state_callback(rs_client_session_t *s, rs_on_state_change_fn cb,
+                                          void *user) {
+    if (!s)
+        return;
+    s->on_state = cb;
     s->on_state_user = user;
 }
 
 /* ── Run / stop ───────────────────────────────────────────────────── */
 
 int rs_client_session_run(rs_client_session_t *s) {
-    if (!s || !s->ctx) return -1;
+    if (!s || !s->ctx)
+        return -1;
 
     atomic_store(&s->is_running, 1);
     notify_state(s, "connecting");
@@ -208,8 +213,9 @@ int rs_client_session_run(rs_client_session_t *s) {
          * (it uses display_present_frame for video and audio playback is
          *  handled by service.c directly). */
         if (rootstream_opus_decoder_init(ctx) < 0) {
-            fprintf(stderr, "rs_client_session: Opus decoder init failed, "
-                            "audio disabled\n");
+            fprintf(stderr,
+                    "rs_client_session: Opus decoder init failed, "
+                    "audio disabled\n");
             ctx->settings.audio_enabled = 0;
         }
     }
@@ -229,7 +235,6 @@ int rs_client_session_run(rs_client_session_t *s) {
     notify_state(s, "connected");
 
     while (!atomic_load(&s->stop_requested) && ctx->running) {
-
         /* Receive incoming packets (16ms = one frame at 60fps).
          * rootstream_net_recv() handles partial packets, reassembly, and
          * populates ctx->current_frame when a complete video frame arrives. */
@@ -238,24 +243,23 @@ int rs_client_session_run(rs_client_session_t *s) {
 
         /* ── Video frame handling ─────────────────────────────────────── */
         if (ctx->current_frame.data && ctx->current_frame.size > 0) {
-
             /* Decode the compressed frame to the pixel format the decoder
              * was initialised with (NV12 for VA-API, RGBA for software). */
-            if (rootstream_decode_frame(ctx,
-                                        ctx->current_frame.data,
-                                        ctx->current_frame.size,
-                                        &decoded_frame) == 0)
-            {
+            if (rootstream_decode_frame(ctx, ctx->current_frame.data, ctx->current_frame.size,
+                                        &decoded_frame) == 0) {
                 /* Invoke the video callback if registered.
                  * The callback is responsible for copying any data it needs
                  * to retain — the decoded_frame buffer is reused on the
                  * next iteration. */
                 if (s->on_video && decoded_frame.data) {
                     rs_video_frame_t vf;
-                    vf.width      = decoded_frame.width;
-                    vf.height     = decoded_frame.height;
-                    vf.pts_us     = 0;  /* TODO: propagate PTS from decoder */
-                    vf.is_keyframe = false;
+                    vf.width = decoded_frame.width;
+                    vf.height = decoded_frame.height;
+                    /* Use the capture timestamp from the decoded frame as the
+                     * presentation timestamp.  The decoder preserves the
+                     * timestamp field from the incoming frame_buffer_t. */
+                    vf.pts_us = decoded_frame.timestamp;
+                    vf.is_keyframe = decoded_frame.is_keyframe;
 
                     /* Map the decoder's output format to rs_pixfmt_t.
                      * VA-API typically outputs NV12; software decoder may
@@ -265,23 +269,22 @@ int rs_client_session_run(rs_client_session_t *s) {
                         /* NV12: Y plane followed by interleaved UV plane.
                          * plane0 = Y luma, stride0 = width
                          * plane1 = UV chroma, stride1 = width (UV rows = height/2) */
-                        vf.pixfmt   = RS_PIXFMT_NV12;
-                        vf.plane0   = decoded_frame.data;
-                        vf.stride0  = decoded_frame.width;
-                        vf.plane1   = decoded_frame.data + decoded_frame.width
-                                                         * decoded_frame.height;
-                        vf.stride1  = decoded_frame.width;
-                        vf.plane2   = NULL;
-                        vf.stride2  = 0;
+                        vf.pixfmt = RS_PIXFMT_NV12;
+                        vf.plane0 = decoded_frame.data;
+                        vf.stride0 = decoded_frame.width;
+                        vf.plane1 = decoded_frame.data + decoded_frame.width * decoded_frame.height;
+                        vf.stride1 = decoded_frame.width;
+                        vf.plane2 = NULL;
+                        vf.stride2 = 0;
                     } else {
                         /* Fallback: treat as packed RGBA */
-                        vf.pixfmt   = RS_PIXFMT_RGBA;
-                        vf.plane0   = decoded_frame.data;
-                        vf.stride0  = decoded_frame.width * 4;
-                        vf.plane1   = NULL;
-                        vf.stride1  = 0;
-                        vf.plane2   = NULL;
-                        vf.stride2  = 0;
+                        vf.pixfmt = RS_PIXFMT_RGBA;
+                        vf.plane0 = decoded_frame.data;
+                        vf.stride0 = decoded_frame.width * 4;
+                        vf.plane1 = NULL;
+                        vf.stride1 = 0;
+                        vf.plane2 = NULL;
+                        vf.stride2 = 0;
                     }
 
                     s->on_video(s->on_video_user, &vf);
@@ -298,25 +301,20 @@ int rs_client_session_run(rs_client_session_t *s) {
         }
 
         /* ── Audio handling ───────────────────────────────────────────── */
-        if (ctx->settings.audio_enabled && s->on_audio &&
-            ctx->current_audio.data && ctx->current_audio.size > 0)
-        {
+        if (ctx->settings.audio_enabled && s->on_audio && ctx->current_audio.data &&
+            ctx->current_audio.size > 0) {
             /* Decode Opus-compressed audio to PCM */
-            int16_t pcm_buf[48000 / 10 * 2];  /* 100ms stereo at 48 kHz */
+            int16_t pcm_buf[48000 / 10 * 2]; /* 100ms stereo at 48 kHz */
             size_t pcm_len = sizeof(pcm_buf) / sizeof(pcm_buf[0]);
-            int pcm_samples = rootstream_opus_decode(ctx,
-                                                      ctx->current_audio.data,
-                                                      ctx->current_audio.size,
-                                                      pcm_buf,
-                                                      &pcm_len);
+            int pcm_samples = rootstream_opus_decode(ctx, ctx->current_audio.data,
+                                                     ctx->current_audio.size, pcm_buf, &pcm_len);
             if (pcm_samples > 0) {
                 rs_audio_frame_t af;
-                af.samples      = pcm_buf;
-                af.num_samples  = (size_t)pcm_samples;
-                af.channels     = ctx->settings.audio_channels > 0
-                                  ? ctx->settings.audio_channels : 2;
-                af.sample_rate  = 48000;
-                af.pts_us       = 0;
+                af.samples = pcm_buf;
+                af.num_samples = (size_t)pcm_samples;
+                af.channels = ctx->settings.audio_channels > 0 ? ctx->settings.audio_channels : 2;
+                af.sample_rate = 48000;
+                af.pts_us = 0;
                 s->on_audio(s->on_audio_user, &af);
                 /* af.samples is now INVALID — pcm_buf is on the stack */
             }
@@ -345,16 +343,17 @@ int rs_client_session_run(rs_client_session_t *s) {
 }
 
 void rs_client_session_request_stop(rs_client_session_t *s) {
-    if (!s) return;
+    if (!s)
+        return;
     atomic_store(&s->stop_requested, 1);
-    if (s->ctx) s->ctx->running = 0;  /* also stop net_recv / net_tick */
+    if (s->ctx)
+        s->ctx->running = 0; /* also stop net_recv / net_tick */
 }
 
 /* ── Introspection ────────────────────────────────────────────────── */
 
 bool rs_client_session_is_running(const rs_client_session_t *s) {
-    return s ? (atomic_load(&s->stop_requested) == 0 &&
-                atomic_load(&s->is_running)     != 0) : false;
+    return s ? (atomic_load(&s->stop_requested) == 0 && atomic_load(&s->is_running) != 0) : false;
 }
 
 const char *rs_client_session_decoder_name(const rs_client_session_t *s) {

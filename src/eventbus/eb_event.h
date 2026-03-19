@@ -12,8 +12,8 @@
 #ifndef ROOTSTREAM_EB_EVENT_H
 #define ROOTSTREAM_EB_EVENT_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,10 +24,10 @@ typedef uint32_t eb_type_t;
 
 /** Event descriptor */
 typedef struct {
-    eb_type_t   type_id;        /**< Numeric event type */
-    void       *payload;        /**< Caller-owned payload (may be NULL) */
-    size_t      payload_len;    /**< Payload byte length */
-    uint64_t    timestamp_us;   /**< Creation wall-clock µs */
+    eb_type_t type_id;     /**< Numeric event type */
+    void *payload;         /**< Caller-owned payload (may be NULL) */
+    size_t payload_len;    /**< Payload byte length */
+    uint64_t timestamp_us; /**< Creation wall-clock µs */
 } eb_event_t;
 
 /**
@@ -40,11 +40,8 @@ typedef struct {
  * @param timestamp_us Creation wall-clock µs
  * @return             0 on success, -1 on NULL
  */
-int eb_event_init(eb_event_t *e,
-                  eb_type_t   type_id,
-                  void       *payload,
-                  size_t      payload_len,
-                  uint64_t    timestamp_us);
+int eb_event_init(eb_event_t *e, eb_type_t type_id, void *payload, size_t payload_len,
+                  uint64_t timestamp_us);
 
 #ifdef __cplusplus
 }

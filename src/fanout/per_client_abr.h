@@ -10,9 +10,10 @@
 #ifndef ROOTSTREAM_PER_CLIENT_ABR_H
 #define ROOTSTREAM_PER_CLIENT_ABR_H
 
-#include "session_table.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "session_table.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +21,9 @@ extern "C" {
 
 /** ABR decision returned to the fanout manager */
 typedef struct {
-    uint32_t target_bitrate_kbps;  /**< Recommended encoding bitrate */
-    bool     allow_upgrade;         /**< True if bitrate can increase */
-    bool     force_keyframe;        /**< True if client needs resync */
+    uint32_t target_bitrate_kbps; /**< Recommended encoding bitrate */
+    bool allow_upgrade;           /**< True if bitrate can increase */
+    bool force_keyframe;          /**< True if client needs resync */
 } abr_decision_t;
 
 /** Opaque per-client ABR controller */
@@ -35,8 +36,7 @@ typedef struct per_client_abr_s per_client_abr_t;
  * @param max_bitrate_kbps      Upper limit negotiated at handshake
  * @return                      Non-NULL handle, or NULL on OOM
  */
-per_client_abr_t *per_client_abr_create(uint32_t initial_bitrate_kbps,
-                                         uint32_t max_bitrate_kbps);
+per_client_abr_t *per_client_abr_create(uint32_t initial_bitrate_kbps, uint32_t max_bitrate_kbps);
 
 /**
  * per_client_abr_destroy — free ABR state
@@ -56,10 +56,8 @@ void per_client_abr_destroy(per_client_abr_t *abr);
  * @param bw_kbps   Measured delivery bandwidth (kbps)
  * @return          Bitrate decision for the next interval
  */
-abr_decision_t per_client_abr_update(per_client_abr_t *abr,
-                                      uint32_t          rtt_ms,
-                                      float             loss_rate,
-                                      uint32_t          bw_kbps);
+abr_decision_t per_client_abr_update(per_client_abr_t *abr, uint32_t rtt_ms, float loss_rate,
+                                     uint32_t bw_kbps);
 
 /**
  * per_client_abr_get_bitrate — return current bitrate target

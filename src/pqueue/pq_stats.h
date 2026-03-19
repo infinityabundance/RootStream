@@ -18,10 +18,10 @@ extern "C" {
 
 /** Priority queue statistics snapshot */
 typedef struct {
-    uint64_t push_count;      /**< Total successful pushes */
-    uint64_t pop_count;       /**< Total successful pops */
-    int      peak_size;       /**< Maximum simultaneous heap occupancy */
-    uint64_t overflow_count;  /**< Push rejections (heap full) */
+    uint64_t push_count;     /**< Total successful pushes */
+    uint64_t pop_count;      /**< Total successful pops */
+    int peak_size;           /**< Maximum simultaneous heap occupancy */
+    uint64_t overflow_count; /**< Push rejections (heap full) */
 } pq_stats_snapshot_t;
 
 /** Opaque priority queue stats context */

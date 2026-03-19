@@ -19,9 +19,9 @@ extern "C" {
 
 /** Priority queue entry (lower key = higher priority) */
 typedef struct {
-    uint64_t key;    /**< Sort key; smallest key is dequeued first */
-    void    *data;   /**< Caller-owned data pointer (may be NULL) */
-    uint32_t id;     /**< Application identifier */
+    uint64_t key; /**< Sort key; smallest key is dequeued first */
+    void *data;   /**< Caller-owned data pointer (may be NULL) */
+    uint32_t id;  /**< Application identifier */
 } pq_entry_t;
 
 #ifdef __cplusplus

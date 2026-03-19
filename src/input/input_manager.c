@@ -1,18 +1,19 @@
 /*
  * input_manager.c - Multi-client input injection manager
- * 
+ *
  * Coordinates input from multiple clients with deduplication,
  * latency measurement, and backend abstraction.
  */
 
-#include "../../include/rootstream.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/time.h>
+#include <unistd.h>
+
+#include "../../include/rootstream.h"
 
 #ifdef __linux__
 #include <linux/uinput.h>
@@ -24,25 +25,25 @@
 static int emit_event(int fd, uint16_t type, uint16_t code, int32_t value) {
 #ifdef __linux__
     struct input_event ev = {0};
-    
+
     ev.type = type;
     ev.code = code;
     ev.value = value;
-    
+
     /* Set timestamp */
     gettimeofday(&ev.time, NULL);
-    
+
     if (write(fd, &ev, sizeof(ev)) < 0)
         return -1;
-    
+
     /* Sync event */
     ev.type = EV_SYN;
     ev.code = SYN_REPORT;
     ev.value = 0;
-    
+
     if (write(fd, &ev, sizeof(ev)) < 0)
         return -1;
-    
+
     return 0;
 #else
     (void)fd;
@@ -165,24 +166,24 @@ static int create_gamepad(void) {
     ioctl(fd, UI_SET_EVBIT, EV_SYN);
 
     /* Enable gamepad buttons */
-    ioctl(fd, UI_SET_KEYBIT, BTN_SOUTH);     /* A */
-    ioctl(fd, UI_SET_KEYBIT, BTN_EAST);      /* B */
-    ioctl(fd, UI_SET_KEYBIT, BTN_WEST);      /* X */
-    ioctl(fd, UI_SET_KEYBIT, BTN_NORTH);     /* Y */
-    ioctl(fd, UI_SET_KEYBIT, BTN_TL);        /* L1 */
-    ioctl(fd, UI_SET_KEYBIT, BTN_TR);        /* R1 */
-    ioctl(fd, UI_SET_KEYBIT, BTN_SELECT);    /* Back */
-    ioctl(fd, UI_SET_KEYBIT, BTN_START);     /* Start */
-    ioctl(fd, UI_SET_KEYBIT, BTN_THUMBL);    /* L3 */
-    ioctl(fd, UI_SET_KEYBIT, BTN_THUMBR);    /* R3 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_SOUTH);  /* A */
+    ioctl(fd, UI_SET_KEYBIT, BTN_EAST);   /* B */
+    ioctl(fd, UI_SET_KEYBIT, BTN_WEST);   /* X */
+    ioctl(fd, UI_SET_KEYBIT, BTN_NORTH);  /* Y */
+    ioctl(fd, UI_SET_KEYBIT, BTN_TL);     /* L1 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_TR);     /* R1 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_SELECT); /* Back */
+    ioctl(fd, UI_SET_KEYBIT, BTN_START);  /* Start */
+    ioctl(fd, UI_SET_KEYBIT, BTN_THUMBL); /* L3 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_THUMBR); /* R3 */
 
     /* Enable analog sticks and triggers */
-    ioctl(fd, UI_SET_ABSBIT, ABS_X);         /* Left stick X */
-    ioctl(fd, UI_SET_ABSBIT, ABS_Y);         /* Left stick Y */
-    ioctl(fd, UI_SET_ABSBIT, ABS_RX);        /* Right stick X */
-    ioctl(fd, UI_SET_ABSBIT, ABS_RY);        /* Right stick Y */
-    ioctl(fd, UI_SET_ABSBIT, ABS_Z);         /* Left trigger */
-    ioctl(fd, UI_SET_ABSBIT, ABS_RZ);        /* Right trigger */
+    ioctl(fd, UI_SET_ABSBIT, ABS_X);  /* Left stick X */
+    ioctl(fd, UI_SET_ABSBIT, ABS_Y);  /* Left stick Y */
+    ioctl(fd, UI_SET_ABSBIT, ABS_RX); /* Right stick X */
+    ioctl(fd, UI_SET_ABSBIT, ABS_RY); /* Right stick Y */
+    ioctl(fd, UI_SET_ABSBIT, ABS_Z);  /* Left trigger */
+    ioctl(fd, UI_SET_ABSBIT, ABS_RZ); /* Right trigger */
 
     /* Setup device */
     struct uinput_setup setup = {0};
@@ -199,32 +200,32 @@ static int create_gamepad(void) {
 
     /* Setup absolute axis ranges */
     struct uinput_abs_setup abs_setup;
-    
+
     /* Left stick X */
     abs_setup.code = ABS_X;
     abs_setup.absinfo.minimum = -32768;
     abs_setup.absinfo.maximum = 32767;
     abs_setup.absinfo.value = 0;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
-    
+
     /* Left stick Y */
     abs_setup.code = ABS_Y;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
-    
+
     /* Right stick X */
     abs_setup.code = ABS_RX;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
-    
+
     /* Right stick Y */
     abs_setup.code = ABS_RY;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
-    
+
     /* Triggers (0-255) */
     abs_setup.code = ABS_Z;
     abs_setup.absinfo.minimum = 0;
     abs_setup.absinfo.maximum = 255;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
-    
+
     abs_setup.code = ABS_RZ;
     ioctl(fd, UI_ABS_SETUP, &abs_setup);
 
@@ -281,7 +282,7 @@ static int process_input_event(input_manager_ctx_t *mgr, const input_event_pkt_t
     }
 
     int result = 0;
-    
+
     switch (event->type) {
 #ifdef __linux__
         case EV_KEY:
@@ -289,20 +290,17 @@ static int process_input_event(input_manager_ctx_t *mgr, const input_event_pkt_t
             if (event->code < BTN_MOUSE) {
                 /* Keyboard */
                 if (mgr->device_fd_kbd >= 0) {
-                    result = emit_event(mgr->device_fd_kbd, EV_KEY,
-                                      event->code, event->value);
+                    result = emit_event(mgr->device_fd_kbd, EV_KEY, event->code, event->value);
                 }
             } else if (event->code < BTN_JOYSTICK) {
                 /* Mouse button */
                 if (mgr->device_fd_mouse >= 0) {
-                    result = emit_event(mgr->device_fd_mouse, EV_KEY,
-                                      event->code, event->value);
+                    result = emit_event(mgr->device_fd_mouse, EV_KEY, event->code, event->value);
                 }
             } else {
                 /* Gamepad button */
                 if (mgr->device_fd_gamepad >= 0) {
-                    result = emit_event(mgr->device_fd_gamepad, EV_KEY,
-                                      event->code, event->value);
+                    result = emit_event(mgr->device_fd_gamepad, EV_KEY, event->code, event->value);
                 }
             }
             break;
@@ -310,16 +308,14 @@ static int process_input_event(input_manager_ctx_t *mgr, const input_event_pkt_t
         case EV_REL:
             /* Mouse movement */
             if (mgr->device_fd_mouse >= 0) {
-                result = emit_event(mgr->device_fd_mouse, EV_REL,
-                                  event->code, event->value);
+                result = emit_event(mgr->device_fd_mouse, EV_REL, event->code, event->value);
             }
             break;
 
         case EV_ABS:
             /* Gamepad analog axes */
             if (mgr->device_fd_gamepad >= 0) {
-                result = emit_event(mgr->device_fd_gamepad, EV_ABS,
-                                  event->code, event->value);
+                result = emit_event(mgr->device_fd_gamepad, EV_ABS, event->code, event->value);
             }
             break;
 #endif
@@ -361,20 +357,17 @@ int input_manager_init(rootstream_ctx_t *ctx, input_backend_type_t backend) {
             /* Create virtual devices */
             mgr->device_fd_kbd = create_keyboard();
             if (mgr->device_fd_kbd < 0) {
-                fprintf(stderr, "Warning: Cannot create virtual keyboard: %s\n",
-                       strerror(errno));
+                fprintf(stderr, "Warning: Cannot create virtual keyboard: %s\n", strerror(errno));
             }
 
             mgr->device_fd_mouse = create_mouse();
             if (mgr->device_fd_mouse < 0) {
-                fprintf(stderr, "Warning: Cannot create virtual mouse: %s\n",
-                       strerror(errno));
+                fprintf(stderr, "Warning: Cannot create virtual mouse: %s\n", strerror(errno));
             }
 
             mgr->device_fd_gamepad = create_gamepad();
             if (mgr->device_fd_gamepad < 0) {
-                fprintf(stderr, "Warning: Cannot create virtual gamepad: %s\n",
-                       strerror(errno));
+                fprintf(stderr, "Warning: Cannot create virtual gamepad: %s\n", strerror(errno));
             }
 
             if (mgr->device_fd_kbd >= 0 || mgr->device_fd_mouse >= 0 ||
@@ -464,7 +457,7 @@ int input_manager_submit_packet(rootstream_ctx_t *ctx, const input_event_pkt_t *
     /* Check for duplicate */
     if (is_duplicate_event(mgr, client_id, sequence_number)) {
         mgr->duplicate_inputs_detected++;
-        return 0;  /* Not an error, just skip duplicate */
+        return 0; /* Not an error, just skip duplicate */
     }
 
     /* Record receive time for latency measurement */
@@ -472,7 +465,7 @@ int input_manager_submit_packet(rootstream_ctx_t *ctx, const input_event_pkt_t *
 
     /* Process the event based on backend */
     int result = 0;
-    
+
     switch (mgr->backend_type) {
         case INPUT_BACKEND_UINPUT:
             result = process_input_event(mgr, event);
@@ -484,7 +477,7 @@ int input_manager_submit_packet(rootstream_ctx_t *ctx, const input_event_pkt_t *
                 result = input_inject_key_xdotool(event->code, event->value != 0);
             } else if (event->type == EV_REL || event->type == EV_KEY) {
                 /* For mouse events, xdotool needs different handling */
-                result = 0;  /* Simplified for now */
+                result = 0; /* Simplified for now */
             }
             break;
 
@@ -493,7 +486,7 @@ int input_manager_submit_packet(rootstream_ctx_t *ctx, const input_event_pkt_t *
             if (event->type == EV_KEY && event->code < BTN_MOUSE) {
                 result = input_inject_key_logging(event->code, event->value != 0);
             } else {
-                result = 0;  /* Log only */
+                result = 0; /* Log only */
             }
             break;
     }
@@ -537,11 +530,11 @@ int input_manager_register_client(rootstream_ctx_t *ctx, uint32_t client_id,
             }
             mgr->clients[i].active = true;
             mgr->clients[i].event_count = 0;
-            mgr->clients[i].last_sequence_number = 0xFFFF;  /* Sentinel - no sequence seen yet */
+            mgr->clients[i].last_sequence_number = 0xFFFF; /* Sentinel - no sequence seen yet */
             mgr->active_client_count++;
-            
-            printf("Input Manager: Registered client %u (%s)\n",
-                   client_id, mgr->clients[i].client_name);
+
+            printf("Input Manager: Registered client %u (%s)\n", client_id,
+                   mgr->clients[i].client_name);
             return 0;
         }
     }
@@ -562,9 +555,9 @@ int input_manager_unregister_client(rootstream_ctx_t *ctx, uint32_t client_id) {
 
     for (int i = 0; i < INPUT_MAX_CLIENTS; i++) {
         if (mgr->clients[i].active && mgr->clients[i].client_id == client_id) {
-            printf("Input Manager: Unregistered client %u (%s)\n",
-                   client_id, mgr->clients[i].client_name);
-            
+            printf("Input Manager: Unregistered client %u (%s)\n", client_id,
+                   mgr->clients[i].client_name);
+
             memset(&mgr->clients[i], 0, sizeof(input_client_info_t));
             mgr->active_client_count--;
             return 0;

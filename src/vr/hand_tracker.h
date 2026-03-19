@@ -5,15 +5,13 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 #include "openxr_manager.h"
 
 // Hand enumeration
-typedef enum {
-    HAND_LEFT = 0,
-    HAND_RIGHT = 1
-} Hand;
+typedef enum { HAND_LEFT = 0, HAND_RIGHT = 1 } Hand;
 
 // Gesture enumeration
 typedef enum {
@@ -42,7 +40,7 @@ typedef struct {
 typedef struct HandTracker HandTracker;
 
 // Creation and initialization
-HandTracker* hand_tracker_create(void);
+HandTracker *hand_tracker_create(void);
 int hand_tracker_init(HandTracker *tracker);
 void hand_tracker_cleanup(HandTracker *tracker);
 void hand_tracker_destroy(HandTracker *tracker);
@@ -63,10 +61,11 @@ XrVector3f hand_tracker_get_finger_tip(HandTracker *tracker, Hand hand, uint32_t
 bool hand_tracker_is_tracked(HandTracker *tracker, Hand hand);
 
 // Ray casting from hand
-int hand_tracker_get_ray(HandTracker *tracker, Hand hand, XrVector3f *origin, XrVector3f *direction);
+int hand_tracker_get_ray(HandTracker *tracker, Hand hand, XrVector3f *origin,
+                         XrVector3f *direction);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HAND_TRACKER_H
+#endif  // HAND_TRACKER_H

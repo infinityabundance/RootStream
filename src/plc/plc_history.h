@@ -10,15 +10,16 @@
 #ifndef ROOTSTREAM_PLC_HISTORY_H
 #define ROOTSTREAM_PLC_HISTORY_H
 
-#include "plc_frame.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "plc_frame.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PLC_HISTORY_DEPTH  8   /**< Number of past frames retained */
+#define PLC_HISTORY_DEPTH 8 /**< Number of past frames retained */
 
 /** Opaque PLC history context */
 typedef struct plc_history_s plc_history_t;
@@ -46,8 +47,7 @@ void plc_history_destroy(plc_history_t *h);
  * @param frame  Frame to store
  * @return       0 on success, -1 on NULL args
  */
-int plc_history_push(plc_history_t     *h,
-                      const plc_frame_t *frame);
+int plc_history_push(plc_history_t *h, const plc_frame_t *frame);
 
 /**
  * plc_history_get_last — retrieve the most recently pushed frame

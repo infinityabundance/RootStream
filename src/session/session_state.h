@@ -31,37 +31,37 @@
 #ifndef ROOTSTREAM_SESSION_STATE_H
 #define ROOTSTREAM_SESSION_STATE_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SESSION_STATE_MAGIC       0x52535353UL  /* 'RSSS' */
-#define SESSION_STATE_VERSION     1
-#define SESSION_MAX_PEER_ADDR     64
-#define SESSION_STREAM_KEY_LEN    32
-#define SESSION_STATE_MIN_SIZE    100  /* header without peer addr */
-#define SESSION_STATE_MAX_SIZE    (SESSION_STATE_MIN_SIZE + SESSION_MAX_PEER_ADDR)
+#define SESSION_STATE_MAGIC 0x52535353UL /* 'RSSS' */
+#define SESSION_STATE_VERSION 1
+#define SESSION_MAX_PEER_ADDR 64
+#define SESSION_STREAM_KEY_LEN 32
+#define SESSION_STATE_MIN_SIZE 100 /* header without peer addr */
+#define SESSION_STATE_MAX_SIZE (SESSION_STATE_MIN_SIZE + SESSION_MAX_PEER_ADDR)
 
 /** Complete session snapshot */
 typedef struct {
     uint64_t session_id;
-    uint64_t created_us;          /**< Monotonic creation timestamp */
+    uint64_t created_us; /**< Monotonic creation timestamp */
     uint32_t width;
     uint32_t height;
-    uint32_t fps_num;             /**< Framerate numerator */
-    uint32_t fps_den;             /**< Framerate denominator */
+    uint32_t fps_num; /**< Framerate numerator */
+    uint32_t fps_den; /**< Framerate denominator */
     uint32_t bitrate_kbps;
     uint32_t audio_sample_rate;
     uint32_t audio_channels;
-    uint32_t last_keyframe;       /**< Frame number of last IDR */
+    uint32_t last_keyframe; /**< Frame number of last IDR */
     uint64_t frames_sent;
-    uint8_t  stream_key[SESSION_STREAM_KEY_LEN];
-    char     peer_addr[SESSION_MAX_PEER_ADDR + 1]; /**< NUL-terminated */
-    uint16_t flags;               /**< Reserved for future use */
+    uint8_t stream_key[SESSION_STREAM_KEY_LEN];
+    char peer_addr[SESSION_MAX_PEER_ADDR + 1]; /**< NUL-terminated */
+    uint16_t flags;                            /**< Reserved for future use */
 } session_state_t;
 
 /**
@@ -72,9 +72,7 @@ typedef struct {
  * @param buf_sz  Size of @buf (must be >= SESSION_STATE_MAX_SIZE)
  * @return        Number of bytes written, or -1 on error
  */
-int session_state_serialise(const session_state_t *state,
-                             uint8_t               *buf,
-                             size_t                 buf_sz);
+int session_state_serialise(const session_state_t *state, uint8_t *buf, size_t buf_sz);
 
 /**
  * session_state_deserialise — decode @state from @buf
@@ -84,9 +82,7 @@ int session_state_serialise(const session_state_t *state,
  * @param state    Output session state
  * @return         0 on success, -1 on bad magic/version/overflow
  */
-int session_state_deserialise(const uint8_t   *buf,
-                               size_t           buf_sz,
-                               session_state_t *state);
+int session_state_deserialise(const uint8_t *buf, size_t buf_sz, session_state_t *state);
 
 /**
  * session_state_serialised_size — return exact size for @state

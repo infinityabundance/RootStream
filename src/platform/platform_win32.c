@@ -8,13 +8,14 @@
 
 #ifdef _WIN32
 
-#include "platform.h"
+#include <direct.h>
+#include <io.h>
+#include <shlobj.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <io.h>
-#include <direct.h>
-#include <shlobj.h>
+
+#include "platform.h"
 
 /* For FlushFileBuffers */
 #pragma comment(lib, "ws2_32.lib")
@@ -95,8 +96,7 @@ int rs_socket_bind(rs_socket_t sock, const struct sockaddr *addr, socklen_t addr
     return bind(sock, addr, addrlen);
 }
 
-int rs_socket_setopt(rs_socket_t sock, int level, int optname,
-                     const void *optval, size_t optlen) {
+int rs_socket_setopt(rs_socket_t sock, int level, int optname, const void *optval, size_t optlen) {
     return setsockopt(sock, level, optname, (const char *)optval, (int)optlen);
 }
 
@@ -122,17 +122,11 @@ int rs_socket_error(void) {
     return WSAGetLastError();
 }
 
-const char* rs_socket_strerror(int err) {
+const char *rs_socket_strerror(int err) {
     /* Use FormatMessage to get Windows error string */
-    DWORD result = FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        err,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        error_buf,
-        sizeof(error_buf),
-        NULL
-    );
+    DWORD result = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                                  err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), error_buf,
+                                  sizeof(error_buf), NULL);
 
     if (result == 0) {
         snprintf(error_buf, sizeof(error_buf), "Unknown error %d", err);
@@ -189,7 +183,7 @@ void rs_sleep_us(uint32_t us) {
  * File System Implementation
  * ============================================================================ */
 
-const char* rs_config_dir(void) {
+const char *rs_config_dir(void) {
     static char config_dir[MAX_PATH] = {0};
 
     if (config_dir[0] != '\0') {
@@ -209,7 +203,7 @@ const char* rs_config_dir(void) {
 }
 
 int rs_mkdir(const char *path, int mode) {
-    (void)mode;  /* Windows doesn't use Unix permissions */
+    (void)mode; /* Windows doesn't use Unix permissions */
     return _mkdir(path) == 0 || errno == EEXIST ? 0 : -1;
 }
 
@@ -256,7 +250,7 @@ char rs_path_separator(void) {
     return '\\';
 }
 
-char* rs_path_join(char *buf, size_t buflen, const char *base, const char *name) {
+char *rs_path_join(char *buf, size_t buflen, const char *base, const char *name) {
     if (!buf || buflen == 0 || !base || !name) {
         return NULL;
     }

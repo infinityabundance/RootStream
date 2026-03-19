@@ -5,8 +5,8 @@
 #ifndef BANDWIDTH_ESTIMATOR_H
 #define BANDWIDTH_ESTIMATOR_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,20 +23,18 @@ typedef enum {
 typedef struct bandwidth_estimator bandwidth_estimator_t;
 
 /* Create bandwidth estimator */
-bandwidth_estimator_t* bandwidth_estimator_create(void);
+bandwidth_estimator_t *bandwidth_estimator_create(void);
 
 /* Destroy bandwidth estimator */
 void bandwidth_estimator_destroy(bandwidth_estimator_t *estimator);
 
 /* Update delivery rate */
 int bandwidth_estimator_update_delivery_rate(bandwidth_estimator_t *estimator,
-                                             uint64_t delivered_bytes,
-                                             uint64_t delivery_time_us);
+                                             uint64_t delivered_bytes, uint64_t delivery_time_us);
 
 /* Detect congestion */
-bool bandwidth_estimator_detect_congestion(bandwidth_estimator_t *estimator,
-                                          uint32_t rtt_ms, 
-                                          float packet_loss_percent);
+bool bandwidth_estimator_detect_congestion(bandwidth_estimator_t *estimator, uint32_t rtt_ms,
+                                           float packet_loss_percent);
 
 /* AIMD operations */
 int bandwidth_estimator_aimd_increase(bandwidth_estimator_t *estimator);

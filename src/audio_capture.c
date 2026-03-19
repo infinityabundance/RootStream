@@ -11,17 +11,17 @@
  * - 5ms frames (240 samples at 48kHz)
  */
 
-#include "../include/rootstream.h"
+#include <alsa/asoundlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
-#include <alsa/asoundlib.h>
+#include "../include/rootstream.h"
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
-#define FRAME_SIZE 240  /* 5ms at 48kHz */
+#define FRAME_SIZE 240 /* 5ms at 48kHz */
 
 typedef struct {
     snd_pcm_t *handle;
@@ -69,11 +69,9 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     capture->frame_size = FRAME_SIZE;
 
     /* Open ALSA device for capture */
-    int err = snd_pcm_open(&capture->handle, "default",
-                          SND_PCM_STREAM_CAPTURE, 0);
+    int err = snd_pcm_open(&capture->handle, "default", SND_PCM_STREAM_CAPTURE, 0);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot open audio capture device: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot open audio capture device: %s\n", snd_strerror(err));
         free(capture);
         return -1;
     }
@@ -84,22 +82,18 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     snd_pcm_hw_params_any(capture->handle, hw_params);
 
     /* Set access type (interleaved) */
-    err = snd_pcm_hw_params_set_access(capture->handle, hw_params,
-                                       SND_PCM_ACCESS_RW_INTERLEAVED);
+    err = snd_pcm_hw_params_set_access(capture->handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set audio access type: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set audio access type: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
     }
 
     /* Set sample format (16-bit signed) */
-    err = snd_pcm_hw_params_set_format(capture->handle, hw_params,
-                                       SND_PCM_FORMAT_S16_LE);
+    err = snd_pcm_hw_params_set_format(capture->handle, hw_params, SND_PCM_FORMAT_S16_LE);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set audio format: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set audio format: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
@@ -109,25 +103,22 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     unsigned int rate = capture->sample_rate;
     err = snd_pcm_hw_params_set_rate_near(capture->handle, hw_params, &rate, 0);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set sample rate: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set sample rate: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
     }
 
     if (rate != (unsigned int)capture->sample_rate) {
-        fprintf(stderr, "WARNING: Sample rate %u Hz (requested %d Hz)\n",
-                rate, capture->sample_rate);
+        fprintf(stderr, "WARNING: Sample rate %u Hz (requested %d Hz)\n", rate,
+                capture->sample_rate);
         capture->sample_rate = rate;
     }
 
     /* Set channels */
-    err = snd_pcm_hw_params_set_channels(capture->handle, hw_params,
-                                        capture->channels);
+    err = snd_pcm_hw_params_set_channels(capture->handle, hw_params, capture->channels);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set channel count: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set channel count: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
@@ -135,18 +126,15 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
 
     /* Set buffer size (3 frames = 15ms to prevent underruns) */
     snd_pcm_uframes_t buffer_size = capture->frame_size * 3;
-    err = snd_pcm_hw_params_set_buffer_size_near(capture->handle, hw_params,
-                                                 &buffer_size);
+    err = snd_pcm_hw_params_set_buffer_size_near(capture->handle, hw_params, &buffer_size);
     if (err < 0) {
-        fprintf(stderr, "WARNING: Cannot set buffer size: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "WARNING: Cannot set buffer size: %s\n", snd_strerror(err));
     }
 
     /* Apply hardware parameters */
     err = snd_pcm_hw_params(capture->handle, hw_params);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot apply hardware parameters: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot apply hardware parameters: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
@@ -155,8 +143,7 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     /* Prepare device */
     err = snd_pcm_prepare(capture->handle);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot prepare audio device: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot prepare audio device: %s\n", snd_strerror(err));
         snd_pcm_close(capture->handle);
         free(capture);
         return -1;
@@ -167,8 +154,8 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
     /* Store in context (reuse mouse fd field) */
     ctx->uinput_mouse_fd = (int)(intptr_t)capture;
 
-    printf("✓ Audio capture ready: %d Hz, %d channels, %d samples/frame\n",
-           capture->sample_rate, capture->channels, capture->frame_size);
+    printf("✓ Audio capture ready: %d Hz, %d channels, %d samples/frame\n", capture->sample_rate,
+           capture->channels, capture->frame_size);
 
     return 0;
 }
@@ -181,20 +168,18 @@ int audio_capture_init_alsa(rootstream_ctx_t *ctx) {
  * @param num_samples Output sample count
  * @return            0 on success, -1 on error
  */
-int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
-                             size_t *num_samples) {
+int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples) {
     if (!ctx || !samples || !num_samples) {
         return -1;
     }
 
-    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t *)(intptr_t)ctx->uinput_mouse_fd;
     if (!capture || !capture->initialized) {
         return -1;
     }
 
     /* Read PCM samples from device */
-    snd_pcm_sframes_t frames = snd_pcm_readi(capture->handle, samples,
-                                             capture->frame_size);
+    snd_pcm_sframes_t frames = snd_pcm_readi(capture->handle, samples, capture->frame_size);
 
     if (frames < 0) {
         /* Handle ALSA errors */
@@ -214,15 +199,14 @@ int audio_capture_frame_alsa(rootstream_ctx_t *ctx, int16_t *samples,
             }
             return -1;
         } else {
-            fprintf(stderr, "ERROR: Audio capture failed: %s\n",
-                    snd_strerror(frames));
+            fprintf(stderr, "ERROR: Audio capture failed: %s\n", snd_strerror(frames));
             return -1;
         }
     }
 
     if (frames != capture->frame_size) {
-        fprintf(stderr, "WARNING: Short read: %ld frames (expected %d)\n",
-                frames, capture->frame_size);
+        fprintf(stderr, "WARNING: Short read: %ld frames (expected %d)\n", frames,
+                capture->frame_size);
     }
 
     *num_samples = frames;
@@ -237,7 +221,7 @@ void audio_capture_cleanup_alsa(rootstream_ctx_t *ctx) {
         return;
     }
 
-    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t*)(intptr_t)ctx->uinput_mouse_fd;
+    alsa_capture_ctx_t *capture = (alsa_capture_ctx_t *)(intptr_t)ctx->uinput_mouse_fd;
 
     if (capture->handle) {
         snd_pcm_drain(capture->handle);

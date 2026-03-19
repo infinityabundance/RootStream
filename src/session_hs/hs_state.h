@@ -27,9 +27,10 @@
 #ifndef ROOTSTREAM_HS_STATE_H
 #define ROOTSTREAM_HS_STATE_H
 
-#include "hs_message.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "hs_message.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,18 +38,18 @@ extern "C" {
 
 /** FSM states (shared client/server) */
 typedef enum {
-    HS_ST_INIT        = 0,
-    HS_ST_HELLO_SENT  = 1,   /**< Client: HELLO sent, awaiting HELLO_ACK */
-    HS_ST_HELLO_RCVD  = 2,   /**< Server: HELLO received */
-    HS_ST_AUTH        = 3,   /**< Client: HELLO_ACK received, building AUTH */
-    HS_ST_AUTH_WAIT   = 4,   /**< Server: HELLO_ACK sent, awaiting AUTH */
-    HS_ST_AUTH_SENT   = 5,   /**< Client: AUTH sent, awaiting AUTH_ACK */
-    HS_ST_AUTH_VERIFY = 6,   /**< Server: AUTH received, verifying */
-    HS_ST_CONFIG_WAIT = 7,   /**< Client: AUTH_ACK OK, awaiting CONFIG */
-    HS_ST_CONFIG_SENT = 8,   /**< Server: CONFIG sent */
-    HS_ST_READY       = 9,   /**< Both: stream ready */
-    HS_ST_ERROR       = 10,  /**< Terminal: error */
-    HS_ST_CLOSED      = 11,  /**< Terminal: graceful close */
+    HS_ST_INIT = 0,
+    HS_ST_HELLO_SENT = 1,  /**< Client: HELLO sent, awaiting HELLO_ACK */
+    HS_ST_HELLO_RCVD = 2,  /**< Server: HELLO received */
+    HS_ST_AUTH = 3,        /**< Client: HELLO_ACK received, building AUTH */
+    HS_ST_AUTH_WAIT = 4,   /**< Server: HELLO_ACK sent, awaiting AUTH */
+    HS_ST_AUTH_SENT = 5,   /**< Client: AUTH sent, awaiting AUTH_ACK */
+    HS_ST_AUTH_VERIFY = 6, /**< Server: AUTH received, verifying */
+    HS_ST_CONFIG_WAIT = 7, /**< Client: AUTH_ACK OK, awaiting CONFIG */
+    HS_ST_CONFIG_SENT = 8, /**< Server: CONFIG sent */
+    HS_ST_READY = 9,       /**< Both: stream ready */
+    HS_ST_ERROR = 10,      /**< Terminal: error */
+    HS_ST_CLOSED = 11,     /**< Terminal: graceful close */
 } hs_state_t;
 
 /** Role of this FSM instance */

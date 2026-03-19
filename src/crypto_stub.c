@@ -5,9 +5,10 @@
  * Every entry point reports why cryptography is unavailable.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
+
+#include "../include/rootstream.h"
 
 int crypto_init(void) {
     fprintf(stderr, "ERROR: Crypto unavailable (NO_CRYPTO build)\n");
@@ -52,8 +53,8 @@ int crypto_verify_peer(const uint8_t *public_key, size_t key_len) {
     return -1;
 }
 
-int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
-                              char *output, size_t output_len) {
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len, char *output,
+                              size_t output_len) {
     (void)public_key;
     (void)key_len;
     if (output && output_len > 0) {
@@ -63,8 +64,7 @@ int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
     return -1;
 }
 
-int crypto_create_session(crypto_session_t *session,
-                          const uint8_t *my_secret,
+int crypto_create_session(crypto_session_t *session, const uint8_t *my_secret,
                           const uint8_t *peer_public) {
     (void)session;
     (void)my_secret;
@@ -73,10 +73,8 @@ int crypto_create_session(crypto_session_t *session,
     return -1;
 }
 
-int crypto_encrypt_packet(const crypto_session_t *session,
-                         const void *plaintext, size_t plain_len,
-                         void *ciphertext, size_t *cipher_len,
-                         uint64_t nonce) {
+int crypto_encrypt_packet(const crypto_session_t *session, const void *plaintext, size_t plain_len,
+                          void *ciphertext, size_t *cipher_len, uint64_t nonce) {
     (void)session;
     (void)plaintext;
     (void)plain_len;
@@ -87,10 +85,8 @@ int crypto_encrypt_packet(const crypto_session_t *session,
     return -1;
 }
 
-int crypto_decrypt_packet(const crypto_session_t *session,
-                         const void *ciphertext, size_t cipher_len,
-                         void *plaintext, size_t *plain_len,
-                         uint64_t nonce) {
+int crypto_decrypt_packet(const crypto_session_t *session, const void *ciphertext,
+                          size_t cipher_len, void *plaintext, size_t *plain_len, uint64_t nonce) {
     (void)session;
     (void)ciphertext;
     (void)cipher_len;

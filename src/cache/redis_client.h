@@ -1,7 +1,7 @@
 /**
  * @file redis_client.h
  * @brief Redis caching and pub/sub client for RootStream
- * 
+ *
  * Provides key-value operations, hash operations, list operations,
  * and pub/sub functionality for real-time state synchronization.
  */
@@ -9,12 +9,12 @@
 #ifndef ROOTSTREAM_REDIS_CLIENT_H
 #define ROOTSTREAM_REDIS_CLIENT_H
 
-#include <string>
-#include <map>
-#include <vector>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,10 +88,10 @@ namespace cache {
  * Redis client for caching and pub/sub
  */
 class RedisClient {
-public:
+   public:
     RedisClient();
     ~RedisClient();
-    
+
     /**
      * Initialize connection to Redis server
      * @param host Redis server host
@@ -99,11 +99,11 @@ public:
      * @return 0 on success, negative on error
      */
     int init(const std::string& host, uint16_t port = 6379);
-    
+
     // ========================================================================
     // Key-Value Operations
     // ========================================================================
-    
+
     /**
      * Set a key-value pair
      * @param key Key to set
@@ -112,7 +112,7 @@ public:
      * @return 0 on success, negative on error
      */
     int set(const std::string& key, const std::string& value, uint32_t ttl_seconds = 0);
-    
+
     /**
      * Get value by key
      * @param key Key to retrieve
@@ -120,25 +120,25 @@ public:
      * @return 0 on success, negative on error (key not found)
      */
     int get(const std::string& key, std::string& value);
-    
+
     /**
      * Delete a key
      * @param key Key to delete
      * @return 0 on success, negative on error
      */
     int del(const std::string& key);
-    
+
     /**
      * Check if key exists
      * @param key Key to check
      * @return 1 if exists, 0 if not, negative on error
      */
     int exists(const std::string& key);
-    
+
     // ========================================================================
     // Hash Operations
     // ========================================================================
-    
+
     /**
      * Set a field in a hash
      * @param key Hash key
@@ -147,7 +147,7 @@ public:
      * @return 0 on success, negative on error
      */
     int hset(const std::string& key, const std::string& field, const std::string& value);
-    
+
     /**
      * Get a field from a hash
      * @param key Hash key
@@ -156,7 +156,7 @@ public:
      * @return 0 on success, negative on error
      */
     int hget(const std::string& key, const std::string& field, std::string& value);
-    
+
     /**
      * Delete a field from a hash
      * @param key Hash key
@@ -164,7 +164,7 @@ public:
      * @return 0 on success, negative on error
      */
     int hdel(const std::string& key, const std::string& field);
-    
+
     /**
      * Get all fields and values from a hash
      * @param key Hash key
@@ -172,11 +172,11 @@ public:
      * @return 0 on success, negative on error
      */
     int hgetall(const std::string& key, std::map<std::string, std::string>& data);
-    
+
     // ========================================================================
     // List Operations
     // ========================================================================
-    
+
     /**
      * Push value to left side of list
      * @param key List key
@@ -184,7 +184,7 @@ public:
      * @return 0 on success, negative on error
      */
     int lpush(const std::string& key, const std::string& value);
-    
+
     /**
      * Pop value from right side of list
      * @param key List key
@@ -192,18 +192,18 @@ public:
      * @return 0 on success, negative on error
      */
     int rpop(const std::string& key, std::string& value);
-    
+
     /**
      * Get length of list
      * @param key List key
      * @return List length, or negative on error
      */
     int llen(const std::string& key);
-    
+
     // ========================================================================
     // Pub/Sub Operations
     // ========================================================================
-    
+
     /**
      * Publish a message to a channel
      * @param channel Channel name
@@ -211,33 +211,33 @@ public:
      * @return 0 on success, negative on error
      */
     int publish(const std::string& channel, const std::string& message);
-    
+
     // ========================================================================
     // Transaction Operations
     // ========================================================================
-    
+
     /**
      * Begin a transaction
      * @return 0 on success, negative on error
      */
     int multi();
-    
+
     /**
      * Execute queued commands
      * @return 0 on success, negative on error
      */
     int exec();
-    
+
     /**
      * Discard queued commands
      * @return 0 on success, negative on error
      */
     int discard();
-    
+
     // ========================================================================
     // TTL Management
     // ========================================================================
-    
+
     /**
      * Set expiration time on a key
      * @param key Key to expire
@@ -245,40 +245,40 @@ public:
      * @return 0 on success, negative on error
      */
     int expire(const std::string& key, uint32_t seconds);
-    
+
     /**
      * Get TTL of a key
      * @param key Key to check
      * @return TTL in seconds, -1 if no expiration, -2 if key doesn't exist
      */
     int ttl(const std::string& key);
-    
+
     /**
      * Check if connected to Redis
      * @return true if connected
      */
     bool isConnected() const;
-    
+
     /**
      * Cleanup resources
      */
     void cleanup();
-    
-private:
+
+   private:
     redisContext* context_;
     std::string host_;
     uint16_t port_;
     bool initialized_;
     std::mutex mutex_;
-    
+
     // Helper to execute command
     redisReply* executeCommand(const char* format, ...);
     void freeReply(redisReply* reply);
 };
 
-} // namespace cache
-} // namespace rootstream
+}  // namespace cache
+}  // namespace rootstream
 
-#endif // __cplusplus
+#endif  // __cplusplus
 
-#endif // ROOTSTREAM_REDIS_CLIENT_H
+#endif  // ROOTSTREAM_REDIS_CLIENT_H

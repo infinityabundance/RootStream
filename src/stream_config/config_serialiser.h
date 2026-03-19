@@ -18,27 +18,28 @@
 #ifndef ROOTSTREAM_CONFIG_SERIALISER_H
 #define ROOTSTREAM_CONFIG_SERIALISER_H
 
-#include "stream_config.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "stream_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CSER_ENVELOPE_MAGIC    0x53455256UL  /* 'SERV' */
+#define CSER_ENVELOPE_MAGIC 0x53455256UL /* 'SERV' */
 #define CSER_ENVELOPE_HDR_SIZE 8
-#define CSER_VERSION_MAJOR     1
-#define CSER_VERSION_MINOR     0
-#define CSER_VERSION           ((CSER_VERSION_MAJOR << 8) | CSER_VERSION_MINOR)
+#define CSER_VERSION_MAJOR 1
+#define CSER_VERSION_MINOR 0
+#define CSER_VERSION ((CSER_VERSION_MAJOR << 8) | CSER_VERSION_MINOR)
 
 /** Error codes */
-#define CSER_OK               0
-#define CSER_ERR_NULL        -1
-#define CSER_ERR_BUF_SMALL   -2
-#define CSER_ERR_BAD_MAGIC   -3
-#define CSER_ERR_VERSION     -4
-#define CSER_ERR_PAYLOAD     -5
+#define CSER_OK 0
+#define CSER_ERR_NULL -1
+#define CSER_ERR_BUF_SMALL -2
+#define CSER_ERR_BAD_MAGIC -3
+#define CSER_ERR_VERSION -4
+#define CSER_ERR_PAYLOAD -5
 
 /**
  * config_serialiser_encode — wrap @cfg in a versioned envelope into @buf
@@ -48,9 +49,7 @@ extern "C" {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or CSER_ERR_* (negative) on error
  */
-int config_serialiser_encode(const stream_config_t *cfg,
-                               uint8_t               *buf,
-                               size_t                 buf_sz);
+int config_serialiser_encode(const stream_config_t *cfg, uint8_t *buf, size_t buf_sz);
 
 /**
  * config_serialiser_decode — unwrap envelope and decode @cfg from @buf
@@ -62,9 +61,7 @@ int config_serialiser_encode(const stream_config_t *cfg,
  * @param cfg     Output config
  * @return        CSER_OK on success, CSER_ERR_* on error
  */
-int config_serialiser_decode(const uint8_t  *buf,
-                               size_t          buf_sz,
-                               stream_config_t *cfg);
+int config_serialiser_decode(const uint8_t *buf, size_t buf_sz, stream_config_t *cfg);
 
 /**
  * config_serialiser_total_size — total encoded size in bytes

@@ -17,22 +17,22 @@
 #ifndef ROOTSTREAM_LOSS_WINDOW_H
 #define ROOTSTREAM_LOSS_WINDOW_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LOSS_WIN_SIZE  64   /**< Sliding window width (packets) */
+#define LOSS_WIN_SIZE 64 /**< Sliding window width (packets) */
 
 /** Sliding packet loss window */
 typedef struct {
-    uint64_t received_mask;   /**< Bitmask: bit i=1 → slot i received */
-    uint16_t base_seq;        /**< Sequence number of slot 0 */
-    uint32_t total_seen;      /**< Packets marked (received or lost) */
-    uint32_t total_lost;      /**< Packets marked lost */
-    bool     initialised;
+    uint64_t received_mask; /**< Bitmask: bit i=1 → slot i received */
+    uint16_t base_seq;      /**< Sequence number of slot 0 */
+    uint32_t total_seen;    /**< Packets marked (received or lost) */
+    uint32_t total_lost;    /**< Packets marked lost */
+    bool initialised;
 } loss_window_t;
 
 /**

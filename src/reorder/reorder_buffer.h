@@ -14,17 +14,18 @@
 #ifndef ROOTSTREAM_REORDER_BUFFER_H
 #define ROOTSTREAM_REORDER_BUFFER_H
 
-#include "reorder_slot.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "reorder_slot.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define REORDER_BUFFER_CAPACITY  64     /**< Max in-flight packets */
-#define REORDER_DEFAULT_TIMEOUT_US  80000ULL  /**< Default hold timeout: 80 ms */
+#define REORDER_BUFFER_CAPACITY 64          /**< Max in-flight packets */
+#define REORDER_DEFAULT_TIMEOUT_US 80000ULL /**< Default hold timeout: 80 ms */
 
 /** Delivery callback: called once per in-order packet */
 typedef void (*reorder_deliver_fn)(const reorder_slot_t *slot, void *user);
@@ -40,9 +41,8 @@ typedef struct reorder_buffer_s reorder_buffer_t;
  * @param user        User pointer passed to callback
  * @return            Non-NULL handle, or NULL on OOM/error
  */
-reorder_buffer_t *reorder_buffer_create(uint64_t          timeout_us,
-                                          reorder_deliver_fn deliver,
-                                          void              *user);
+reorder_buffer_t *reorder_buffer_create(uint64_t timeout_us, reorder_deliver_fn deliver,
+                                        void *user);
 
 /**
  * reorder_buffer_destroy — free buffer
@@ -61,11 +61,8 @@ void reorder_buffer_destroy(reorder_buffer_t *rb);
  * @param payload_len Payload length
  * @return            0 on success, -1 if buffer full or duplicate seq
  */
-int reorder_buffer_insert(reorder_buffer_t *rb,
-                            uint16_t          seq,
-                            uint64_t          arrival_us,
-                            const uint8_t    *payload,
-                            uint16_t          payload_len);
+int reorder_buffer_insert(reorder_buffer_t *rb, uint16_t seq, uint64_t arrival_us,
+                          const uint8_t *payload, uint16_t payload_len);
 
 /**
  * reorder_buffer_flush — deliver all packets that are in-order or timed out

@@ -1,19 +1,20 @@
 /*
  * audio_capture_pipewire.c - PipeWire audio capture fallback
- * 
+ *
  * Works on modern Linux distributions where PipeWire is the default audio server.
  * Fedora 40+, Ubuntu 24.04+, Arch, etc.
- * 
+ *
  * Uses pw_stream for simple, non-blocking audio capture.
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <errno.h>
 #include <unistd.h>
+
+#include "../include/rootstream.h"
 
 #ifdef HAVE_PIPEWIRE
 #include <pipewire/pipewire.h>
@@ -26,11 +27,11 @@ typedef struct {
     struct pw_stream *stream;
     struct pw_core *core;
     struct pw_context *context;
-    
+
     int16_t *buffer;
     size_t buffer_size;
     size_t read_pos;
-    
+
     int sample_rate;
     int channels;
     int frame_size;
@@ -47,20 +48,20 @@ static void on_process(void *userdata) {
     }
 
     buf = b->buffer;
-    
+
     /* Get audio data from buffer */
     for (uint32_t i = 0; i < buf->n_datas; i++) {
         struct spa_data *d = &buf->datas[i];
-        
-        if (d->data == NULL) continue;
-        
+
+        if (d->data == NULL)
+            continue;
+
         uint32_t n_samples = d->chunk->size / sizeof(int16_t);
         int16_t *samples = (int16_t *)d->data;
-        
+
         /* Copy to our buffer */
         if (pw->read_pos + n_samples <= pw->buffer_size) {
-            memcpy(pw->buffer + pw->read_pos, samples, 
-                   n_samples * sizeof(int16_t));
+            memcpy(pw->buffer + pw->read_pos, samples, n_samples * sizeof(int16_t));
             pw->read_pos += n_samples;
         }
     }
@@ -85,8 +86,8 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
 
     pw->sample_rate = 48000;
     pw->channels = 2;
-    pw->frame_size = 240;  /* 5ms at 48kHz */
-    pw->buffer_size = pw->frame_size * pw->channels * 4;  /* 4 frames buffer */
+    pw->frame_size = 240;                                /* 5ms at 48kHz */
+    pw->buffer_size = pw->frame_size * pw->channels * 4; /* 4 frames buffer */
 
     pw->buffer = calloc(pw->buffer_size, sizeof(int16_t));
     if (!pw->buffer) {
@@ -133,18 +134,11 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
     }
 
     /* Create stream */
-    pw->stream = pw_stream_new_simple(
-        pw->loop,
-        "RootStream Capture",
-        pw_properties_new(
-            PW_KEY_MEDIA_TYPE, "Audio",
-            PW_KEY_MEDIA_CATEGORY, "Capture",
-            PW_KEY_AUDIO_FORMAT, "S16LE",
-            NULL
-        ),
-        &stream_events,
-        pw
-    );
+    pw->stream =
+        pw_stream_new_simple(pw->loop, "RootStream Capture",
+                             pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY,
+                                               "Capture", PW_KEY_AUDIO_FORMAT, "S16LE", NULL),
+                             &stream_events, pw);
 
     if (!pw->stream) {
         fprintf(stderr, "ERROR: Cannot create PipeWire stream\n");
@@ -160,24 +154,16 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
     /* Build stream parameters */
     uint8_t params_buffer[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
-    
+
     const struct spa_pod *params[1];
-    params[0] = spa_format_audio_raw_build(&b, SPA_PARAM_EnumFormat, 
-        &SPA_AUDIO_INFO_RAW_INIT(
-            .format = SPA_AUDIO_FORMAT_S16,
-            .channels = pw->channels,
-            .rate = pw->sample_rate
-        ));
+    params[0] = spa_format_audio_raw_build(
+        &b, SPA_PARAM_EnumFormat,
+        &SPA_AUDIO_INFO_RAW_INIT(.format = SPA_AUDIO_FORMAT_S16, .channels = pw->channels,
+                                 .rate = pw->sample_rate));
 
     /* Connect stream for capture */
-    if (pw_stream_connect(
-            pw->stream,
-            PW_DIRECTION_INPUT,
-            PW_ID_ANY,
-            PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
-            params,
-            1
-        ) < 0) {
+    if (pw_stream_connect(pw->stream, PW_DIRECTION_INPUT, PW_ID_ANY,
+                          PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS, params, 1) < 0) {
         fprintf(stderr, "ERROR: Cannot connect PipeWire stream\n");
         pw_stream_destroy(pw->stream);
         pw_core_disconnect(pw->core);
@@ -197,12 +183,13 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
 /*
  * Capture a frame via PipeWire
  */
-int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
-                                size_t *num_samples) {
-    if (!ctx || !samples || !num_samples) return -1;
-    
+int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples) {
+    if (!ctx || !samples || !num_samples)
+        return -1;
+
     pipewire_capture_ctx_t *pw = (pipewire_capture_ctx_t *)ctx->audio_capture_priv;
-    if (!pw || !pw->stream) return -1;
+    if (!pw || !pw->stream)
+        return -1;
 
     /* Run main loop to process events */
     pw_loop_iterate(pw->loop, 0);
@@ -217,7 +204,7 @@ int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
                     pw->read_pos, pw->frame_size * pw->channels);
         }
 #endif
-        return -1;  /* Not enough data yet */
+        return -1; /* Not enough data yet */
     }
 
     /* Copy samples */
@@ -227,9 +214,8 @@ int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
 
     /* Shift remaining data */
     if (pw->read_pos > (size_t)(pw->frame_size * pw->channels)) {
-        memmove(pw->buffer, 
-               pw->buffer + pw->frame_size * pw->channels,
-               (pw->read_pos - pw->frame_size * pw->channels) * sizeof(int16_t));
+        memmove(pw->buffer, pw->buffer + pw->frame_size * pw->channels,
+                (pw->read_pos - pw->frame_size * pw->channels) * sizeof(int16_t));
         pw->read_pos -= pw->frame_size * pw->channels;
     } else {
         pw->read_pos = 0;
@@ -242,18 +228,24 @@ int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
  * Cleanup PipeWire capture
  */
 void audio_capture_cleanup_pipewire(rootstream_ctx_t *ctx) {
-    if (!ctx || !ctx->audio_capture_priv) return;
-    
+    if (!ctx || !ctx->audio_capture_priv)
+        return;
+
     pipewire_capture_ctx_t *pw = (pipewire_capture_ctx_t *)ctx->audio_capture_priv;
-    
-    if (pw->stream) pw_stream_destroy(pw->stream);
-    if (pw->core) pw_core_disconnect(pw->core);
-    if (pw->context) pw_context_destroy(pw->context);
-    if (pw->loop) pw_loop_destroy(pw->loop);
-    if (pw->buffer) free(pw->buffer);
-    
+
+    if (pw->stream)
+        pw_stream_destroy(pw->stream);
+    if (pw->core)
+        pw_core_disconnect(pw->core);
+    if (pw->context)
+        pw_context_destroy(pw->context);
+    if (pw->loop)
+        pw_loop_destroy(pw->loop);
+    if (pw->buffer)
+        free(pw->buffer);
+
     pw_deinit();
-    
+
     free(pw);
     ctx->audio_capture_priv = NULL;
 }
@@ -264,28 +256,29 @@ void audio_capture_cleanup_pipewire(rootstream_ctx_t *ctx) {
 bool audio_capture_pipewire_available(void) {
     /* Try to connect to PipeWire daemon */
     pw_init(NULL, NULL);
-    
+
     struct pw_loop *loop = pw_loop_new(NULL);
     if (!loop) {
         pw_deinit();
         return false;
     }
-    
+
     struct pw_context *context = pw_context_new(loop, NULL, 0);
     if (!context) {
         pw_loop_destroy(loop);
         pw_deinit();
         return false;
     }
-    
+
     struct pw_core *core = pw_context_connect(context, NULL, 0);
     bool available = (core != NULL);
-    
-    if (core) pw_core_disconnect(core);
+
+    if (core)
+        pw_core_disconnect(core);
     pw_context_destroy(context);
     pw_loop_destroy(loop);
     pw_deinit();
-    
+
     return available;
 }
 
@@ -297,8 +290,7 @@ int audio_capture_init_pipewire(rootstream_ctx_t *ctx) {
     return -1;
 }
 
-int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples,
-                                size_t *num_samples) {
+int audio_capture_frame_pipewire(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples) {
     (void)ctx;
     (void)samples;
     (void)num_samples;

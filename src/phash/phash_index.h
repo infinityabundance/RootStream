@@ -16,21 +16,22 @@
 #ifndef ROOTSTREAM_PHASH_INDEX_H
 #define ROOTSTREAM_PHASH_INDEX_H
 
-#include "phash.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "phash.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PHASH_INDEX_MAX_ENTRIES  65536
+#define PHASH_INDEX_MAX_ENTRIES 65536
 
 /** A single index entry */
 typedef struct {
     uint64_t hash;
     uint64_t id;
-    bool     valid;
+    bool valid;
 } phash_entry_t;
 
 /** Opaque pHash index handle */
@@ -78,10 +79,7 @@ int phash_index_remove(phash_index_t *idx, uint64_t id);
  * @param out_dist  Hamming distance to nearest entry
  * @return          0 if a match found, -1 if index empty
  */
-int phash_index_nearest(const phash_index_t *idx,
-                          uint64_t             query,
-                          uint64_t            *out_id,
-                          int                 *out_dist);
+int phash_index_nearest(const phash_index_t *idx, uint64_t query, uint64_t *out_id, int *out_dist);
 
 /**
  * phash_index_range_query — find all entries within @max_dist of @query
@@ -93,11 +91,8 @@ int phash_index_nearest(const phash_index_t *idx,
  * @param out_max   Capacity of @out
  * @return          Number of matches (may be < actual count if out_max too small)
  */
-size_t phash_index_range_query(const phash_index_t *idx,
-                                 uint64_t             query,
-                                 int                  max_dist,
-                                 phash_entry_t       *out,
-                                 size_t               out_max);
+size_t phash_index_range_query(const phash_index_t *idx, uint64_t query, int max_dist,
+                               phash_entry_t *out, size_t out_max);
 
 /**
  * phash_index_count — number of valid entries in index

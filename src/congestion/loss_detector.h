@@ -15,27 +15,27 @@
 #ifndef ROOTSTREAM_LOSS_DETECTOR_H
 #define ROOTSTREAM_LOSS_DETECTOR_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LOSS_WINDOW_SIZE  128          /**< Sliding window depth (packets) */
-#define LOSS_DEFAULT_THRESHOLD  0.05   /**< Default congestion threshold (5%) */
+#define LOSS_WINDOW_SIZE 128        /**< Sliding window depth (packets) */
+#define LOSS_DEFAULT_THRESHOLD 0.05 /**< Default congestion threshold (5%) */
 
 /** Packet outcome */
 typedef enum {
     LOSS_OUTCOME_RECEIVED = 0,
-    LOSS_OUTCOME_LOST     = 1,
+    LOSS_OUTCOME_LOST = 1,
 } loss_outcome_t;
 
 /** Congestion signal (returned by loss_detector_record) */
 typedef enum {
-    LOSS_SIGNAL_NONE      = 0,   /**< No congestion */
-    LOSS_SIGNAL_CONGESTED = 1,   /**< Loss fraction exceeded threshold */
+    LOSS_SIGNAL_NONE = 0,      /**< No congestion */
+    LOSS_SIGNAL_CONGESTED = 1, /**< Loss fraction exceeded threshold */
 } loss_signal_t;
 
 /** Opaque loss detector */

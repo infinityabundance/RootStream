@@ -19,10 +19,10 @@ extern "C" {
 
 /** Buffer pool stats snapshot */
 typedef struct {
-    uint64_t alloc_count;   /**< Total successful acquires */
-    uint64_t free_count;    /**< Total successful releases */
-    int      peak_in_use;   /**< Highest simultaneous in-use count */
-    uint64_t fail_count;    /**< Acquire failures (pool exhausted) */
+    uint64_t alloc_count; /**< Total successful acquires */
+    uint64_t free_count;  /**< Total successful releases */
+    int peak_in_use;      /**< Highest simultaneous in-use count */
+    uint64_t fail_count;  /**< Acquire failures (pool exhausted) */
 } bp_stats_snapshot_t;
 
 /** Opaque buffer pool stats context */

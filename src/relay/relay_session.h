@@ -16,10 +16,11 @@
 #ifndef ROOTSTREAM_RELAY_SESSION_H
 #define ROOTSTREAM_RELAY_SESSION_H
 
-#include "relay_protocol.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "relay_protocol.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,21 +31,21 @@ extern "C" {
 
 /** Session lifecycle state */
 typedef enum {
-    RELAY_STATE_IDLE      = 0,  /**< Slot free */
-    RELAY_STATE_WAITING   = 1,  /**< Host connected, waiting for viewer */
-    RELAY_STATE_PAIRED    = 2,  /**< Host + viewer connected: relaying */
-    RELAY_STATE_CLOSING   = 3,  /**< Teardown in progress */
+    RELAY_STATE_IDLE = 0,    /**< Slot free */
+    RELAY_STATE_WAITING = 1, /**< Host connected, waiting for viewer */
+    RELAY_STATE_PAIRED = 2,  /**< Host + viewer connected: relaying */
+    RELAY_STATE_CLOSING = 3, /**< Teardown in progress */
 } relay_state_t;
 
 /** Relay session entry */
 typedef struct {
     relay_session_id_t id;
-    relay_state_t      state;
-    uint8_t            token[RELAY_TOKEN_LEN];  /**< Auth token */
-    int                host_fd;     /**< Host socket fd  (-1 if absent) */
-    int                viewer_fd;   /**< Viewer socket fd (-1 if absent) */
-    uint64_t           created_us;  /**< Monotonic creation timestamp */
-    uint64_t           bytes_relayed;
+    relay_state_t state;
+    uint8_t token[RELAY_TOKEN_LEN]; /**< Auth token */
+    int host_fd;                    /**< Host socket fd  (-1 if absent) */
+    int viewer_fd;                  /**< Viewer socket fd (-1 if absent) */
+    uint64_t created_us;            /**< Monotonic creation timestamp */
+    uint64_t bytes_relayed;
 } relay_session_entry_t;
 
 /** Opaque relay session manager */
@@ -75,10 +76,8 @@ void relay_session_manager_destroy(relay_session_manager_t *mgr);
  * @param out_id   Receives assigned session ID
  * @return         0 on success, -1 on failure (table full / bad args)
  */
-int relay_session_open(relay_session_manager_t *mgr,
-                       const uint8_t           *token,
-                       int                      host_fd,
-                       relay_session_id_t       *out_id);
+int relay_session_open(relay_session_manager_t *mgr, const uint8_t *token, int host_fd,
+                       relay_session_id_t *out_id);
 
 /**
  * relay_session_pair — pair a viewer to an existing session
@@ -92,10 +91,8 @@ int relay_session_open(relay_session_manager_t *mgr,
  * @param out_id    Receives the matched session ID
  * @return          0 on success, -1 if no matching WAITING session
  */
-int relay_session_pair(relay_session_manager_t *mgr,
-                       const uint8_t           *token,
-                       int                      viewer_fd,
-                       relay_session_id_t       *out_id);
+int relay_session_pair(relay_session_manager_t *mgr, const uint8_t *token, int viewer_fd,
+                       relay_session_id_t *out_id);
 
 /**
  * relay_session_close — mark a session as CLOSING and remove it
@@ -104,8 +101,7 @@ int relay_session_pair(relay_session_manager_t *mgr,
  * @param id   Session ID
  * @return     0 on success, -1 if not found
  */
-int relay_session_close(relay_session_manager_t *mgr,
-                        relay_session_id_t       id);
+int relay_session_close(relay_session_manager_t *mgr, relay_session_id_t id);
 
 /**
  * relay_session_get — copy a session entry by ID
@@ -115,9 +111,8 @@ int relay_session_close(relay_session_manager_t *mgr,
  * @param out  Receives the session snapshot
  * @return     0 on success, -1 if not found
  */
-int relay_session_get(relay_session_manager_t *mgr,
-                      relay_session_id_t       id,
-                      relay_session_entry_t   *out);
+int relay_session_get(relay_session_manager_t *mgr, relay_session_id_t id,
+                      relay_session_entry_t *out);
 
 /**
  * relay_session_count — number of non-IDLE sessions
@@ -135,9 +130,7 @@ size_t relay_session_count(relay_session_manager_t *mgr);
  * @param bytes  Bytes to add
  * @return       0 on success, -1 if not found
  */
-int relay_session_add_bytes(relay_session_manager_t *mgr,
-                            relay_session_id_t       id,
-                            uint64_t                 bytes);
+int relay_session_add_bytes(relay_session_manager_t *mgr, relay_session_id_t id, uint64_t bytes);
 
 #ifdef __cplusplus
 }

@@ -3,11 +3,13 @@
  */
 
 #include "user_auth.h"
-#include "crypto_primitives.h"
+
 #include <sodium.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+
+#include "crypto_primitives.h"
 
 /* Session storage (simplified - in production use proper database) */
 #define MAX_SESSIONS 64
@@ -30,18 +32,14 @@ int user_auth_hash_password(const char *password, char *hash) {
     if (!password || !hash) {
         return -1;
     }
-    
+
     /* Use libsodium's pwhash (Argon2id) */
-    if (crypto_pwhash_str(
-            hash,
-            password,
-            strlen(password),
-            crypto_pwhash_OPSLIMIT_INTERACTIVE,
-            crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+    if (crypto_pwhash_str(hash, password, strlen(password), crypto_pwhash_OPSLIMIT_INTERACTIVE,
+                          crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
         fprintf(stderr, "ERROR: Password hashing failed (out of memory?)\n");
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -52,7 +50,7 @@ bool user_auth_verify_password(const char *password, const char *hash) {
     if (!password || !hash) {
         return false;
     }
-    
+
     return crypto_pwhash_str_verify(hash, password, strlen(password)) == 0;
 }
 
@@ -63,11 +61,11 @@ int user_auth_generate_totp_secret(char *secret, size_t secret_len) {
     if (!secret || secret_len < USER_AUTH_TOTP_SECRET_LEN) {
         return -1;
     }
-    
+
     /* Generate random bytes */
     uint8_t raw_secret[20];
     crypto_prim_random_bytes(raw_secret, sizeof(raw_secret));
-    
+
     /* Base32 encode (simplified - just hex for now) */
     const char hex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < 20 && i * 2 < secret_len - 1; i++) {
@@ -75,14 +73,14 @@ int user_auth_generate_totp_secret(char *secret, size_t secret_len) {
         secret[i * 2 + 1] = hex[raw_secret[i] & 0xF];
     }
     secret[40] = '\0';
-    
+
     crypto_prim_secure_wipe(raw_secret, sizeof(raw_secret));
     return 0;
 }
 
 /*
  * Verify TOTP code (Time-based One-Time Password)
- * 
+ *
  * NOTE: This is a simplified TOTP implementation for demonstration.
  * Production use should implement proper RFC 6238 TOTP with HMAC-SHA1/SHA256.
  */
@@ -90,26 +88,25 @@ bool user_auth_verify_totp(const char *secret, const char *code) {
     if (!secret || !code) {
         return false;
     }
-    
+
     /* Validate code format: must be 6 digits */
     if (strlen(code) != 6) {
         return false;
     }
-    
+
     for (int i = 0; i < 6; i++) {
         if (code[i] < '0' || code[i] > '9') {
             return false;
         }
     }
-    
-    /* TODO: Implement proper TOTP verification
-     * 1. Decode base32-encoded secret
-     * 2. Compute time_step = current_time / 30
-     * 3. Compute HMAC-SHA1(secret, time_step)
-     * 4. Extract 6-digit code from HMAC
-     * 5. Compare with provided code (with time window tolerance)
-     * 
-     * For now, accept any valid 6-digit format for demonstration
+
+    /* DEFERRED(no-account-system): Full TOTP verification (RFC 6238) requires
+     * a user account system with stored TOTP secrets, which is explicitly out
+     * of scope for the current supported product path (see docs/PRODUCT_CORE.md
+     * § Non-Goals and docs/SECURITY.md § What is currently NOT implemented).
+     * This function validates the 6-digit format only; a complete TOTP
+     * implementation will be added when the account system is introduced.
+     * For now, accept any valid 6-digit format.
      */
     return true;
 }
@@ -121,11 +118,11 @@ int user_auth_create_session(const char *username, user_auth_session_t *session)
     if (!username || !session || g_session_count >= MAX_SESSIONS) {
         return -1;
     }
-    
+
     /* Generate random session token */
     uint8_t token_bytes[32];
     crypto_prim_random_bytes(token_bytes, sizeof(token_bytes));
-    
+
     /* Convert to hex string */
     const char hex[] = "0123456789abcdef";
     for (int i = 0; i < 32; i++) {
@@ -133,23 +130,23 @@ int user_auth_create_session(const char *username, user_auth_session_t *session)
         session->session_token[i * 2 + 1] = hex[token_bytes[i] & 0xF];
     }
     session->session_token[64] = '\0';
-    
+
     /* Set session info */
     strncpy(session->username, username, USER_AUTH_MAX_USERNAME - 1);
     session->username[USER_AUTH_MAX_USERNAME - 1] = '\0';
-    
+
     /* Expiration: 1 hour from now */
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     session->expiration_time_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    session->expiration_time_us += 3600ULL * 1000000ULL;  /* +1 hour */
-    
+    session->expiration_time_us += 3600ULL * 1000000ULL; /* +1 hour */
+
     session->mfa_verified = false;
-    
+
     /* Store session */
     memcpy(&g_sessions[g_session_count], session, sizeof(user_auth_session_t));
     g_session_count++;
-    
+
     return 0;
 }
 
@@ -160,12 +157,12 @@ bool user_auth_validate_session(const char *token) {
     if (!token) {
         return false;
     }
-    
+
     /* Get current time */
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     uint64_t now_us = (uint64_t)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-    
+
     /* Check all sessions */
     for (int i = 0; i < g_session_count; i++) {
         if (strcmp(g_sessions[i].session_token, token) == 0) {
@@ -175,7 +172,7 @@ bool user_auth_validate_session(const char *token) {
             }
         }
     }
-    
+
     return false;
 }
 

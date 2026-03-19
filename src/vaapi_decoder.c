@@ -12,13 +12,14 @@
  * - Map surfaces to get pixel data
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
 
 /* VA-API headers */
 #include <va/va.h>
@@ -102,8 +103,7 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
     VAProfile selected_profile = VAProfileH264Main;
 
     for (int i = 0; i < actual_num_profiles; i++) {
-        if (profiles_list[i] == VAProfileH264High ||
-            profiles_list[i] == VAProfileH264Main) {
+        if (profiles_list[i] == VAProfileH264High || profiles_list[i] == VAProfileH264Main) {
             h264_decode_supported = true;
             selected_profile = profiles_list[i];
         }
@@ -116,7 +116,7 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
     free(profiles_list);
 
     /* Use H.264 as default for now (codec negotiation in future) */
-    codec_type_t codec = ctx->encoder.codec;  /* Match encoder codec */
+    codec_type_t codec = ctx->encoder.codec; /* Match encoder codec */
     const char *codec_name;
 
     if (codec == CODEC_H265) {
@@ -157,8 +157,8 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    status = vaCreateConfig(dec->display, selected_profile, VAEntrypointVLD,
-                           &attrib, 1, &dec->config_id);
+    status = vaCreateConfig(dec->display, selected_profile, VAEntrypointVLD, &attrib, 1,
+                            &dec->config_id);
     if (status != VA_STATUS_SUCCESS) {
         fprintf(stderr, "ERROR: Cannot create decode config: %d\n", status);
         vaTerminate(dec->display);
@@ -170,14 +170,12 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
     /* Use default resolution, will be updated on first frame */
     dec->width = 1920;
     dec->height = 1080;
-    dec->num_surfaces = 8;  /* Buffer pool for smooth decoding */
+    dec->num_surfaces = 8; /* Buffer pool for smooth decoding */
 
     /* Create surfaces for decoded frames */
     dec->surfaces = malloc(dec->num_surfaces * sizeof(VASurfaceID));
-    status = vaCreateSurfaces(dec->display, VA_RT_FORMAT_YUV420,
-                             dec->width, dec->height,
-                             dec->surfaces, dec->num_surfaces,
-                             NULL, 0);
+    status = vaCreateSurfaces(dec->display, VA_RT_FORMAT_YUV420, dec->width, dec->height,
+                              dec->surfaces, dec->num_surfaces, NULL, 0);
     if (status != VA_STATUS_SUCCESS) {
         fprintf(stderr, "ERROR: Cannot create decode surfaces: %d\n", status);
         vaDestroyConfig(dec->display, dec->config_id);
@@ -189,10 +187,8 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
     }
 
     /* Create decode context */
-    status = vaCreateContext(dec->display, dec->config_id,
-                            dec->width, dec->height, VA_PROGRESSIVE,
-                            dec->surfaces, dec->num_surfaces,
-                            &dec->context_id);
+    status = vaCreateContext(dec->display, dec->config_id, dec->width, dec->height, VA_PROGRESSIVE,
+                             dec->surfaces, dec->num_surfaces, &dec->context_id);
     if (status != VA_STATUS_SUCCESS) {
         fprintf(stderr, "ERROR: Cannot create decode context: %d\n", status);
         vaDestroySurfaces(dec->display, dec->surfaces, dec->num_surfaces);
@@ -208,10 +204,10 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
 
     /* Store decoder context in encoder context (reusing field) */
     ctx->encoder.hw_ctx = dec;
-    ctx->encoder.type = ENCODER_VAAPI;  /* Reuse encoder type field */
+    ctx->encoder.type = ENCODER_VAAPI; /* Reuse encoder type field */
 
-    printf("✓ VA-API decoder ready: %dx%d with %d surfaces\n",
-           dec->width, dec->height, dec->num_surfaces);
+    printf("✓ VA-API decoder ready: %dx%d with %d surfaces\n", dec->width, dec->height,
+           dec->num_surfaces);
 
     return 0;
 }
@@ -228,15 +224,14 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
  * Note: This is a simplified decoder that assumes complete frames.
  * Production implementation would need proper H.264 bitstream parsing.
  */
-int rootstream_decode_frame(rootstream_ctx_t *ctx,
-                           const uint8_t *in, size_t in_size,
-                           frame_buffer_t *out) {
+int rootstream_decode_frame(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_size,
+                            frame_buffer_t *out) {
     if (!ctx || !in || !out) {
         fprintf(stderr, "ERROR: Invalid arguments to decode_frame\n");
         return -1;
     }
 
-    vaapi_decoder_ctx_t *dec = (vaapi_decoder_ctx_t*)ctx->encoder.hw_ctx;
+    vaapi_decoder_ctx_t *dec = (vaapi_decoder_ctx_t *)ctx->encoder.hw_ctx;
     if (!dec) {
         fprintf(stderr, "ERROR: Decoder not initialized\n");
         return -1;
@@ -257,9 +252,8 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
 
     /* Create slice data buffer with encoded data */
     VABufferID slice_data_buf;
-    status = vaCreateBuffer(dec->display, dec->context_id,
-                           VASliceDataBufferType, in_size, 1,
-                           (void*)in, &slice_data_buf);
+    status = vaCreateBuffer(dec->display, dec->context_id, VASliceDataBufferType, in_size, 1,
+                            (void *)in, &slice_data_buf);
     if (status != VA_STATUS_SUCCESS) {
         fprintf(stderr, "ERROR: Cannot create slice data buffer: %d\n", status);
         vaEndPicture(dec->display, dec->context_id);
@@ -267,8 +261,7 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
     }
 
     /* Render the slice data */
-    status = vaRenderPicture(dec->display, dec->context_id,
-                            &slice_data_buf, 1);
+    status = vaRenderPicture(dec->display, dec->context_id, &slice_data_buf, 1);
     if (status != VA_STATUS_SUCCESS) {
         fprintf(stderr, "ERROR: vaRenderPicture failed: %d\n", status);
         vaDestroyBuffer(dec->display, slice_data_buf);
@@ -352,7 +345,7 @@ void rootstream_decoder_cleanup(rootstream_ctx_t *ctx) {
         return;
     }
 
-    vaapi_decoder_ctx_t *dec = (vaapi_decoder_ctx_t*)ctx->encoder.hw_ctx;
+    vaapi_decoder_ctx_t *dec = (vaapi_decoder_ctx_t *)ctx->encoder.hw_ctx;
 
     /* Destroy decode context */
     if (dec->context_id) {

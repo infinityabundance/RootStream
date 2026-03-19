@@ -20,10 +20,10 @@ extern "C" {
 
 /** Single ABR ladder rung */
 typedef struct {
-    uint32_t bitrate_bps;   /**< Target video bitrate (bits/second) */
-    uint16_t width;         /**< Output width  (pixels) */
-    uint16_t height;        /**< Output height (pixels) */
-    float    fps;           /**< Output frame rate */
+    uint32_t bitrate_bps; /**< Target video bitrate (bits/second) */
+    uint16_t width;       /**< Output width  (pixels) */
+    uint16_t height;      /**< Output height (pixels) */
+    float fps;            /**< Output frame rate */
 } ladder_rung_t;
 
 /**
@@ -36,8 +36,7 @@ typedef struct {
  * @param fps       Frame rate (must be > 0)
  * @return          0 on success, -1 on NULL or invalid
  */
-int lr_init(ladder_rung_t *r,
-              uint32_t bps, uint16_t width, uint16_t height, float fps);
+int lr_init(ladder_rung_t *r, uint32_t bps, uint16_t width, uint16_t height, float fps);
 
 /**
  * lr_compare — compare two rungs by bitrate (ascending)

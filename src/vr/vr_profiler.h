@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // Frame metrics
 typedef struct {
@@ -33,7 +33,7 @@ typedef struct {
 typedef struct VRProfiler VRProfiler;
 
 // Creation and initialization
-VRProfiler* vr_profiler_create(void);
+VRProfiler *vr_profiler_create(void);
 int vr_profiler_init(VRProfiler *profiler);
 void vr_profiler_cleanup(VRProfiler *profiler);
 void vr_profiler_destroy(VRProfiler *profiler);
@@ -46,8 +46,8 @@ VRFrameMetrics vr_profiler_get_average_metrics(VRProfiler *profiler, uint32_t fr
 VRFrameMetrics vr_profiler_get_current_metrics(VRProfiler *profiler);
 
 // Performance analysis
-int vr_profiler_detect_issues(VRProfiler *profiler, VRPerformanceIssue *issues, 
-                              uint32_t maxIssues, uint32_t *issueCount);
+int vr_profiler_detect_issues(VRProfiler *profiler, VRPerformanceIssue *issues, uint32_t maxIssues,
+                              uint32_t *issueCount);
 
 // Recommendations
 bool vr_profiler_should_enable_foveated_rendering(VRProfiler *profiler);
@@ -60,4 +60,4 @@ int vr_profiler_generate_report(VRProfiler *profiler, char *report, size_t repor
 }
 #endif
 
-#endif // VR_PROFILER_H
+#endif  // VR_PROFILER_H

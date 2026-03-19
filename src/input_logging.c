@@ -1,16 +1,17 @@
 /*
  * input_logging.c - Debug input logging (no injection)
- * 
+ *
  * Perfect for headless testing and validation.
  * Just prints input events without attempting injection.
  * Never fails - always available.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include "../include/rootstream.h"
 
 int input_init_logging(rootstream_ctx_t *ctx) {
     (void)ctx;
@@ -44,5 +45,5 @@ void input_cleanup_logging(rootstream_ctx_t *ctx) {
 }
 
 bool input_logging_available(void) {
-    return true;  /* Always available */
+    return true; /* Always available */
 }

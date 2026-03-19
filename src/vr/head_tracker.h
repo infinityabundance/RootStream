@@ -5,25 +5,26 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 #include "openxr_manager.h"
 
 // Tracking data structure
 typedef struct {
-    XrQuaternionf orientation;     // Head rotation
-    XrVector3f position;           // Head position (6-DOF)
-    XrVector3f linearVelocity;     // Head linear motion
-    XrVector3f angularVelocity;    // Head rotation velocity
+    XrQuaternionf orientation;   // Head rotation
+    XrVector3f position;         // Head position (6-DOF)
+    XrVector3f linearVelocity;   // Head linear motion
+    XrVector3f angularVelocity;  // Head rotation velocity
     uint64_t timestamp_us;
-    float confidence;              // Tracking quality 0.0-1.0
+    float confidence;  // Tracking quality 0.0-1.0
 } HeadTrackingData;
 
 // Head tracker structure
 typedef struct HeadTracker HeadTracker;
 
 // Creation and initialization
-HeadTracker* head_tracker_create(void);
+HeadTracker *head_tracker_create(void);
 int head_tracker_init(HeadTracker *tracker);
 void head_tracker_cleanup(HeadTracker *tracker);
 void head_tracker_destroy(HeadTracker *tracker);
@@ -57,4 +58,4 @@ int head_tracker_enable_prediction(HeadTracker *tracker, bool enable);
 }
 #endif
 
-#endif // HEAD_TRACKER_H
+#endif  // HEAD_TRACKER_H

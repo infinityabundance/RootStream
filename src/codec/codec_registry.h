@@ -36,8 +36,8 @@
 #ifndef ROOTSTREAM_CODEC_REGISTRY_H
 #define ROOTSTREAM_CODEC_REGISTRY_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,40 +47,40 @@ extern "C" {
 
 /** Video codec IDs used throughout the codec layer.
  *  Must match SCFG_VCODEC_* values in stream_config.h for on-wire compat. */
-#define CREG_VCODEC_RAW     0   /**< Uncompressed / pass-through               */
-#define CREG_VCODEC_H264    1   /**< H.264 / AVC (hardware + software)          */
-#define CREG_VCODEC_H265    2   /**< H.265 / HEVC (hardware + software)         */
-#define CREG_VCODEC_AV1     3   /**< AV1 (libaom / SVT-AV1 / hardware)          */
-#define CREG_VCODEC_VP9     4   /**< VP9 (libvpx / hardware VAAPI/NVENC)        */
-#define CREG_VCODEC_VVC     5   /**< H.266 / VVC (VVenC + VVdeC)               */
-#define CREG_VCODEC_AV2     6   /**< AV2 (future spec / libdave gateway)        */
-#define CREG_VCODEC_LIBDAVE 7   /**< Discord libdave packetised media codec     */
-#define CREG_VCODEC_MAX     8   /**< Sentinel — one past last valid video codec */
+#define CREG_VCODEC_RAW 0     /**< Uncompressed / pass-through               */
+#define CREG_VCODEC_H264 1    /**< H.264 / AVC (hardware + software)          */
+#define CREG_VCODEC_H265 2    /**< H.265 / HEVC (hardware + software)         */
+#define CREG_VCODEC_AV1 3     /**< AV1 (libaom / SVT-AV1 / hardware)          */
+#define CREG_VCODEC_VP9 4     /**< VP9 (libvpx / hardware VAAPI/NVENC)        */
+#define CREG_VCODEC_VVC 5     /**< H.266 / VVC (VVenC + VVdeC)               */
+#define CREG_VCODEC_AV2 6     /**< AV2 (future spec / libdave gateway)        */
+#define CREG_VCODEC_LIBDAVE 7 /**< Discord libdave packetised media codec     */
+#define CREG_VCODEC_MAX 8     /**< Sentinel — one past last valid video codec */
 
 /* ── Encoder backends ─────────────────────────────────────────────── */
 
 /** Encoder backend flags — a codec may support multiple backends.
  *  Multiple flags may be OR'd together. */
-#define CREG_BACKEND_NONE       0x00  /**< No backend available               */
-#define CREG_BACKEND_SW         0x01  /**< Pure CPU software encoding         */
-#define CREG_BACKEND_VAAPI      0x02  /**< Linux VA-API hardware acceleration  */
-#define CREG_BACKEND_NVENC      0x04  /**< NVIDIA NVENC hardware encoding     */
-#define CREG_BACKEND_QSV        0x08  /**< Intel QuickSync Video              */
-#define CREG_BACKEND_VIDEOTB    0x10  /**< Apple VideoToolbox (macOS/iOS)     */
-#define CREG_BACKEND_MEDIACODEC 0x20  /**< Android MediaCodec                 */
-#define CREG_BACKEND_V4L2       0x40  /**< V4L2 M2M (Raspberry Pi, etc.)      */
+#define CREG_BACKEND_NONE 0x00       /**< No backend available               */
+#define CREG_BACKEND_SW 0x01         /**< Pure CPU software encoding         */
+#define CREG_BACKEND_VAAPI 0x02      /**< Linux VA-API hardware acceleration  */
+#define CREG_BACKEND_NVENC 0x04      /**< NVIDIA NVENC hardware encoding     */
+#define CREG_BACKEND_QSV 0x08        /**< Intel QuickSync Video              */
+#define CREG_BACKEND_VIDEOTB 0x10    /**< Apple VideoToolbox (macOS/iOS)     */
+#define CREG_BACKEND_MEDIACODEC 0x20 /**< Android MediaCodec                 */
+#define CREG_BACKEND_V4L2 0x40       /**< V4L2 M2M (Raspberry Pi, etc.)      */
 
 /** Per-codec capability entry.
  *  Populated by each codec module calling creg_register() at startup. */
 typedef struct {
-    uint8_t  codec_id;        /**< CREG_VCODEC_* constant                    */
+    uint8_t codec_id;         /**< CREG_VCODEC_* constant                    */
     const char *name;         /**< Human-readable short name ("av1", "vvc")  */
     const char *long_name;    /**< Full name ("AOMedia Video 1")              */
-    uint8_t  encoder_backends;/**< OR'd CREG_BACKEND_* flags (encoder side)  */
-    uint8_t  decoder_backends;/**< OR'd CREG_BACKEND_* flags (decoder side)  */
-    bool     encode_available;/**< At least one encoder backend is live       */
-    bool     decode_available;/**< At least one decoder backend is live       */
-    bool     hw_preferred;    /**< True when a HW backend is available        */
+    uint8_t encoder_backends; /**< OR'd CREG_BACKEND_* flags (encoder side)  */
+    uint8_t decoder_backends; /**< OR'd CREG_BACKEND_* flags (decoder side)  */
+    bool encode_available;    /**< At least one encoder backend is live       */
+    bool decode_available;    /**< At least one decoder backend is live       */
+    bool hw_preferred;        /**< True when a HW backend is available        */
 
     /** Optional probe function — called by creg_probe() to dynamically
      *  verify availability.  May be NULL (entry is assumed always-available). */
@@ -186,8 +186,7 @@ int creg_count(const creg_registry_t *r);
  * @param fn   Called for each entry; return false to stop iteration early
  * @param user Opaque pointer forwarded to fn
  */
-void creg_foreach(const creg_registry_t *r,
-                  bool (*fn)(const creg_entry_t *e, void *user),
+void creg_foreach(const creg_registry_t *r, bool (*fn)(const creg_entry_t *e, void *user),
                   void *user);
 
 #ifdef __cplusplus

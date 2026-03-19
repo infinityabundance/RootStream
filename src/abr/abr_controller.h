@@ -15,25 +15,26 @@
 #ifndef ROOTSTREAM_ABR_CONTROLLER_H
 #define ROOTSTREAM_ABR_CONTROLLER_H
 
+#include <stdbool.h>
+
 #include "abr_estimator.h"
 #include "abr_ladder.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Safety margin: fraction of estimated BW used for budgeting */
-#define ABR_SAFETY_MARGIN      0.85f
+#define ABR_SAFETY_MARGIN 0.85f
 
 /** Consecutive stable ticks required before upgrading */
 #define ABR_UPGRADE_HOLD_TICKS 3
 
 /** Result returned by abr_controller_tick */
 typedef struct {
-    int  new_level_idx;      /**< Selected level index */
-    bool level_changed;      /**< True if level is different from previous */
-    bool is_downgrade;       /**< True if we moved to a lower level */
+    int new_level_idx;  /**< Selected level index */
+    bool level_changed; /**< True if level is different from previous */
+    bool is_downgrade;  /**< True if we moved to a lower level */
 } abr_decision_t;
 
 /** Opaque ABR controller */
@@ -46,8 +47,7 @@ typedef struct abr_controller_s abr_controller_t;
  * @param ladder     Quality ladder (borrowed, not owned)
  * @return           Non-NULL handle, or NULL on error
  */
-abr_controller_t *abr_controller_create(abr_estimator_t *estimator,
-                                          abr_ladder_t    *ladder);
+abr_controller_t *abr_controller_create(abr_estimator_t *estimator, abr_ladder_t *ladder);
 
 /**
  * abr_controller_destroy — free controller

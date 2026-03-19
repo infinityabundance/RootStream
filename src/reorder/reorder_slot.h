@@ -12,23 +12,23 @@
 #ifndef ROOTSTREAM_REORDER_SLOT_H
 #define ROOTSTREAM_REORDER_SLOT_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define REORDER_SLOT_MAX_PAYLOAD  2048  /**< Maximum payload bytes per slot */
+#define REORDER_SLOT_MAX_PAYLOAD 2048 /**< Maximum payload bytes per slot */
 
 /** Reorder slot */
 typedef struct {
-    uint16_t seq;               /**< RTP-style sequence number */
-    uint64_t arrival_us;        /**< Arrival timestamp in µs */
-    uint8_t  payload[REORDER_SLOT_MAX_PAYLOAD];
-    uint16_t payload_len;       /**< Valid payload bytes */
-    bool     occupied;          /**< Slot contains a packet */
+    uint16_t seq;        /**< RTP-style sequence number */
+    uint64_t arrival_us; /**< Arrival timestamp in µs */
+    uint8_t payload[REORDER_SLOT_MAX_PAYLOAD];
+    uint16_t payload_len; /**< Valid payload bytes */
+    bool occupied;        /**< Slot contains a packet */
 } reorder_slot_t;
 
 /**
@@ -41,11 +41,8 @@ typedef struct {
  * @param payload_len Payload length (must be <= REORDER_SLOT_MAX_PAYLOAD)
  * @return            0 on success, -1 on error
  */
-int reorder_slot_fill(reorder_slot_t *slot,
-                       uint16_t        seq,
-                       uint64_t        arrival_us,
-                       const uint8_t  *payload,
-                       uint16_t        payload_len);
+int reorder_slot_fill(reorder_slot_t *slot, uint16_t seq, uint64_t arrival_us,
+                      const uint8_t *payload, uint16_t payload_len);
 
 /**
  * reorder_slot_clear — reset slot to empty

@@ -15,25 +15,26 @@
 #ifndef ROOTSTREAM_CHUNK_REASSEMBLE_H
 #define ROOTSTREAM_CHUNK_REASSEMBLE_H
 
-#include "chunk_hdr.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "chunk_hdr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define REASSEMBLE_SLOTS      8    /**< Concurrent reassembly slots */
-#define REASSEMBLE_MAX_CHUNKS 32   /**< Max chunks per frame (≤ 32 for bitmask) */
+#define REASSEMBLE_SLOTS 8       /**< Concurrent reassembly slots */
+#define REASSEMBLE_MAX_CHUNKS 32 /**< Max chunks per frame (≤ 32 for bitmask) */
 
 /** One reassembly slot */
 typedef struct {
     uint32_t stream_id;
     uint32_t frame_seq;
-    uint16_t chunk_count;           /**< Expected total chunks */
-    uint32_t received_mask;         /**< Bit i set when chunk i arrived */
-    bool     complete;
-    bool     in_use;
+    uint16_t chunk_count;   /**< Expected total chunks */
+    uint32_t received_mask; /**< Bit i set when chunk i arrived */
+    bool complete;
+    bool in_use;
 } reassemble_slot_t;
 
 /** Opaque reassembly context */
@@ -62,8 +63,7 @@ void reassemble_ctx_destroy(reassemble_ctx_t *c);
  * @return     Pointer to the slot (owned by context); complete flag set
  *             when all chunks received
  */
-reassemble_slot_t *reassemble_receive(reassemble_ctx_t *c,
-                                       const chunk_hdr_t *h);
+reassemble_slot_t *reassemble_receive(reassemble_ctx_t *c, const chunk_hdr_t *h);
 
 /**
  * reassemble_release — free a slot after it has been fully processed

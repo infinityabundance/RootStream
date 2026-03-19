@@ -12,9 +12,9 @@
 #ifndef ROOTSTREAM_MIX_STATS_H
 #define ROOTSTREAM_MIX_STATS_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <float.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,13 +22,13 @@ extern "C" {
 
 /** Mix statistics snapshot */
 typedef struct {
-    uint64_t mix_calls;         /**< Total mix_engine_mix() calls recorded */
-    uint64_t active_sources;    /**< Cumulative active source-mix events */
-    uint64_t muted_sources;     /**< Cumulative muted source-mix events */
-    uint64_t underruns;         /**< Calls where no active sources contributed */
-    double   avg_latency_us;    /**< Average mix latency (µs) */
-    double   min_latency_us;    /**< Minimum mix latency (µs) */
-    double   max_latency_us;    /**< Maximum mix latency (µs) */
+    uint64_t mix_calls;      /**< Total mix_engine_mix() calls recorded */
+    uint64_t active_sources; /**< Cumulative active source-mix events */
+    uint64_t muted_sources;  /**< Cumulative muted source-mix events */
+    uint64_t underruns;      /**< Calls where no active sources contributed */
+    double avg_latency_us;   /**< Average mix latency (µs) */
+    double min_latency_us;   /**< Minimum mix latency (µs) */
+    double max_latency_us;   /**< Maximum mix latency (µs) */
 } mix_stats_snapshot_t;
 
 /** Opaque mix stats context */
@@ -58,10 +58,7 @@ void mix_stats_destroy(mix_stats_t *st);
  * @param latency_us      Mix latency in µs (0 if not measured)
  * @return                0 on success, -1 on NULL
  */
-int mix_stats_record(mix_stats_t *st,
-                     int          active_count,
-                     int          muted_count,
-                     uint64_t     latency_us);
+int mix_stats_record(mix_stats_t *st, int active_count, int muted_count, uint64_t latency_us);
 
 /**
  * mix_stats_snapshot — copy current statistics

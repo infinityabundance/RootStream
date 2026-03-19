@@ -16,17 +16,18 @@
 #ifndef ROOTSTREAM_SCHEDULE_STORE_H
 #define ROOTSTREAM_SCHEDULE_STORE_H
 
-#include "schedule_entry.h"
 #include <stddef.h>
+
+#include "schedule_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SCHEDULE_STORE_MAGIC    0x52535348UL  /* 'RSSH' */
-#define SCHEDULE_STORE_VERSION  1
-#define SCHEDULE_STORE_HDR_SZ   12
-#define SCHEDULE_STORE_MAX_ENTRIES  SCHEDULER_MAX_ENTRIES
+#define SCHEDULE_STORE_MAGIC 0x52535348UL /* 'RSSH' */
+#define SCHEDULE_STORE_VERSION 1
+#define SCHEDULE_STORE_HDR_SZ 12
+#define SCHEDULE_STORE_MAX_ENTRIES SCHEDULER_MAX_ENTRIES
 
 /**
  * schedule_store_save — write @n entries to @path
@@ -38,9 +39,7 @@ extern "C" {
  * @param n        Number of entries
  * @return         0 on success, -1 on I/O error
  */
-int schedule_store_save(const char             *path,
-                         const schedule_entry_t *entries,
-                         size_t                  n);
+int schedule_store_save(const char *path, const schedule_entry_t *entries, size_t n);
 
 /**
  * schedule_store_load — read entries from @path into @entries
@@ -51,10 +50,7 @@ int schedule_store_save(const char             *path,
  * @param out_count  Receives actual count loaded
  * @return           0 on success, -1 on I/O or parse error
  */
-int schedule_store_load(const char       *path,
-                         schedule_entry_t *entries,
-                         size_t            max,
-                         size_t           *out_count);
+int schedule_store_load(const char *path, schedule_entry_t *entries, size_t max, size_t *out_count);
 
 #ifdef __cplusplus
 }

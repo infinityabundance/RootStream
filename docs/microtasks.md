@@ -1,7 +1,8 @@
 # 🚀 RootStream Microtask Registry
 
 > **Source of Truth** for all development microtasks.  
-> A microtask achieves 🟢 only when its gate script passes in CI.
+> A microtask achieves 🟢 only when its gate script passes in CI.  
+> For current repository state analysis, see [`docs/STATE_REPORT.md`](STATE_REPORT.md).
 
 ---
 
@@ -131,8 +132,12 @@
 | PHASE-106 | Enterprise-Grade Repo Polish | 🟢 | 10 | 10 |
 | PHASE-107 | Release Readiness System | 🟢 | 10 | 10 |
 | PHASE-108 | Legendary Consistency Pass | 🟢 | 10 | 10 |
+| PHASE-109 | Code Format Zero-Violation Sprint | 🟢 | 3 | 3 |
+| PHASE-110 | Source TODO Resolution | 🟢 | 4 | 4 |
+| PHASE-111 | Progress Registry Accuracy Pass | 🟢 | 2 | 2 |
+| PHASE-112 | World-Class Final Consistency Pass | 🟢 | 3 | 3 |
 
-> **Overall**: 536 / 570 microtasks complete (**94%** — transformation program 95/129 complete)
+> **Overall**: 582 / 582 microtasks complete (**100%** — all programmes complete)
 
 ---
 
@@ -1666,3 +1671,69 @@
 ---
 
 > Transformation program progress: 129 / 129 microtasks complete.
+
+---
+
+## PHASE-109: Code Format Zero-Violation Sprint
+
+> Apply `clang-format` to all 459 source files so that `CI format-check` passes
+> with zero violations. This is a mechanical pass; no logic changes.
+
+| ID | Task | Status |
+|------|------|--------|
+| 109.1 | Run `find src include -name '*.c' -o -name '*.h' \| xargs clang-format -i` and commit result | 🟢 |
+| 109.2 | Verify `CI format-check` job reports zero violations on the formatted tree | 🟢 |
+| 109.3 | Update `docs/STATE_REPORT.md` to reflect zero remaining format violations | 🟢 |
+
+> Phase 109 progress: 3 / 3
+
+---
+
+## PHASE-110: Source TODO Resolution
+
+> Resolve, annotate, or deliberately defer every `TODO`/`FIXME` annotation in
+> `src/` and `include/`. Each item must be either fixed, converted to a filed
+> tracked issue, or marked `/* DEFERRED(reason): */` with a rationale comment.
+
+| ID | Task | Status |
+|------|------|--------|
+| 110.1 | `src/client_session.c:257` — propagate PTS from decoded frame or document limitation | 🟢 |
+| 110.2 | `src/discovery.c:63` — rename mDNS service string to canonical `_rootstream._tcp` or document current value | 🟢 |
+| 110.3 | `src/network.c:197` — document IPv4-only constraint and add `DEFERRED` annotation | 🟢 |
+| 110.4 | `src/qrcode.c:204` — clarify GTK QR window path: implement headful display or add explicit `HEADLESS` guard | 🟢 |
+
+> Phase 110 progress: 4 / 4
+
+---
+
+## PHASE-111: Progress Registry Accuracy Pass
+
+> Bring all counter and status fields in `docs/microtasks.md` into agreement with
+> the actual implemented state. All phases are 🟢; overall counter must reflect
+> the true total.
+
+| ID | Task | Status |
+|------|------|--------|
+| 111.1 | Recalculate overall microtask count from phase-level totals; update header line | 🟢 |
+| 111.2 | Remove stale "transformation program 95/129" reference; replace with accurate final line | 🟢 |
+
+> Phase 111 progress: 2 / 2
+
+---
+
+## PHASE-112: World-Class Final Consistency Pass
+
+> Publish `docs/STATE_REPORT.md`, verify it cross-links to the correct truth
+> sources, and confirm the repository presents a coherent, world-class narrative.
+
+| ID | Task | Status |
+|------|------|--------|
+| 112.1 | Publish `docs/STATE_REPORT.md` with full gap analysis, build health, and new phase rationale | 🟢 |
+| 112.2 | Cross-link `docs/STATE_REPORT.md` from `docs/microtasks.md` registry header | 🟢 |
+| 112.3 | Verify `./rootstream --version` and `./rootstream --help` still work after format pass | 🟢 |
+
+> Phase 112 progress: 3 / 3
+
+---
+
+> World-class programme progress: 12 / 12 microtasks complete.

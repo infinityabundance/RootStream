@@ -11,25 +11,25 @@
 #ifndef ROOTSTREAM_PLATFORM_H
 #define ROOTSTREAM_PLATFORM_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /* ============================================================================
  * Platform Detection
  * ============================================================================ */
 
 #if defined(_WIN32) || defined(_WIN64)
-    #define RS_PLATFORM_WINDOWS 1
-    #define RS_PLATFORM_NAME "Windows"
+#define RS_PLATFORM_WINDOWS 1
+#define RS_PLATFORM_NAME "Windows"
 #elif defined(__linux__)
-    #define RS_PLATFORM_LINUX 1
-    #define RS_PLATFORM_NAME "Linux"
+#define RS_PLATFORM_LINUX 1
+#define RS_PLATFORM_NAME "Linux"
 #elif defined(__APPLE__)
-    #define RS_PLATFORM_MACOS 1
-    #define RS_PLATFORM_NAME "macOS"
+#define RS_PLATFORM_MACOS 1
+#define RS_PLATFORM_NAME "macOS"
 #else
-    #error "Unsupported platform"
+#error "Unsupported platform"
 #endif
 
 /* ============================================================================
@@ -37,36 +37,36 @@
  * ============================================================================ */
 
 #ifdef RS_PLATFORM_WINDOWS
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <winsock2.h>
-    #include <ws2tcpip.h>
-    #include <windows.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-    typedef SOCKET rs_socket_t;
-    #define RS_INVALID_SOCKET INVALID_SOCKET
-    #define RS_SOCKET_ERROR   SOCKET_ERROR
+typedef SOCKET rs_socket_t;
+#define RS_INVALID_SOCKET INVALID_SOCKET
+#define RS_SOCKET_ERROR SOCKET_ERROR
 
-    /* Windows doesn't have socklen_t in older SDKs */
-    #ifndef socklen_t
-        typedef int socklen_t;
-    #endif
+/* Windows doesn't have socklen_t in older SDKs */
+#ifndef socklen_t
+typedef int socklen_t;
+#endif
 
 #else /* POSIX (Linux, macOS) */
-    #include <sys/socket.h>
-    #include <sys/types.h>
-    #include <netinet/in.h>
-    #include <netinet/ip.h>
-    #include <arpa/inet.h>
-    #include <netdb.h>
-    #include <unistd.h>
-    #include <poll.h>
-    #include <errno.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-    typedef int rs_socket_t;
-    #define RS_INVALID_SOCKET (-1)
-    #define RS_SOCKET_ERROR   (-1)
+typedef int rs_socket_t;
+#define RS_INVALID_SOCKET (-1)
+#define RS_SOCKET_ERROR (-1)
 #endif
 
 /* ============================================================================
@@ -143,8 +143,7 @@ int rs_socket_bind(rs_socket_t sock, const struct sockaddr *addr, socklen_t addr
  * @param optlen Option value length
  * @return 0 on success, -1 on error
  */
-int rs_socket_setopt(rs_socket_t sock, int level, int optname,
-                     const void *optval, size_t optlen);
+int rs_socket_setopt(rs_socket_t sock, int level, int optname, const void *optval, size_t optlen);
 
 /**
  * Poll socket for readability.
@@ -196,7 +195,7 @@ int rs_socket_error(void);
  * @param err Error code from rs_socket_error()
  * @return Human-readable error message
  */
-const char* rs_socket_strerror(int err);
+const char *rs_socket_strerror(int err);
 
 /* ============================================================================
  * Timing API
@@ -243,7 +242,7 @@ void rs_sleep_us(uint32_t us);
  *         - Windows: %APPDATA%\RootStream
  *         - macOS: ~/Library/Application Support/RootStream
  */
-const char* rs_config_dir(void);
+const char *rs_config_dir(void);
 
 /**
  * Create directory with specified permissions.
@@ -316,6 +315,6 @@ char rs_path_separator(void);
  * @param name File/directory name
  * @return Pointer to buf, or NULL on error
  */
-char* rs_path_join(char *buf, size_t buflen, const char *base, const char *name);
+char *rs_path_join(char *buf, size_t buflen, const char *base, const char *name);
 
 #endif /* ROOTSTREAM_PLATFORM_H */

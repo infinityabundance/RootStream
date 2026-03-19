@@ -9,10 +9,11 @@
 #ifndef ROOTSTREAM_POINTER_SYNC_H
 #define ROOTSTREAM_POINTER_SYNC_H
 
-#include "annotation_protocol.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "annotation_protocol.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,14 +23,14 @@ extern "C" {
 #define POINTER_SYNC_MAX_PEERS 16
 
 /** Default idle timeout before pointer is considered hidden (µs) */
-#define POINTER_SYNC_TIMEOUT_US (3000000ULL)  /* 3 seconds */
+#define POINTER_SYNC_TIMEOUT_US (3000000ULL) /* 3 seconds */
 
 /** Snapshot of one remote pointer */
 typedef struct {
-    uint32_t      peer_id;
+    uint32_t peer_id;
     annot_point_t pos;
-    uint64_t      last_updated_us;  /**< Monotonic timestamp */
-    bool          visible;
+    uint64_t last_updated_us; /**< Monotonic timestamp */
+    bool visible;
 } remote_pointer_t;
 
 /** Opaque pointer sync state */
@@ -59,8 +60,7 @@ void pointer_sync_destroy(pointer_sync_t *ps);
  * @param ps     Pointer sync state
  * @param event  Annotation event
  */
-void pointer_sync_update(pointer_sync_t           *ps,
-                         const annotation_event_t *event);
+void pointer_sync_update(pointer_sync_t *ps, const annotation_event_t *event);
 
 /**
  * pointer_sync_get — retrieve the current state of a peer's pointer
@@ -70,9 +70,7 @@ void pointer_sync_update(pointer_sync_t           *ps,
  * @param out     Receives the pointer snapshot
  * @return        0 if found, -1 if not tracked
  */
-int pointer_sync_get(const pointer_sync_t *ps,
-                     uint32_t              peer_id,
-                     remote_pointer_t     *out);
+int pointer_sync_get(const pointer_sync_t *ps, uint32_t peer_id, remote_pointer_t *out);
 
 /**
  * pointer_sync_get_all — fill @out with all currently visible pointers
@@ -84,9 +82,7 @@ int pointer_sync_get(const pointer_sync_t *ps,
  * @param max_count  Capacity of @out
  * @return           Number of visible pointers written
  */
-int pointer_sync_get_all(const pointer_sync_t *ps,
-                          remote_pointer_t     *out,
-                          int                   max_count);
+int pointer_sync_get_all(const pointer_sync_t *ps, remote_pointer_t *out, int max_count);
 
 /**
  * pointer_sync_expire — remove pointers that have exceeded the timeout

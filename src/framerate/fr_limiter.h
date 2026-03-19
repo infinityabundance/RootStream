@@ -15,20 +15,20 @@
 #ifndef ROOTSTREAM_FR_LIMITER_H
 #define ROOTSTREAM_FR_LIMITER_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define FR_MAX_BURST  2   /**< Maximum token accumulation (frames) */
+#define FR_MAX_BURST 2 /**< Maximum token accumulation (frames) */
 
 /** Token-bucket frame limiter */
 typedef struct {
-    double   target_fps;      /**< Target frame rate (frames/second) */
-    double   tokens;          /**< Current token count (fractional) */
-    int      max_burst;       /**< Token cap (default FR_MAX_BURST) */
+    double target_fps; /**< Target frame rate (frames/second) */
+    double tokens;     /**< Current token count (fractional) */
+    int max_burst;     /**< Token cap (default FR_MAX_BURST) */
 } fr_limiter_t;
 
 /**

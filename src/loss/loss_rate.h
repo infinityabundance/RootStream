@@ -11,20 +11,21 @@
 #ifndef ROOTSTREAM_LOSS_RATE_H
 #define ROOTSTREAM_LOSS_RATE_H
 
-#include "loss_window.h"
 #include <stdbool.h>
+
+#include "loss_window.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define LOSS_RATE_EWMA_ALPHA  0.125   /**< EWMA smoothing factor */
+#define LOSS_RATE_EWMA_ALPHA 0.125 /**< EWMA smoothing factor */
 
 /** Loss rate estimator */
 typedef struct {
-    loss_window_t window;          /**< Sliding packet window */
-    double        ewma_loss_rate;  /**< Smoothed loss rate [0,1] */
-    bool          ready;           /**< True once first packet received */
+    loss_window_t window;  /**< Sliding packet window */
+    double ewma_loss_rate; /**< Smoothed loss rate [0,1] */
+    bool ready;            /**< True once first packet received */
 } loss_rate_t;
 
 /**

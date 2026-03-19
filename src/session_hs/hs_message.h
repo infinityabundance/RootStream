@@ -21,36 +21,36 @@
 #ifndef ROOTSTREAM_HS_MESSAGE_H
 #define ROOTSTREAM_HS_MESSAGE_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HS_MSG_MAGIC       0x48534D47UL   /* 'HSMG' */
-#define HS_MSG_HDR_SIZE    16
-#define HS_MAX_PAYLOAD     256
+#define HS_MSG_MAGIC 0x48534D47UL /* 'HSMG' */
+#define HS_MSG_HDR_SIZE 16
+#define HS_MAX_PAYLOAD 256
 
 /** Handshake PDU types */
 typedef enum {
-    HS_MSG_HELLO    = 1,   /**< Client → Server: initiate session */
-    HS_MSG_HELLO_ACK= 2,   /**< Server → Client: send session token */
-    HS_MSG_AUTH     = 3,   /**< Client → Server: authenticate */
-    HS_MSG_AUTH_ACK = 4,   /**< Server → Client: auth result */
-    HS_MSG_CONFIG   = 5,   /**< Server → Client: stream config */
-    HS_MSG_READY    = 6,   /**< Bidirectional: stream ready */
-    HS_MSG_ERROR    = 7,   /**< Any direction: error and reason */
-    HS_MSG_BYE      = 8,   /**< Bidirectional: graceful disconnect */
+    HS_MSG_HELLO = 1,     /**< Client → Server: initiate session */
+    HS_MSG_HELLO_ACK = 2, /**< Server → Client: send session token */
+    HS_MSG_AUTH = 3,      /**< Client → Server: authenticate */
+    HS_MSG_AUTH_ACK = 4,  /**< Server → Client: auth result */
+    HS_MSG_CONFIG = 5,    /**< Server → Client: stream config */
+    HS_MSG_READY = 6,     /**< Bidirectional: stream ready */
+    HS_MSG_ERROR = 7,     /**< Any direction: error and reason */
+    HS_MSG_BYE = 8,       /**< Bidirectional: graceful disconnect */
 } hs_msg_type_t;
 
 /** In-memory handshake message */
 typedef struct {
     hs_msg_type_t type;
-    uint16_t      seq;
-    uint16_t      payload_len;
-    uint8_t       payload[HS_MAX_PAYLOAD];
+    uint16_t seq;
+    uint16_t payload_len;
+    uint8_t payload[HS_MAX_PAYLOAD];
 } hs_message_t;
 
 /**
@@ -63,9 +63,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 on error
  */
-int hs_message_encode(const hs_message_t *msg,
-                        uint8_t            *buf,
-                        size_t              buf_sz);
+int hs_message_encode(const hs_message_t *msg, uint8_t *buf, size_t buf_sz);
 
 /**
  * hs_message_decode — parse @msg from @buf
@@ -77,9 +75,7 @@ int hs_message_encode(const hs_message_t *msg,
  * @param msg     Output message
  * @return        0 on success, -1 on error
  */
-int hs_message_decode(const uint8_t *buf,
-                        size_t         buf_sz,
-                        hs_message_t  *msg);
+int hs_message_decode(const uint8_t *buf, size_t buf_sz, hs_message_t *msg);
 
 /**
  * hs_msg_type_name — human-readable type name

@@ -18,11 +18,11 @@ extern "C" {
 
 /** Loss statistics snapshot */
 typedef struct {
-    uint64_t total_sent;     /**< Total sequence numbers observed */
-    uint64_t total_lost;     /**< Total packets counted as lost */
-    uint32_t burst_count;    /**< Number of loss bursts (consecutive losses) */
-    uint32_t max_burst;      /**< Longest single burst (packets) */
-    double   loss_pct;       /**< total_lost/total_sent × 100 */
+    uint64_t total_sent;  /**< Total sequence numbers observed */
+    uint64_t total_lost;  /**< Total packets counted as lost */
+    uint32_t burst_count; /**< Number of loss bursts (consecutive losses) */
+    uint32_t max_burst;   /**< Longest single burst (packets) */
+    double loss_pct;      /**< total_lost/total_sent × 100 */
 } loss_stats_snapshot_t;
 
 /** Opaque loss statistics context */

@@ -10,14 +10,15 @@
  * - 240 samples per frame (5ms at 48kHz)
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "../include/rootstream.h"
+
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
-#define FRAME_SIZE 240  /* 5ms at 48kHz */
+#define FRAME_SIZE 240 /* 5ms at 48kHz */
 
 /*
  * Initialize dummy audio capture
@@ -44,8 +45,7 @@ int audio_capture_init_dummy(rootstream_ctx_t *ctx) {
  * @param num_samples Output sample count
  * @return            0 on success (always succeeds)
  */
-int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples,
-                              size_t *num_samples) {
+int audio_capture_frame_dummy(rootstream_ctx_t *ctx, int16_t *samples, size_t *num_samples) {
     if (!ctx || !samples || !num_samples) {
         return -1;
     }

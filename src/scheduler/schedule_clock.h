@@ -10,9 +10,9 @@
 #ifndef ROOTSTREAM_SCHEDULE_CLOCK_H
 #define ROOTSTREAM_SCHEDULE_CLOCK_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

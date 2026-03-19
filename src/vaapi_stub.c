@@ -4,8 +4,9 @@
  * This lets HEADLESS/CI builds compile without VA-API headers or libraries.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
+
+#include "../include/rootstream.h"
 
 bool rootstream_encoder_vaapi_available(void) {
     return false;
@@ -19,8 +20,8 @@ int rootstream_encoder_init(rootstream_ctx_t *ctx, encoder_type_t type) {
     return -1;
 }
 
-int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                           uint8_t *out, size_t *out_size) {
+int rootstream_encode_frame(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                            size_t *out_size) {
     (void)ctx;
     (void)in;
     (void)out;

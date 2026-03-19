@@ -16,52 +16,52 @@
 #ifndef ROOTSTREAM_HEALTH_METRIC_H
 #define ROOTSTREAM_HEALTH_METRIC_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HEALTH_METRIC_NAME_MAX  48   /**< Max metric name (incl. NUL) */
+#define HEALTH_METRIC_NAME_MAX 48 /**< Max metric name (incl. NUL) */
 
 /** Metric kind */
 typedef enum {
-    HM_GAUGE   = 0,
+    HM_GAUGE = 0,
     HM_COUNTER = 1,
-    HM_RATE    = 2,
+    HM_RATE = 2,
     HM_BOOLEAN = 3,
 } hm_kind_t;
 
 /** Health level for a single metric */
 typedef enum {
-    HM_OK   = 0,
+    HM_OK = 0,
     HM_WARN = 1,
     HM_CRIT = 2,
 } hm_level_t;
 
 /** Metric threshold: warn_lo ≤ ok ≤ warn_hi; outside → WARN/CRIT */
 typedef struct {
-    double warn_lo;   /**< Value below this → WARN  (use -DBL_MAX to disable) */
-    double warn_hi;   /**< Value above this → WARN  (use +DBL_MAX to disable) */
-    double crit_lo;   /**< Value below this → CRIT  (use -DBL_MAX to disable) */
-    double crit_hi;   /**< Value above this → CRIT  (use +DBL_MAX to disable) */
+    double warn_lo; /**< Value below this → WARN  (use -DBL_MAX to disable) */
+    double warn_hi; /**< Value above this → WARN  (use +DBL_MAX to disable) */
+    double crit_lo; /**< Value below this → CRIT  (use -DBL_MAX to disable) */
+    double crit_hi; /**< Value above this → CRIT  (use +DBL_MAX to disable) */
 } hm_threshold_t;
 
 /** Metric value union */
 typedef union {
-    double   fval;    /**< GAUGE / RATE */
-    uint64_t uval;    /**< COUNTER */
-    bool     bval;    /**< BOOLEAN */
+    double fval;   /**< GAUGE / RATE */
+    uint64_t uval; /**< COUNTER */
+    bool bval;     /**< BOOLEAN */
 } hm_value_t;
 
 /** Single health metric */
 typedef struct {
-    char          name[HEALTH_METRIC_NAME_MAX];
-    hm_kind_t     kind;
-    hm_value_t    value;
+    char name[HEALTH_METRIC_NAME_MAX];
+    hm_kind_t kind;
+    hm_value_t value;
     hm_threshold_t thresh;
-    bool          has_threshold;
+    bool has_threshold;
 } health_metric_t;
 
 /**

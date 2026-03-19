@@ -4,13 +4,14 @@
  * Allows compiling without libdrm headers/libraries.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
 
+#include "../include/rootstream.h"
+
 static char last_error[256];
 
-const char* rootstream_get_error(void) {
+const char *rootstream_get_error(void) {
     return last_error;
 }
 

@@ -8,8 +8,9 @@
 #ifndef ROOTSTREAM_PLUGIN_LOADER_H
 #define ROOTSTREAM_PLUGIN_LOADER_H
 
-#include "plugin_api.h"
 #include <stddef.h>
+
+#include "plugin_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,8 +29,7 @@ typedef struct plugin_handle_s plugin_handle_t;
  * @param host  Host API table to pass to the plugin
  * @return      Non-NULL handle on success, NULL on failure
  */
-plugin_handle_t *plugin_loader_load(const char *path,
-                                    const plugin_host_api_t *host);
+plugin_handle_t *plugin_loader_load(const char *path, const plugin_host_api_t *host);
 
 /**
  * plugin_loader_unload — shutdown and unload a plugin
@@ -46,8 +46,7 @@ void plugin_loader_unload(plugin_handle_t *handle);
  * @param handle  Loaded plugin handle
  * @return        Pointer to the descriptor (lifetime = plugin lifetime)
  */
-const plugin_descriptor_t *plugin_loader_get_descriptor(
-        const plugin_handle_t *handle);
+const plugin_descriptor_t *plugin_loader_get_descriptor(const plugin_handle_t *handle);
 
 /**
  * plugin_loader_get_path — return the path used to load the plugin

@@ -4,10 +4,11 @@
  * Provides timestamps and safe errors when networking is unavailable.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+
+#include "../include/rootstream.h"
 
 int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
     (void)ctx;
@@ -17,8 +18,8 @@ int rootstream_net_init(rootstream_ctx_t *ctx, uint16_t port) {
     return -1;
 }
 
-int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
-                                  uint8_t type, const void *data, size_t size) {
+int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer, uint8_t type,
+                                  const void *data, size_t size) {
     (void)ctx;
     (void)peer;
     (void)type;
@@ -28,8 +29,7 @@ int rootstream_net_send_encrypted(rootstream_ctx_t *ctx, peer_t *peer,
     return -1;
 }
 
-int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer,
-                              const uint8_t *data, size_t size,
+int rootstream_net_send_video(rootstream_ctx_t *ctx, peer_t *peer, const uint8_t *data, size_t size,
                               uint64_t timestamp_us) {
     (void)ctx;
     (void)peer;
@@ -64,14 +64,14 @@ void rootstream_net_tick(rootstream_ctx_t *ctx) {
     (void)ctx;
 }
 
-peer_t* rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code) {
+peer_t *rootstream_add_peer(rootstream_ctx_t *ctx, const char *rootstream_code) {
     (void)ctx;
     (void)rootstream_code;
     fprintf(stderr, "ERROR: Cannot add peer (NO_CRYPTO build)\n");
     return NULL;
 }
 
-peer_t* rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key) {
+peer_t *rootstream_find_peer(rootstream_ctx_t *ctx, const uint8_t *public_key) {
     (void)ctx;
     (void)public_key;
     return NULL;
@@ -109,8 +109,7 @@ int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
     return -1;
 }
 
-int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
-                           const uint8_t *data, size_t size) {
+int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer, const uint8_t *data, size_t size) {
     (void)ctx;
     (void)peer;
     (void)data;
@@ -119,8 +118,8 @@ int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
     return -1;
 }
 
-int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
-                           uint8_t *buffer, size_t *buffer_len) {
+int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer, uint8_t *buffer,
+                            size_t *buffer_len) {
     (void)ctx;
     (void)peer;
     (void)buffer;
@@ -155,4 +154,3 @@ void peer_reconnect_cleanup(peer_t *peer) {
 void peer_reconnect_reset(peer_t *peer) {
     (void)peer;
 }
-

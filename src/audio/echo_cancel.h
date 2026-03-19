@@ -20,8 +20,9 @@
 #ifndef ROOTSTREAM_ECHO_CANCEL_H
 #define ROOTSTREAM_ECHO_CANCEL_H
 
-#include "audio_pipeline.h"
 #include <stddef.h>
+
+#include "audio_pipeline.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,10 +30,10 @@ extern "C" {
 
 /** AEC configuration */
 typedef struct {
-    int   sample_rate;      /**< Sample rate in Hz (e.g. 48000) */
-    int   channels;         /**< Mono (1) or stereo (2) */
-    int   filter_length_ms; /**< Adaptive filter length in ms (e.g. 100) */
-    float step_size;        /**< NLMS step size 0 < μ ≤ 1 (e.g. 0.5) */
+    int sample_rate;      /**< Sample rate in Hz (e.g. 48000) */
+    int channels;         /**< Mono (1) or stereo (2) */
+    int filter_length_ms; /**< Adaptive filter length in ms (e.g. 100) */
+    float step_size;      /**< NLMS step size 0 < μ ≤ 1 (e.g. 0.5) */
 } aec_config_t;
 
 /** Opaque AEC state */
@@ -62,11 +63,8 @@ void aec_destroy(aec_state_t *state);
  * @param out_samples  Output: echo-cancelled signal (may alias mic_samples)
  * @param frame_count  Frames to process
  */
-void aec_process(aec_state_t  *state,
-                 const float  *mic_samples,
-                 const float  *ref_samples,
-                 float        *out_samples,
-                 size_t        frame_count);
+void aec_process(aec_state_t *state, const float *mic_samples, const float *ref_samples,
+                 float *out_samples, size_t frame_count);
 
 /**
  * aec_set_reference — store far-end reference for next pipeline call
@@ -79,9 +77,7 @@ void aec_process(aec_state_t  *state,
  *                     audio_pipeline_process() returns)
  * @param frame_count  Number of frames in the buffer
  */
-void aec_set_reference(aec_state_t *state,
-                       const float *ref_samples,
-                       size_t       frame_count);
+void aec_set_reference(aec_state_t *state, const float *ref_samples, size_t frame_count);
 
 /**
  * aec_make_node — return a pipeline node backed by @state
