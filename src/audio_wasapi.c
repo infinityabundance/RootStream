@@ -7,25 +7,26 @@
 
 #ifdef _WIN32
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
 
+#include "../include/rootstream.h"
+
 /* WASAPI headers */
-#include <initguid.h>
-#include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <audiopolicy.h>
+#include <initguid.h>
+#include <mmdeviceapi.h>
 
 /* Reference time units (100-nanosecond intervals) */
-#define REFTIMES_PER_SEC  10000000
-#define REFTIMES_PER_MILLISEC  10000
+#define REFTIMES_PER_SEC 10000000
+#define REFTIMES_PER_MILLISEC 10000
 
 /* Audio configuration matching Linux ALSA settings */
-#define AUDIO_SAMPLE_RATE    48000
-#define AUDIO_CHANNELS       2
+#define AUDIO_SAMPLE_RATE 48000
+#define AUDIO_CHANNELS 2
 #define AUDIO_BITS_PER_SAMPLE 16
-#define AUDIO_FRAME_SIZE     960   /* 20ms at 48kHz */
+#define AUDIO_FRAME_SIZE 960 /* 20ms at 48kHz */
 
 /* WASAPI context stored in rootstream_ctx_t */
 typedef struct {
@@ -42,14 +43,14 @@ typedef struct {
 } wasapi_ctx_t;
 
 /* GUIDs */
-DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xbcde0395, 0xe52f, 0x467c,
-            0x8e, 0x3d, 0xc4, 0x57, 0x92, 0x91, 0x69, 0x2e);
-DEFINE_GUID(IID_IMMDeviceEnumerator, 0xa95664d2, 0x9614, 0x4f35,
-            0xa7, 0x46, 0xde, 0x8d, 0xb6, 0x36, 0x17, 0xe6);
-DEFINE_GUID(IID_IAudioClient, 0x1cb9ad4c, 0xdbfa, 0x4c32,
-            0xb1, 0x78, 0xc2, 0xf5, 0x68, 0xa7, 0x03, 0xb2);
-DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483,
-            0xa7, 0xbf, 0xad, 0xdc, 0xa7, 0xc2, 0x60, 0xe2);
+DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xbcde0395, 0xe52f, 0x467c, 0x8e, 0x3d, 0xc4, 0x57, 0x92,
+            0x91, 0x69, 0x2e);
+DEFINE_GUID(IID_IMMDeviceEnumerator, 0xa95664d2, 0x9614, 0x4f35, 0xa7, 0x46, 0xde, 0x8d, 0xb6, 0x36,
+            0x17, 0xe6);
+DEFINE_GUID(IID_IAudioClient, 0x1cb9ad4c, 0xdbfa, 0x4c32, 0xb1, 0x78, 0xc2, 0xf5, 0x68, 0xa7, 0x03,
+            0xb2);
+DEFINE_GUID(IID_IAudioRenderClient, 0xf294acfc, 0x3146, 0x4483, 0xa7, 0xbf, 0xad, 0xdc, 0xa7, 0xc2,
+            0x60, 0xe2);
 
 /* Forward declarations */
 static int wasapi_init_exclusive(wasapi_ctx_t *ctx);
@@ -82,8 +83,8 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
     }
 
     /* Create device enumerator */
-    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
-                          &IID_IMMDeviceEnumerator, (void **)&wasapi->enumerator);
+    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, &IID_IMMDeviceEnumerator,
+                          (void **)&wasapi->enumerator);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to create device enumerator: 0x%08lx\n", hr);
         free(wasapi);
@@ -91,8 +92,8 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
     }
 
     /* Get default audio output device */
-    hr = wasapi->enumerator->lpVtbl->GetDefaultAudioEndpoint(
-        wasapi->enumerator, eRender, eConsole, &wasapi->device);
+    hr = wasapi->enumerator->lpVtbl->GetDefaultAudioEndpoint(wasapi->enumerator, eRender, eConsole,
+                                                             &wasapi->device);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to get default audio device: 0x%08lx\n", hr);
         wasapi->enumerator->lpVtbl->Release(wasapi->enumerator);
@@ -101,9 +102,8 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
     }
 
     /* Activate audio client */
-    hr = wasapi->device->lpVtbl->Activate(
-        wasapi->device, &IID_IAudioClient, CLSCTX_ALL, NULL,
-        (void **)&wasapi->audio_client);
+    hr = wasapi->device->lpVtbl->Activate(wasapi->device, &IID_IAudioClient, CLSCTX_ALL, NULL,
+                                          (void **)&wasapi->audio_client);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to activate audio client: 0x%08lx\n", hr);
         wasapi->device->lpVtbl->Release(wasapi->device);
@@ -143,12 +143,12 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
     }
 
     /* Get render client */
-    hr = wasapi->audio_client->lpVtbl->GetService(
-        wasapi->audio_client, &IID_IAudioRenderClient,
-        (void **)&wasapi->render_client);
+    hr = wasapi->audio_client->lpVtbl->GetService(wasapi->audio_client, &IID_IAudioRenderClient,
+                                                  (void **)&wasapi->render_client);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to get render client: 0x%08lx\n", hr);
-        if (wasapi->wave_format) CoTaskMemFree(wasapi->wave_format);
+        if (wasapi->wave_format)
+            CoTaskMemFree(wasapi->wave_format);
         CloseHandle(wasapi->event);
         wasapi->audio_client->lpVtbl->Release(wasapi->audio_client);
         wasapi->device->lpVtbl->Release(wasapi->device);
@@ -158,12 +158,12 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
     }
 
     /* Get buffer size */
-    hr = wasapi->audio_client->lpVtbl->GetBufferSize(
-        wasapi->audio_client, &wasapi->buffer_frames);
+    hr = wasapi->audio_client->lpVtbl->GetBufferSize(wasapi->audio_client, &wasapi->buffer_frames);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to get buffer size: 0x%08lx\n", hr);
         wasapi->render_client->lpVtbl->Release(wasapi->render_client);
-        if (wasapi->wave_format) CoTaskMemFree(wasapi->wave_format);
+        if (wasapi->wave_format)
+            CoTaskMemFree(wasapi->wave_format);
         CloseHandle(wasapi->event);
         wasapi->audio_client->lpVtbl->Release(wasapi->audio_client);
         wasapi->device->lpVtbl->Release(wasapi->device);
@@ -172,8 +172,7 @@ int audio_playback_init(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    printf("WASAPI: Buffer size: %u frames (%.1f ms)\n",
-           wasapi->buffer_frames,
+    printf("WASAPI: Buffer size: %u frames (%.1f ms)\n", wasapi->buffer_frames,
            (float)wasapi->buffer_frames * 1000.0f / AUDIO_SAMPLE_RATE);
 
     wasapi->initialized = true;
@@ -201,14 +200,9 @@ static int wasapi_init_exclusive(wasapi_ctx_t *ctx) {
     buffer_duration = 10 * REFTIMES_PER_MILLISEC;
 
     /* Initialize in exclusive mode */
-    hr = ctx->audio_client->lpVtbl->Initialize(
-        ctx->audio_client,
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
-        AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        buffer_duration,
-        buffer_duration,
-        &format,
-        NULL);
+    hr = ctx->audio_client->lpVtbl->Initialize(ctx->audio_client, AUDCLNT_SHAREMODE_EXCLUSIVE,
+                                               AUDCLNT_STREAMFLAGS_EVENTCALLBACK, buffer_duration,
+                                               buffer_duration, &format, NULL);
 
     if (FAILED(hr)) {
         return -1;
@@ -245,14 +239,11 @@ static int wasapi_init_shared(wasapi_ctx_t *ctx) {
 
     /* Initialize in shared mode */
     hr = ctx->audio_client->lpVtbl->Initialize(
-        ctx->audio_client,
-        AUDCLNT_SHAREMODE_SHARED,
+        ctx->audio_client, AUDCLNT_SHAREMODE_SHARED,
         AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
-        AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
-        buffer_duration,
-        0,  /* periodicity must be 0 for shared mode */
-        device_format,
-        NULL);
+            AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
+        buffer_duration, 0, /* periodicity must be 0 for shared mode */
+        device_format, NULL);
 
     if (FAILED(hr)) {
         CoTaskMemFree(device_format);
@@ -327,8 +318,7 @@ int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples, size_t n
     }
 
     /* Get buffer */
-    hr = wasapi->render_client->lpVtbl->GetBuffer(
-        wasapi->render_client, frames_to_write, &buffer);
+    hr = wasapi->render_client->lpVtbl->GetBuffer(wasapi->render_client, frames_to_write, &buffer);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to get buffer: 0x%08lx\n", hr);
         return -1;
@@ -338,8 +328,7 @@ int audio_playback_write(rootstream_ctx_t *ctx, const int16_t *samples, size_t n
     memcpy(buffer, samples, frames_to_write * AUDIO_CHANNELS * sizeof(int16_t));
 
     /* Release buffer */
-    hr = wasapi->render_client->lpVtbl->ReleaseBuffer(
-        wasapi->render_client, frames_to_write, 0);
+    hr = wasapi->render_client->lpVtbl->ReleaseBuffer(wasapi->render_client, frames_to_write, 0);
     if (FAILED(hr)) {
         fprintf(stderr, "WASAPI: Failed to release buffer: 0x%08lx\n", hr);
         return -1;

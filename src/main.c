@@ -1,25 +1,26 @@
 /*
  * main.c - RootStream main entry point
- * 
+ *
  * Usage modes:
  *   rootstream                    # Start tray app (GUI mode)
  *   rootstream --service          # Run as background service
  *   rootstream --qr               # Show QR code and exit
  *   rootstream connect <code>     # Connect to peer
  *   rootstream host               # Host mode (for testing)
- *   
+ *
  * The tray app is the default and recommended way to use RootStream.
  * Service mode is for headless systems or systemd integration.
  */
 
-#include "../include/rootstream.h"
-#include "ai_logging.h"
+#include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include <unistd.h>
-#include <getopt.h>
+
+#include "../include/rootstream.h"
+#include "ai_logging.h"
 
 static volatile bool keep_running = true;
 
@@ -81,7 +82,8 @@ static void print_usage(const char *progname) {
     printf("  %s --qr                               # Show your code\n", progname);
     printf("  %s connect kXx7Y...@gaming-pc         # Connect to peer\n", progname);
     printf("  %s host --display 1 --bitrate 15000   # Host on 2nd display\n", progname);
-    printf("  %s host --record game.mp4             # Record to file (balanced preset)\n", progname);
+    printf("  %s host --record game.mp4             # Record to file (balanced preset)\n",
+           progname);
     printf("  %s host --record game.mp4 --preset fast  # Fast recording preset\n", progname);
     printf("  %s --peer-add 192.168.1.100:9876      # Manually add peer\n", progname);
     printf("  %s --peer-list                        # Show saved peers\n", progname);
@@ -146,9 +148,9 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
 
     /* Initialize tray UI with fallback (PHASE 6) */
     printf("INFO: Initializing GUI backend...\n");
-    
-    int gui_backend = -1;  /* -1=uninitialized, 0=GTK, 1=TUI, 2=CLI */
-    
+
+    int gui_backend = -1; /* -1=uninitialized, 0=GTK, 1=TUI, 2=CLI */
+
     /* Check for user override */
     if (ctx->backend_prefs.gui_override) {
         if (strcmp(ctx->backend_prefs.gui_override, "gtk") == 0) {
@@ -217,14 +219,14 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
         while (ctx->running) {
             tray_update_status_tui(ctx, ctx->tray.status);
             tray_run_tui(ctx);
-            usleep(100000);  /* 100ms */
+            usleep(100000); /* 100ms */
         }
     } else {
         /* For CLI, just keep running until interrupted */
         printf("INFO: Running in CLI-only mode (Ctrl+C to exit)\n");
         while (ctx->running) {
             tray_run_cli(ctx);
-            usleep(1000000);  /* 1 second */
+            usleep(1000000); /* 1 second */
         }
     }
 
@@ -234,7 +236,8 @@ static int run_tray_mode(rootstream_ctx_t *ctx, int argc, char **argv, bool no_d
 /*
  * Run in host mode (streaming server)
  */
-static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery, const char *record_file, const char *record_preset) {
+static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discovery,
+                         const char *record_file, const char *record_preset) {
     printf("INFO: Starting host mode\n");
     printf("INFO: Press Ctrl+C to stop\n");
     printf("\n");
@@ -243,24 +246,23 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
     /* Detect and select display (DRM-based) */
     display_info_t displays[MAX_DISPLAYS];
     int num_displays = rootstream_detect_displays(displays, MAX_DISPLAYS);
-    
+
     if (num_displays < 0) {
         printf("WARNING: DRM display detection failed: %s\n", rootstream_get_error());
         printf("INFO: Will attempt fallback capture backends in service_run_host()\n");
-        num_displays = 0;  /* Continue with fallback backends */
+        num_displays = 0; /* Continue with fallback backends */
     }
 
     if (num_displays > 0) {
         printf("INFO: Found %d DRM display(s)\n", num_displays);
         for (int i = 0; i < num_displays; i++) {
-            printf("  [%d] %s - %dx%d @ %d Hz\n", i,
-                   displays[i].name, displays[i].width,
+            printf("  [%d] %s - %dx%d @ %d Hz\n", i, displays[i].name, displays[i].width,
                    displays[i].height, displays[i].refresh_rate);
         }
 
         if (display_idx < 0 || display_idx >= num_displays) {
-            fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n",
-                    display_idx, num_displays - 1);
+            fprintf(stderr, "ERROR: Display index %d out of range (0-%d)\n", display_idx,
+                    num_displays - 1);
             for (int i = 0; i < num_displays; i++) {
                 if (displays[i].fd >= 0) {
                     close(displays[i].fd);
@@ -285,18 +287,18 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
         printf("INFO: No DRM displays available, will use fallback capture backend\n");
         /* Initialize display info to defaults for fallback backends */
         ctx->display.fd = -1;
-        ctx->display.width = 0;  /* Let backend set this */
+        ctx->display.width = 0; /* Let backend set this */
         ctx->display.height = 0;
         ctx->display.refresh_rate = 60;
         snprintf(ctx->display.name, sizeof(ctx->display.name), "Fallback");
     }
 
-    printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n",
-           ctx->display.name, ctx->display.width,
+    printf("\n✓ Selected: %s (%dx%d @ %d Hz)\n\n", ctx->display.name, ctx->display.width,
            ctx->display.height, ctx->display.refresh_rate);
     printf("INFO: Target video bitrate: %u kbps\n", ctx->encoder.bitrate / 1000);
 
-    /* Capture and encoder initialization will be handled by service_run_host() with fallback logic */
+    /* Capture and encoder initialization will be handled by service_run_host() with fallback logic
+     */
 
     if (rootstream_net_init(ctx, ctx->port) < 0) {
         fprintf(stderr, "ERROR: Network init failed\n");
@@ -318,11 +320,11 @@ static int run_host_mode(rootstream_ctx_t *ctx, int display_idx, bool no_discove
         if (!record_preset) {
             record_preset = "balanced";
         }
-        
+
         printf("INFO: Recording enabled\n");
         printf("  File: %s\n", record_file);
         printf("  Preset: %s\n", record_preset);
-        
+
         if (recording_init(ctx, record_file) < 0) {
             fprintf(stderr, "ERROR: Recording init failed\n");
             return -1;
@@ -375,30 +377,28 @@ int main(int argc, char **argv) {
     int ret = 0;
 
     /* Parse options */
-    static struct option long_options[] = {
-        {"help",        no_argument,       0, 'h'},
-        {"version",     no_argument,       0, 'v'},
-        {"qr",          no_argument,       0, 'q'},
-        {"list-displays", no_argument,     0, 'L'},
-        {"service",     no_argument,       0, 's'},
-        {"port",        required_argument, 0, 'p'},
-        {"display",     required_argument, 0, 'd'},
-        {"bitrate",     required_argument, 0, 'b'},
-        {"record",      required_argument, 0, 'r'},
-        {"preset",      required_argument, 0, 'P'},
-        {"no-discovery",no_argument,       0, 'n'},
-        {"latency-log", no_argument,       0, 'l'},
-        {"latency-interval", required_argument, 0, 'i'},
-        {"backend-verbose", no_argument,   0, 0},
-        {"peer-add",    required_argument, 0, 0},
-        {"peer-list",   no_argument,       0, 0},
-        {"peer-code",   required_argument, 0, 0},
-        {"gui",         required_argument, 0, 0},
-        {"input",       required_argument, 0, 0},
-        {"diagnostics", no_argument,       0, 0},
-        {"ai-coding-logs", optional_argument, 0, 0},
-        {0, 0, 0, 0}
-    };
+    static struct option long_options[] = {{"help", no_argument, 0, 'h'},
+                                           {"version", no_argument, 0, 'v'},
+                                           {"qr", no_argument, 0, 'q'},
+                                           {"list-displays", no_argument, 0, 'L'},
+                                           {"service", no_argument, 0, 's'},
+                                           {"port", required_argument, 0, 'p'},
+                                           {"display", required_argument, 0, 'd'},
+                                           {"bitrate", required_argument, 0, 'b'},
+                                           {"record", required_argument, 0, 'r'},
+                                           {"preset", required_argument, 0, 'P'},
+                                           {"no-discovery", no_argument, 0, 'n'},
+                                           {"latency-log", no_argument, 0, 'l'},
+                                           {"latency-interval", required_argument, 0, 'i'},
+                                           {"backend-verbose", no_argument, 0, 0},
+                                           {"peer-add", required_argument, 0, 0},
+                                           {"peer-list", no_argument, 0, 0},
+                                           {"peer-code", required_argument, 0, 0},
+                                           {"gui", required_argument, 0, 0},
+                                           {"input", required_argument, 0, 0},
+                                           {"diagnostics", no_argument, 0, 0},
+                                           {"ai-coding-logs", optional_argument, 0, 0},
+                                           {0, 0, 0, 0}};
 
     bool show_qr = false;
     bool list_displays = false;
@@ -423,7 +423,8 @@ int main(int argc, char **argv) {
 
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:P:nli:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvqLsp:d:b:r:P:nli:", long_options, &option_index)) !=
+           -1) {
         switch (opt) {
             case 0:
                 /* Long option without short equivalent */
@@ -444,7 +445,7 @@ int main(int argc, char **argv) {
                     show_diagnostics = true;
                 } else if (strcmp(long_options[option_index].name, "ai-coding-logs") == 0) {
                     enable_ai_logging = true;
-                    ai_log_file = optarg;  /* May be NULL for stderr */
+                    ai_log_file = optarg; /* May be NULL for stderr */
                 }
                 break;
             case 'h':
@@ -507,7 +508,7 @@ int main(int argc, char **argv) {
     /* Install signal handlers */
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
-    signal(SIGPIPE, SIG_IGN);  /* Ignore broken pipe */
+    signal(SIGPIPE, SIG_IGN); /* Ignore broken pipe */
 
     /* Initialize context */
     if (rootstream_init(&ctx) < 0) {
@@ -525,7 +526,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-    
+
     AI_LOG_CORE("startup: RootStream version=%s", ROOTSTREAM_VERSION);
     AI_LOG_CORE("startup: port=%d bitrate=%d service_mode=%d", port, bitrate, service_mode);
 
@@ -567,8 +568,7 @@ int main(int argc, char **argv) {
         printf("Available displays:\n\n");
         for (int i = 0; i < num_displays; i++) {
             printf("  [%d] %s\n", i, displays[i].name);
-            printf("      Resolution: %dx%d @ %d Hz\n",
-                   displays[i].width, displays[i].height,
+            printf("      Resolution: %dx%d @ %d Hz\n", displays[i].width, displays[i].height,
                    displays[i].refresh_rate);
             printf("\n");
 
@@ -592,8 +592,7 @@ int main(int argc, char **argv) {
 
         /* Also save as PNG */
         char qr_path[256];
-        snprintf(qr_path, sizeof(qr_path), "%s/rootstream-qr.png",
-                config_get_dir());
+        snprintf(qr_path, sizeof(qr_path), "%s/rootstream-qr.png", config_get_dir());
         if (qrcode_generate(ctx.keypair.rootstream_code, qr_path) == 0) {
             printf("QR code saved to: %s\n", qr_path);
         }

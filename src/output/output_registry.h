@@ -11,14 +11,15 @@
 #ifndef ROOTSTREAM_OUTPUT_REGISTRY_H
 #define ROOTSTREAM_OUTPUT_REGISTRY_H
 
-#include "output_target.h"
 #include <stddef.h>
+
+#include "output_target.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define OUTPUT_MAX_TARGETS  16   /**< Maximum registered targets */
+#define OUTPUT_MAX_TARGETS 16 /**< Maximum registered targets */
 
 /** Opaque output registry */
 typedef struct output_registry_s output_registry_t;
@@ -44,10 +45,8 @@ void output_registry_destroy(output_registry_t *r);
  * @param protocol  Protocol tag
  * @return          Pointer to registered target, or NULL if full/dup
  */
-output_target_t *output_registry_add(output_registry_t *r,
-                                       const char *name,
-                                       const char *url,
-                                       const char *protocol);
+output_target_t *output_registry_add(output_registry_t *r, const char *name, const char *url,
+                                     const char *protocol);
 
 /**
  * output_registry_remove — unregister target by name
@@ -73,9 +72,7 @@ output_target_t *output_registry_get(output_registry_t *r, const char *name);
  * @param state  New state
  * @return       0 on success, -1 if not found
  */
-int output_registry_set_state(output_registry_t *r,
-                                const char *name,
-                                ot_state_t state);
+int output_registry_set_state(output_registry_t *r, const char *name, ot_state_t state);
 
 /**
  * output_registry_enable  — enable  target by name
@@ -101,9 +98,8 @@ int output_registry_active_count(const output_registry_t *r);
  * @param cb    Callback
  * @param user  User pointer forwarded to callback
  */
-void output_registry_foreach(output_registry_t *r,
-                               void (*cb)(output_target_t *t, void *user),
-                               void *user);
+void output_registry_foreach(output_registry_t *r, void (*cb)(output_target_t *t, void *user),
+                             void *user);
 
 #ifdef __cplusplus
 }

@@ -20,29 +20,29 @@
 #ifndef ROOTSTREAM_ANNOTATION_PROTOCOL_H
 #define ROOTSTREAM_ANNOTATION_PROTOCOL_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define ANNOTATION_MAGIC    0x414EU  /* 'AN' little-endian */
-#define ANNOTATION_VERSION  1
-#define ANNOTATION_HDR_SIZE 16       /* bytes */
+#define ANNOTATION_MAGIC 0x414EU /* 'AN' little-endian */
+#define ANNOTATION_VERSION 1
+#define ANNOTATION_HDR_SIZE 16 /* bytes */
 #define ANNOTATION_MAX_TEXT 256
 
 /** Annotation event types */
 typedef enum {
-    ANNOT_DRAW_BEGIN   = 1,  /**< Pen/mouse down: start a new stroke */
-    ANNOT_DRAW_POINT   = 2,  /**< Intermediate stroke point */
-    ANNOT_DRAW_END     = 3,  /**< Pen/mouse up: finish stroke */
-    ANNOT_ERASE        = 4,  /**< Erase annotation in a circular region */
-    ANNOT_CLEAR_ALL    = 5,  /**< Clear all annotations */
-    ANNOT_TEXT         = 6,  /**< Place a text label */
-    ANNOT_POINTER_MOVE = 7,  /**< Remote cursor position update */
-    ANNOT_POINTER_HIDE = 8,  /**< Remote cursor hidden */
+    ANNOT_DRAW_BEGIN = 1,   /**< Pen/mouse down: start a new stroke */
+    ANNOT_DRAW_POINT = 2,   /**< Intermediate stroke point */
+    ANNOT_DRAW_END = 3,     /**< Pen/mouse up: finish stroke */
+    ANNOT_ERASE = 4,        /**< Erase annotation in a circular region */
+    ANNOT_CLEAR_ALL = 5,    /**< Clear all annotations */
+    ANNOT_TEXT = 6,         /**< Place a text label */
+    ANNOT_POINTER_MOVE = 7, /**< Remote cursor position update */
+    ANNOT_POINTER_HIDE = 8, /**< Remote cursor hidden */
 } annotation_event_type_t;
 
 /** ARGB colour: 0xAARRGGBB */
@@ -56,16 +56,16 @@ typedef struct {
 
 /** Draw-begin payload */
 typedef struct {
-    annot_point_t  pos;          /**< Starting position */
-    annot_color_t  color;        /**< Stroke colour */
-    float          width;        /**< Stroke width in logical pixels */
-    uint32_t       stroke_id;    /**< Unique ID for this stroke */
+    annot_point_t pos;   /**< Starting position */
+    annot_color_t color; /**< Stroke colour */
+    float width;         /**< Stroke width in logical pixels */
+    uint32_t stroke_id;  /**< Unique ID for this stroke */
 } annot_draw_begin_t;
 
 /** Draw-point payload */
 typedef struct {
-    annot_point_t  pos;
-    uint32_t       stroke_id;
+    annot_point_t pos;
+    uint32_t stroke_id;
 } annot_draw_point_t;
 
 /** Draw-end payload */
@@ -75,36 +75,36 @@ typedef struct {
 
 /** Erase payload */
 typedef struct {
-    annot_point_t  center;
-    float          radius;       /**< Erase radius in normalised units */
+    annot_point_t center;
+    float radius; /**< Erase radius in normalised units */
 } annot_erase_t;
 
 /** Text annotation payload */
 typedef struct {
-    annot_point_t  pos;
-    annot_color_t  color;
-    float          font_size;    /**< In logical pixels */
-    uint16_t       text_len;     /**< Byte length of the UTF-8 text */
-    char           text[ANNOTATION_MAX_TEXT];
+    annot_point_t pos;
+    annot_color_t color;
+    float font_size;   /**< In logical pixels */
+    uint16_t text_len; /**< Byte length of the UTF-8 text */
+    char text[ANNOTATION_MAX_TEXT];
 } annot_text_t;
 
 /** Pointer-move payload */
 typedef struct {
-    annot_point_t  pos;
-    uint32_t       peer_id;      /**< Identifies the remote peer */
+    annot_point_t pos;
+    uint32_t peer_id; /**< Identifies the remote peer */
 } annot_pointer_move_t;
 
 /** Unified annotation event */
 typedef struct {
     annotation_event_type_t type;
-    uint32_t                seq;        /**< Monotonic sequence number */
-    uint64_t                timestamp_us;
+    uint32_t seq; /**< Monotonic sequence number */
+    uint64_t timestamp_us;
     union {
-        annot_draw_begin_t  draw_begin;
-        annot_draw_point_t  draw_point;
-        annot_draw_end_t    draw_end;
-        annot_erase_t       erase;
-        annot_text_t        text;
+        annot_draw_begin_t draw_begin;
+        annot_draw_point_t draw_point;
+        annot_draw_end_t draw_end;
+        annot_erase_t erase;
+        annot_text_t text;
         annot_pointer_move_t pointer_move;
     };
 } annotation_event_t;
@@ -117,9 +117,7 @@ typedef struct {
  * @param buf_sz  Size of @buf in bytes
  * @return        Number of bytes written, or -1 if buf_sz too small
  */
-int annotation_encode(const annotation_event_t *event,
-                      uint8_t                  *buf,
-                      size_t                    buf_sz);
+int annotation_encode(const annotation_event_t *event, uint8_t *buf, size_t buf_sz);
 
 /**
  * annotation_decode — deserialise @event from @buf
@@ -129,9 +127,7 @@ int annotation_encode(const annotation_event_t *event,
  * @param event   Output event
  * @return        0 on success, -1 on parse error
  */
-int annotation_decode(const uint8_t      *buf,
-                      size_t              buf_sz,
-                      annotation_event_t *event);
+int annotation_decode(const uint8_t *buf, size_t buf_sz, annotation_event_t *event);
 
 /**
  * annotation_encoded_size — compute the serialised size of @event

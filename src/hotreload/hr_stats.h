@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_HR_STATS_H
 #define ROOTSTREAM_HR_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,10 +19,10 @@ extern "C" {
 
 /** Hot-reload statistics snapshot */
 typedef struct {
-    uint64_t reload_count;     /**< Total successful reloads */
-    uint64_t fail_count;       /**< Total failed reload attempts */
-    uint64_t last_reload_us;   /**< Timestamp of last success (µs) */
-    int      loaded_plugins;   /**< Currently loaded plugin count */
+    uint64_t reload_count;   /**< Total successful reloads */
+    uint64_t fail_count;     /**< Total failed reload attempts */
+    uint64_t last_reload_us; /**< Timestamp of last success (µs) */
+    int loaded_plugins;      /**< Currently loaded plugin count */
 } hr_stats_snapshot_t;
 
 /** Opaque hot-reload stats context */

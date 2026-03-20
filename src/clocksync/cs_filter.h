@@ -15,22 +15,23 @@
 #ifndef ROOTSTREAM_CS_FILTER_H
 #define ROOTSTREAM_CS_FILTER_H
 
-#include "cs_sample.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "cs_sample.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CS_FILTER_SIZE  8   /**< Sliding window size */
+#define CS_FILTER_SIZE 8 /**< Sliding window size */
 
 /** Filter output */
 typedef struct {
-    int64_t offset_us;  /**< Median clock offset (µs, signed) */
-    int64_t rtt_us;     /**< Median RTT (µs) */
-    bool    converged;  /**< True once CS_FILTER_SIZE samples collected */
-    int     count;      /**< Samples collected so far (capped at size) */
+    int64_t offset_us; /**< Median clock offset (µs, signed) */
+    int64_t rtt_us;    /**< Median RTT (µs) */
+    bool converged;    /**< True once CS_FILTER_SIZE samples collected */
+    int count;         /**< Samples collected so far (capped at size) */
 } cs_filter_out_t;
 
 /** Opaque clock sync filter */

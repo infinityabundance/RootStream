@@ -3,22 +3,23 @@
  *
  * Pure CPU-based encoding fallback for systems without GPU hardware encoding.
  * ~10-20x slower than hardware encoding, but works everywhere.
- * 
+ *
  * Requires: libavcodec, libavutil, libswscale
  * Codecs: libx264 (H.264), libx265 (H.265)
  */
 
-#include "../include/rootstream.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
+
+#include "../include/rootstream.h"
 
 #ifdef HAVE_FFMPEG
 
 #include <libavcodec/avcodec.h>
-#include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 
 typedef struct {
@@ -42,7 +43,7 @@ bool rootstream_encoder_ffmpeg_available(void) {
     if (codec) {
         return true;
     }
-    
+
     /* Also check for h264_nvenc as fallback (though we prefer direct NVENC) */
     codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     return (codec != NULL);
@@ -57,14 +58,14 @@ static bool detect_h264_keyframe_ffmpeg(const uint8_t *data, size_t size) {
     }
 
     for (size_t i = 0; i < size - 4; i++) {
-        bool sc3 = (data[i] == 0x00 && data[i+1] == 0x00 && data[i+2] == 0x01);
-        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i+1] == 0x00 &&
-                   data[i+2] == 0x00 && data[i+3] == 0x01);
+        bool sc3 = (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01);
+        bool sc4 = (i + 4 < size && data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 &&
+                    data[i + 3] == 0x01);
 
         if (sc3 || sc4) {
             size_t idx = sc4 ? i + 4 : i + 3;
             if (idx < size && (data[idx] & 0x1F) == 5) {
-                return true;  /* IDR slice */
+                return true; /* IDR slice */
             }
             i += sc4 ? 3 : 2;
         }
@@ -126,17 +127,17 @@ int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec) {
     ff->codec_ctx->time_base = (AVRational){1, ff->fps};
     ff->codec_ctx->framerate = (AVRational){ff->fps, 1};
     ff->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    
+
     /* Bitrate */
     if (ctx->encoder.bitrate > 0) {
         ff->codec_ctx->bit_rate = ctx->encoder.bitrate;
     } else {
-        ff->codec_ctx->bit_rate = 5000000;  /* 5 Mbps default */
+        ff->codec_ctx->bit_rate = 5000000; /* 5 Mbps default */
     }
 
     /* GOP size (keyframe interval) */
-    ff->codec_ctx->gop_size = ff->fps * 2;  /* Keyframe every 2 seconds */
-    ff->codec_ctx->max_b_frames = 0;  /* No B-frames for low latency */
+    ff->codec_ctx->gop_size = ff->fps * 2; /* Keyframe every 2 seconds */
+    ff->codec_ctx->max_b_frames = 0;       /* No B-frames for low latency */
 
     /* x264 specific settings for low latency */
     if (codec == CODEC_H264) {
@@ -198,11 +199,8 @@ int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec) {
     }
 
     /* Initialize swscale context for RGBA to YUV420P conversion */
-    ff->sws_ctx = sws_getContext(
-        ff->width, ff->height, AV_PIX_FMT_RGBA,
-        ff->width, ff->height, AV_PIX_FMT_YUV420P,
-        SWS_FAST_BILINEAR, NULL, NULL, NULL
-    );
+    ff->sws_ctx = sws_getContext(ff->width, ff->height, AV_PIX_FMT_RGBA, ff->width, ff->height,
+                                 AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 
     if (!ff->sws_ctx) {
         fprintf(stderr, "ERROR: Cannot initialize swscale context\n");
@@ -222,9 +220,8 @@ int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec) {
     ctx->encoder.low_latency = true;
     ctx->encoder.max_output_size = (size_t)ff->width * ff->height * 4;
 
-    printf("✓ FFmpeg %s encoder ready: %dx%d @ %d fps, %d kbps (software)\n",
-           codec_name, ff->width, ff->height, ff->fps, 
-           ctx->encoder.bitrate / 1000);
+    printf("✓ FFmpeg %s encoder ready: %dx%d @ %d fps, %d kbps (software)\n", codec_name, ff->width,
+           ff->height, ff->fps, ctx->encoder.bitrate / 1000);
     printf("  ⚠ WARNING: Using CPU encoding - performance may be limited\n");
 
     return 0;
@@ -233,27 +230,24 @@ int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec) {
 /*
  * Encode a frame with FFmpeg
  */
-int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                   uint8_t *out, size_t *out_size) {
+int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                   size_t *out_size) {
     if (!ctx || !in || !out || !out_size) {
         return -1;
     }
 
-    ffmpeg_ctx_t *ff = (ffmpeg_ctx_t*)ctx->encoder.hw_ctx;
+    ffmpeg_ctx_t *ff = (ffmpeg_ctx_t *)ctx->encoder.hw_ctx;
     if (!ff) {
         fprintf(stderr, "ERROR: FFmpeg encoder not initialized\n");
         return -1;
     }
 
     /* Convert RGBA to YUV420P */
-    const uint8_t *src_data[1] = { in->data };
-    int src_linesize[1] = { (int)in->pitch };
+    const uint8_t *src_data[1] = {in->data};
+    int src_linesize[1] = {(int)in->pitch};
 
-    int ret = sws_scale(
-        ff->sws_ctx,
-        src_data, src_linesize, 0, ff->height,
-        ff->frame->data, ff->frame->linesize
-    );
+    int ret = sws_scale(ff->sws_ctx, src_data, src_linesize, 0, ff->height, ff->frame->data,
+                        ff->frame->linesize);
 
     if (ret < 0) {
         fprintf(stderr, "ERROR: Color conversion failed\n");
@@ -311,8 +305,8 @@ int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
 /*
  * Encode frame with keyframe detection
  */
-int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                      uint8_t *out, size_t *out_size, bool *is_keyframe) {
+int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                      size_t *out_size, bool *is_keyframe) {
     int result = rootstream_encode_frame_ffmpeg(ctx, in, out, out_size);
     if (result == 0 && is_keyframe && *out_size > 0) {
         /* Detect keyframe from NAL units */
@@ -329,7 +323,7 @@ void rootstream_encoder_cleanup_ffmpeg(rootstream_ctx_t *ctx) {
         return;
     }
 
-    ffmpeg_ctx_t *ff = (ffmpeg_ctx_t*)ctx->encoder.hw_ctx;
+    ffmpeg_ctx_t *ff = (ffmpeg_ctx_t *)ctx->encoder.hw_ctx;
 
     if (ff->sws_ctx) {
         sws_freeContext(ff->sws_ctx);
@@ -351,7 +345,7 @@ void rootstream_encoder_cleanup_ffmpeg(rootstream_ctx_t *ctx) {
     ctx->encoder.hw_ctx = NULL;
 }
 
-#else  /* !HAVE_FFMPEG */
+#else /* !HAVE_FFMPEG */
 
 /* Stub implementations when FFmpeg is not available */
 
@@ -367,8 +361,8 @@ int rootstream_encoder_init_ffmpeg(rootstream_ctx_t *ctx, codec_type_t codec) {
     return -1;
 }
 
-int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                   uint8_t *out, size_t *out_size) {
+int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                   size_t *out_size) {
     (void)ctx;
     (void)in;
     (void)out;
@@ -376,8 +370,8 @@ int rootstream_encode_frame_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
     return -1;
 }
 
-int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                      uint8_t *out, size_t *out_size, bool *is_keyframe) {
+int rootstream_encode_frame_ex_ffmpeg(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                      size_t *out_size, bool *is_keyframe) {
     (void)ctx;
     (void)in;
     (void)out;
@@ -390,4 +384,4 @@ void rootstream_encoder_cleanup_ffmpeg(rootstream_ctx_t *ctx) {
     (void)ctx;
 }
 
-#endif  /* HAVE_FFMPEG */
+#endif /* HAVE_FFMPEG */

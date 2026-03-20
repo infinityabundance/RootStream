@@ -14,8 +14,8 @@
 #ifndef ROOTSTREAM_JITTER_STATS_H
 #define ROOTSTREAM_JITTER_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,13 +23,13 @@ extern "C" {
 
 /** Jitter statistics snapshot */
 typedef struct {
-    uint64_t packets_received;   /**< Total packets received */
-    uint64_t packets_late;       /**< Packets that arrived past playout deadline */
-    uint64_t packets_dropped;    /**< Packets dropped (buffer full) */
-    double   jitter_us;          /**< RFC 3550 inter-arrival jitter estimate (µs) */
-    double   avg_delay_us;       /**< Running average end-to-end delay (µs) */
-    double   min_delay_us;       /**< Minimum observed delay */
-    double   max_delay_us;       /**< Maximum observed delay */
+    uint64_t packets_received; /**< Total packets received */
+    uint64_t packets_late;     /**< Packets that arrived past playout deadline */
+    uint64_t packets_dropped;  /**< Packets dropped (buffer full) */
+    double jitter_us;          /**< RFC 3550 inter-arrival jitter estimate (µs) */
+    double avg_delay_us;       /**< Running average end-to-end delay (µs) */
+    double min_delay_us;       /**< Minimum observed delay */
+    double max_delay_us;       /**< Maximum observed delay */
 } jitter_stats_snapshot_t;
 
 /** Opaque jitter stats context */
@@ -59,11 +59,8 @@ void jitter_stats_destroy(jitter_stats_t *st);
  * @param was_dropped  1 if a packet was dropped to accommodate this one
  * @return             0 on success, -1 on NULL args
  */
-int jitter_stats_record_arrival(jitter_stats_t *st,
-                                  uint64_t        send_us,
-                                  uint64_t        recv_us,
-                                  int             is_late,
-                                  int             was_dropped);
+int jitter_stats_record_arrival(jitter_stats_t *st, uint64_t send_us, uint64_t recv_us, int is_late,
+                                int was_dropped);
 
 /**
  * jitter_stats_snapshot — copy current statistics
@@ -72,8 +69,7 @@ int jitter_stats_record_arrival(jitter_stats_t *st,
  * @param out  Output snapshot
  * @return     0 on success, -1 on NULL args
  */
-int jitter_stats_snapshot(const jitter_stats_t    *st,
-                            jitter_stats_snapshot_t *out);
+int jitter_stats_snapshot(const jitter_stats_t *st, jitter_stats_snapshot_t *out);
 
 /**
  * jitter_stats_reset — clear all statistics

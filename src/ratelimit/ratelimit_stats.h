@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_RATELIMIT_STATS_H
 #define ROOTSTREAM_RATELIMIT_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +21,8 @@ extern "C" {
 typedef struct {
     uint64_t packets_allowed;   /**< Total packets that passed */
     uint64_t packets_throttled; /**< Total packets that were dropped */
-    double   bytes_consumed;    /**< Total bytes that passed */
-    double   throttle_rate;     /**< throttled / (allowed + throttled) */
+    double bytes_consumed;      /**< Total bytes that passed */
+    double throttle_rate;       /**< throttled / (allowed + throttled) */
 } ratelimit_stats_snapshot_t;
 
 /** Opaque stats context */
@@ -59,8 +59,7 @@ int ratelimit_stats_record(ratelimit_stats_t *st, int allowed, double bytes);
  * @param out  Output snapshot
  * @return     0 on success, -1 on NULL
  */
-int ratelimit_stats_snapshot(const ratelimit_stats_t    *st,
-                               ratelimit_stats_snapshot_t *out);
+int ratelimit_stats_snapshot(const ratelimit_stats_t *st, ratelimit_stats_snapshot_t *out);
 
 /**
  * ratelimit_stats_reset — clear all accumulators

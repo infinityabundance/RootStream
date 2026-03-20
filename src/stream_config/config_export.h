@@ -10,8 +10,9 @@
 #ifndef ROOTSTREAM_CONFIG_EXPORT_H
 #define ROOTSTREAM_CONFIG_EXPORT_H
 
-#include "stream_config.h"
 #include <stddef.h>
+
+#include "stream_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,9 +34,7 @@ extern "C" {
  * @param buf_sz  Buffer size
  * @return        Bytes written (excl. NUL), or -1 if buf too small
  */
-int config_export_json(const stream_config_t *cfg,
-                         char                  *buf,
-                         size_t                 buf_sz);
+int config_export_json(const stream_config_t *cfg, char *buf, size_t buf_sz);
 
 /**
  * config_vcodec_name — return codec name string for @code

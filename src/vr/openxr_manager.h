@@ -5,20 +5,17 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // OpenXR forward declarations (to avoid requiring OpenXR headers)
-typedef struct XrInstance_T* XrInstance;
-typedef struct XrSession_T* XrSession;
+typedef struct XrInstance_T *XrInstance;
+typedef struct XrSession_T *XrSession;
 typedef uint64_t XrSystemId;
 typedef int32_t XrEnvironmentBlendMode;
 
 // Eye enumeration
-typedef enum {
-    XR_EYE_LEFT = 0,
-    XR_EYE_RIGHT = 1
-} XREye;
+typedef enum { XR_EYE_LEFT = 0, XR_EYE_RIGHT = 1 } XREye;
 
 // Vector and quaternion types
 typedef struct {
@@ -67,7 +64,7 @@ typedef struct {
 typedef struct OpenXRManager OpenXRManager;
 
 // Initialization and cleanup
-OpenXRManager* openxr_manager_create(void);
+OpenXRManager *openxr_manager_create(void);
 int openxr_manager_init(OpenXRManager *manager);
 void openxr_manager_cleanup(OpenXRManager *manager);
 void openxr_manager_destroy(OpenXRManager *manager);
@@ -89,19 +86,19 @@ bool openxr_manager_is_tracking_active(OpenXRManager *manager);
 XRInputState openxr_manager_get_input(OpenXRManager *manager);
 
 // Haptic feedback
-int openxr_manager_vibrate_controller(OpenXRManager *manager, XREye hand, 
-                                     float intensity, float duration_ms);
+int openxr_manager_vibrate_controller(OpenXRManager *manager, XREye hand, float intensity,
+                                      float duration_ms);
 
 // Frame swapchain
 uint32_t openxr_manager_acquire_swapchain_image(OpenXRManager *manager);
 int openxr_manager_release_swapchain_image(OpenXRManager *manager);
 
 // System information
-int openxr_manager_get_recommended_resolution(OpenXRManager *manager, 
-                                              uint32_t *width, uint32_t *height);
+int openxr_manager_get_recommended_resolution(OpenXRManager *manager, uint32_t *width,
+                                              uint32_t *height);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // OPENXR_MANAGER_H
+#endif  // OPENXR_MANAGER_H

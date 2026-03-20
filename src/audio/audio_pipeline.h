@@ -16,9 +16,9 @@
 #ifndef ROOTSTREAM_AUDIO_PIPELINE_H
 #define ROOTSTREAM_AUDIO_PIPELINE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,10 +28,8 @@ extern "C" {
 #define AUDIO_PIPELINE_MAX_NODES 16
 
 /** DSP node function type — modifies @samples in-place */
-typedef void (*audio_filter_fn_t)(float *samples,
-                                  size_t frame_count,
-                                  int    channels,
-                                  void  *user_data);
+typedef void (*audio_filter_fn_t)(float *samples, size_t frame_count, int channels,
+                                  void *user_data);
 
 /**
  * audio_filter_node_t — one DSP stage in the chain
@@ -40,10 +38,10 @@ typedef void (*audio_filter_fn_t)(float *samples,
  * node is in a pipeline.
  */
 typedef struct {
-    const char       *name;      /**< Human-readable name for diagnostics */
-    audio_filter_fn_t process;   /**< Processing callback (non-NULL) */
-    void             *user_data; /**< Opaque state passed to @process */
-    bool              enabled;   /**< When false the node is bypassed */
+    const char *name;          /**< Human-readable name for diagnostics */
+    audio_filter_fn_t process; /**< Processing callback (non-NULL) */
+    void *user_data;           /**< Opaque state passed to @process */
+    bool enabled;              /**< When false the node is bypassed */
 } audio_filter_node_t;
 
 /** Opaque pipeline handle */
@@ -74,8 +72,7 @@ void audio_pipeline_destroy(audio_pipeline_t *pipeline);
  * @param node      Fully initialised node (shallow copy stored)
  * @return          0 on success, -1 if pipeline is full
  */
-int audio_pipeline_add_node(audio_pipeline_t *pipeline,
-                             const audio_filter_node_t *node);
+int audio_pipeline_add_node(audio_pipeline_t *pipeline, const audio_filter_node_t *node);
 
 /**
  * audio_pipeline_remove_node — remove a node by name
@@ -93,9 +90,7 @@ int audio_pipeline_remove_node(audio_pipeline_t *pipeline, const char *name);
  * @param samples      Interleaved float PCM buffer (modified in-place)
  * @param frame_count  Number of audio frames (samples / channels)
  */
-void audio_pipeline_process(audio_pipeline_t *pipeline,
-                             float            *samples,
-                             size_t            frame_count);
+void audio_pipeline_process(audio_pipeline_t *pipeline, float *samples, size_t frame_count);
 
 /**
  * audio_pipeline_node_count — return number of nodes in the pipeline

@@ -15,22 +15,23 @@
 #ifndef ROOTSTREAM_EB_BUS_H
 #define ROOTSTREAM_EB_BUS_H
 
-#include "eb_event.h"
 #include <stdint.h>
+
+#include "eb_event.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EB_MAX_SUBSCRIBERS  16
-#define EB_TYPE_ANY         UINT32_MAX  /**< Wildcard: match all event types */
+#define EB_MAX_SUBSCRIBERS 16
+#define EB_TYPE_ANY UINT32_MAX /**< Wildcard: match all event types */
 
 /** Subscription callback */
 typedef void (*eb_callback_t)(const eb_event_t *event, void *user);
 
 /** Opaque subscription handle */
 typedef int eb_handle_t;
-#define EB_INVALID_HANDLE  (-1)
+#define EB_INVALID_HANDLE (-1)
 
 /** Opaque event bus */
 typedef struct eb_bus_s eb_bus_t;
@@ -56,10 +57,7 @@ void eb_bus_destroy(eb_bus_t *b);
  * @param user    Opaque user pointer passed to callback
  * @return        Non-negative handle, or EB_INVALID_HANDLE on full/invalid
  */
-eb_handle_t eb_bus_subscribe(eb_bus_t *b,
-                              eb_type_t    type_id,
-                              eb_callback_t cb,
-                              void         *user);
+eb_handle_t eb_bus_subscribe(eb_bus_t *b, eb_type_t type_id, eb_callback_t cb, void *user);
 
 /**
  * eb_bus_unsubscribe — remove a subscription

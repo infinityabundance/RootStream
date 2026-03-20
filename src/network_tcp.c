@@ -1,32 +1,33 @@
 /*
  * network_tcp.c - TCP fallback transport when UDP blocked
- * 
+ *
  * Encrypted TCP tunnel for unreliable networks.
  * Uses same encryption/packet format as UDP for compatibility.
  * Slower but works everywhere TCP available.
  */
 
-#include "../include/rootstream.h"
-#include "platform/platform.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
+#include "platform/platform.h"
 
 #ifndef RS_PLATFORM_WINDOWS
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #else
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
 
 typedef struct {
-    rs_socket_t fd;            /* TCP socket FD */
+    rs_socket_t fd; /* TCP socket FD */
     struct sockaddr_in addr;
     bool connected;
     uint64_t connect_time;
@@ -38,7 +39,8 @@ typedef struct {
  * Try to establish TCP connection to peer
  */
 int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
-    if (!ctx || !peer) return -1;
+    if (!ctx || !peer)
+        return -1;
 
     rs_socket_t fd = rs_socket_create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (fd == RS_INVALID_SOCKET) {
@@ -57,7 +59,7 @@ int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
 #endif
 
     struct sockaddr_in *addr = (struct sockaddr_in *)&peer->addr;
-    
+
     /* Connect (non-blocking) */
     if (connect(fd, (struct sockaddr *)addr, peer->addr_len) < 0) {
         int err = rs_socket_error();
@@ -74,13 +76,13 @@ int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
 
     /* Wait for connection with timeout */
 #ifndef RS_PLATFORM_WINDOWS
-    struct pollfd pfd = { .fd = fd, .events = POLLOUT };
-    int ret = poll(&pfd, 1, 5000);  /* 5 second timeout */
+    struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+    int ret = poll(&pfd, 1, 5000); /* 5 second timeout */
 #else
     fd_set writefds;
     FD_ZERO(&writefds);
     FD_SET(fd, &writefds);
-    struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
+    struct timeval tv = {.tv_sec = 5, .tv_usec = 0};
     int ret = select((int)fd + 1, NULL, &writefds, NULL, &tv);
 #endif
 
@@ -114,7 +116,7 @@ int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
 
     peer->transport_priv = tcp;
     peer->transport = TRANSPORT_TCP;
-    
+
     printf("✓ TCP connection established to %s\n", peer->hostname);
     return 0;
 }
@@ -122,13 +124,15 @@ int rootstream_net_tcp_connect(rootstream_ctx_t *ctx, peer_t *peer) {
 /*
  * Send packet via TCP
  */
-int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
-                           const uint8_t *data, size_t size) {
-    if (!ctx || !peer || !data || size == 0) return -1;
-    if (!peer->transport_priv) return -1;
+int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer, const uint8_t *data, size_t size) {
+    if (!ctx || !peer || !data || size == 0)
+        return -1;
+    if (!peer->transport_priv)
+        return -1;
 
     tcp_peer_ctx_t *tcp = (tcp_peer_ctx_t *)peer->transport_priv;
-    if (!tcp->connected) return -1;
+    if (!tcp->connected)
+        return -1;
 
     size_t sent = 0;
     while (sent < size) {
@@ -137,7 +141,7 @@ int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
 #else
         ssize_t ret = send(tcp->fd, (const char *)(data + sent), (int)(size - sent), 0);
 #endif
-        
+
         if (ret < 0) {
             int err = rs_socket_error();
 #ifndef RS_PLATFORM_WINDOWS
@@ -153,7 +157,7 @@ int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
                 return -1;
             }
         }
-        
+
         sent += ret;
     }
 
@@ -165,21 +169,24 @@ int rootstream_net_tcp_send(rootstream_ctx_t *ctx, peer_t *peer,
 /*
  * Receive packet via TCP with reassembly
  */
-int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
-                           uint8_t *buffer, size_t *buffer_len) {
-    if (!ctx || !peer || !buffer || !buffer_len) return -1;
-    if (!peer->transport_priv) return -1;
+int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer, uint8_t *buffer,
+                            size_t *buffer_len) {
+    if (!ctx || !peer || !buffer || !buffer_len)
+        return -1;
+    if (!peer->transport_priv)
+        return -1;
 
     tcp_peer_ctx_t *tcp = (tcp_peer_ctx_t *)peer->transport_priv;
-    if (!tcp->connected) return -1;
+    if (!tcp->connected)
+        return -1;
 
-    /* Try to read more data */
+        /* Try to read more data */
 #ifndef RS_PLATFORM_WINDOWS
     ssize_t ret = recv(tcp->fd, tcp->read_buffer + tcp->read_offset,
-                      sizeof(tcp->read_buffer) - tcp->read_offset, MSG_DONTWAIT);
+                       sizeof(tcp->read_buffer) - tcp->read_offset, MSG_DONTWAIT);
 #else
     ssize_t ret = recv(tcp->fd, (char *)(tcp->read_buffer + tcp->read_offset),
-                      (int)(sizeof(tcp->read_buffer) - tcp->read_offset), 0);
+                       (int)(sizeof(tcp->read_buffer) - tcp->read_offset), 0);
 #endif
 
     if (ret < 0) {
@@ -193,7 +200,7 @@ int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
             tcp->connected = false;
             return -1;
         }
-        return 0;  /* No data available */
+        return 0; /* No data available */
     }
 
     if (ret == 0) {
@@ -207,14 +214,14 @@ int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
 
     /* Try to extract a complete packet */
     if (tcp->read_offset < sizeof(packet_header_t)) {
-        return 0;  /* Need more data */
+        return 0; /* Need more data */
     }
 
     packet_header_t *hdr = (packet_header_t *)tcp->read_buffer;
     size_t packet_size = sizeof(packet_header_t) + hdr->payload_size;
 
     if (tcp->read_offset < packet_size) {
-        return 0;  /* Need more data */
+        return 0; /* Need more data */
     }
 
     /* We have a complete packet */
@@ -222,20 +229,20 @@ int rootstream_net_tcp_recv(rootstream_ctx_t *ctx, peer_t *peer,
     *buffer_len = packet_size;
 
     /* Shift remaining data */
-    memmove(tcp->read_buffer, tcp->read_buffer + packet_size,
-            tcp->read_offset - packet_size);
+    memmove(tcp->read_buffer, tcp->read_buffer + packet_size, tcp->read_offset - packet_size);
     tcp->read_offset -= packet_size;
 
     ctx->bytes_received += packet_size;
     peer->last_received = get_timestamp_ms();
-    return 1;  /* Packet ready */
+    return 1; /* Packet ready */
 }
 
 /*
  * Cleanup TCP connection
  */
 void rootstream_net_tcp_cleanup(peer_t *peer) {
-    if (!peer || !peer->transport_priv) return;
+    if (!peer || !peer->transport_priv)
+        return;
 
     tcp_peer_ctx_t *tcp = (tcp_peer_ctx_t *)peer->transport_priv;
     if (tcp->fd != RS_INVALID_SOCKET) {
@@ -249,7 +256,8 @@ void rootstream_net_tcp_cleanup(peer_t *peer) {
  * Check TCP connection health
  */
 bool rootstream_net_tcp_is_healthy(peer_t *peer) {
-    if (!peer || !peer->transport_priv) return false;
+    if (!peer || !peer->transport_priv)
+        return false;
     tcp_peer_ctx_t *tcp = (tcp_peer_ctx_t *)peer->transport_priv;
     return tcp->connected;
 }

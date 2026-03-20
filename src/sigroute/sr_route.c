@@ -31,26 +31,27 @@
  */
 
 #include "sr_route.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 /* ── route entry (internal) ───────────────────────────────────────── */
 
 typedef struct {
-    uint32_t          src_mask;  /* applied to signal_id before comparison */
-    uint32_t          match_id;  /* expected value after masking            */
-    sr_filter_fn      filter_fn; /* optional per-signal predicate (may be NULL) */
-    sr_deliver_fn     deliver;   /* mandatory delivery callback             */
-    void             *user;      /* opaque pointer forwarded to callbacks   */
-    bool              in_use;    /* slot is occupied (false = free)         */
-    sr_route_handle_t handle;    /* unique, monotonically increasing ID     */
+    uint32_t src_mask;        /* applied to signal_id before comparison */
+    uint32_t match_id;        /* expected value after masking            */
+    sr_filter_fn filter_fn;   /* optional per-signal predicate (may be NULL) */
+    sr_deliver_fn deliver;    /* mandatory delivery callback             */
+    void *user;               /* opaque pointer forwarded to callbacks   */
+    bool in_use;              /* slot is occupied (false = free)         */
+    sr_route_handle_t handle; /* unique, monotonically increasing ID     */
 } route_entry_t;
 
 /* ── router struct ────────────────────────────────────────────────── */
 
 struct sr_route_s {
-    route_entry_t     routes[SR_MAX_ROUTES];
-    int               count;       /* active route count */
+    route_entry_t routes[SR_MAX_ROUTES];
+    int count;                     /* active route count */
     sr_route_handle_t next_handle; /* next handle to assign (never reused)  */
 };
 
@@ -62,34 +63,34 @@ sr_router_t *sr_router_create(void) {
     return calloc(1, sizeof(sr_router_t));
 }
 
-void sr_router_destroy(sr_router_t *r) { free(r); }
-int  sr_router_count(const sr_router_t *r) { return r ? r->count : 0; }
+void sr_router_destroy(sr_router_t *r) {
+    free(r);
+}
+int sr_router_count(const sr_router_t *r) {
+    return r ? r->count : 0;
+}
 
-
-sr_route_handle_t sr_router_add_route(sr_router_t   *r,
-                                       uint32_t       src_mask,
-                                       uint32_t       match_id,
-                                       sr_filter_fn   filter_fn,
-                                       sr_deliver_fn  deliver,
-                                       void          *user) {
+sr_route_handle_t sr_router_add_route(sr_router_t *r, uint32_t src_mask, uint32_t match_id,
+                                      sr_filter_fn filter_fn, sr_deliver_fn deliver, void *user) {
     /* deliver must be non-NULL: a route with no callback is useless and
      * would silently swallow matching signals.  filter_fn may be NULL
      * (no filtering = deliver all matching signals). */
-    if (!r || !deliver || r->count >= SR_MAX_ROUTES) return SR_INVALID_HANDLE;
+    if (!r || !deliver || r->count >= SR_MAX_ROUTES)
+        return SR_INVALID_HANDLE;
 
     for (int i = 0; i < SR_MAX_ROUTES; i++) {
         if (!r->routes[i].in_use) {
-            r->routes[i].src_mask  = src_mask;
-            r->routes[i].match_id  = match_id;
+            r->routes[i].src_mask = src_mask;
+            r->routes[i].match_id = match_id;
             r->routes[i].filter_fn = filter_fn;
-            r->routes[i].deliver   = deliver;
-            r->routes[i].user      = user;
-            r->routes[i].in_use    = true;
+            r->routes[i].deliver = deliver;
+            r->routes[i].user = user;
+            r->routes[i].in_use = true;
             /* next_handle is monotonically increasing and never reused.
              * Reuse would break callers that cache a handle for removal
              * after the original route was removed and a new one was added
              * to the same slot. */
-            r->routes[i].handle    = r->next_handle++;
+            r->routes[i].handle = r->next_handle++;
             r->count++;
             return r->routes[i].handle;
         }
@@ -98,7 +99,8 @@ sr_route_handle_t sr_router_add_route(sr_router_t   *r,
 }
 
 int sr_router_remove_route(sr_router_t *r, sr_route_handle_t h) {
-    if (!r || h < 0) return -1;
+    if (!r || h < 0)
+        return -1;
     for (int i = 0; i < SR_MAX_ROUTES; i++) {
         if (r->routes[i].in_use && r->routes[i].handle == h) {
             /* memset to zero: clears in_use=false, nulls all pointers.
@@ -110,11 +112,12 @@ int sr_router_remove_route(sr_router_t *r, sr_route_handle_t h) {
             return 0;
         }
     }
-    return -1;  /* handle not found — caller may have already removed it */
+    return -1; /* handle not found — caller may have already removed it */
 }
 
 int sr_router_route(sr_router_t *r, const sr_signal_t *s) {
-    if (!r || !s) return 0;
+    if (!r || !s)
+        return 0;
     int delivered = 0;
 
     /* Iterate ALL routes — a signal may match and be delivered to
@@ -123,7 +126,8 @@ int sr_router_route(sr_router_t *r, const sr_signal_t *s) {
      * (e.g., both a logger and an alert system subscribed to the same
      * signal range). */
     for (int i = 0; i < SR_MAX_ROUTES; i++) {
-        if (!r->routes[i].in_use) continue;
+        if (!r->routes[i].in_use)
+            continue;
 
         /* Bitmask match: test only the bits indicated by src_mask.
          * A src_mask of 0 makes match_id=0 a wildcard (0 & anything == 0). */
@@ -133,8 +137,7 @@ int sr_router_route(sr_router_t *r, const sr_signal_t *s) {
         /* Optional predicate filter: allows fine-grained routing beyond
          * what the bitmask alone can express (e.g., filter by level range,
          * source_id allow-list, time-of-day, etc.). */
-        if (r->routes[i].filter_fn &&
-            !r->routes[i].filter_fn(s, r->routes[i].user))
+        if (r->routes[i].filter_fn && !r->routes[i].filter_fn(s, r->routes[i].user))
             continue;
 
         r->routes[i].deliver(s, r->routes[i].user);

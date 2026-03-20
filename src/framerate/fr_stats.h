@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_FR_STATS_H
 #define ROOTSTREAM_FR_STATS_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +19,11 @@ extern "C" {
 
 /** Frame rate statistics snapshot */
 typedef struct {
-    uint64_t frame_count;       /**< Frames produced */
-    uint64_t drop_count;        /**< Frames dropped (limiter returned 0) */
-    double   avg_interval_us;   /**< Average inter-frame interval (µs) */
-    uint64_t min_interval_us;   /**< Minimum interval (µs) */
-    uint64_t max_interval_us;   /**< Maximum interval (µs) */
+    uint64_t frame_count;     /**< Frames produced */
+    uint64_t drop_count;      /**< Frames dropped (limiter returned 0) */
+    double avg_interval_us;   /**< Average inter-frame interval (µs) */
+    uint64_t min_interval_us; /**< Minimum interval (µs) */
+    uint64_t max_interval_us; /**< Maximum interval (µs) */
 } fr_stats_snapshot_t;
 
 /** Opaque frame rate stats context */

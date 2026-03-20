@@ -5,8 +5,9 @@
  * Every entry point logs a clear message and returns safely.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
+
+#include "../include/rootstream.h"
 
 int tray_init(rootstream_ctx_t *ctx, int argc, char **argv) {
     (void)ctx;

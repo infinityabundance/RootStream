@@ -25,24 +25,24 @@
 #ifndef ROOTSTREAM_STREAM_METADATA_H
 #define ROOTSTREAM_STREAM_METADATA_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define METADATA_MAGIC          0x4D455441UL  /* 'META' */
-#define METADATA_FIXED_HDR_SZ   22
-#define METADATA_MAX_TITLE      256
-#define METADATA_MAX_DESC       1024
-#define METADATA_MAX_TAGS       512
+#define METADATA_MAGIC 0x4D455441UL /* 'META' */
+#define METADATA_FIXED_HDR_SZ 22
+#define METADATA_MAX_TITLE 256
+#define METADATA_MAX_DESC 1024
+#define METADATA_MAX_TAGS 512
 
 /** Metadata flags */
-#define METADATA_FLAG_LIVE       0x01  /**< Live stream (not VOD) */
-#define METADATA_FLAG_ENCRYPTED  0x02  /**< Stream uses encryption */
-#define METADATA_FLAG_PUBLIC     0x04  /**< Stream is publicly visible */
+#define METADATA_FLAG_LIVE 0x01      /**< Live stream (not VOD) */
+#define METADATA_FLAG_ENCRYPTED 0x02 /**< Stream uses encryption */
+#define METADATA_FLAG_PUBLIC 0x04    /**< Stream is publicly visible */
 
 /** Stream metadata record */
 typedef struct {
@@ -50,11 +50,11 @@ typedef struct {
     uint32_t duration_us;
     uint16_t video_width;
     uint16_t video_height;
-    uint8_t  video_fps;
-    uint8_t  flags;
-    char     title[METADATA_MAX_TITLE + 1];
-    char     description[METADATA_MAX_DESC + 1];
-    char     tags[METADATA_MAX_TAGS + 1];
+    uint8_t video_fps;
+    uint8_t flags;
+    char title[METADATA_MAX_TITLE + 1];
+    char description[METADATA_MAX_DESC + 1];
+    char tags[METADATA_MAX_TAGS + 1];
 } stream_metadata_t;
 
 /**
@@ -65,9 +65,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        Bytes written, or -1 on error
  */
-int stream_metadata_encode(const stream_metadata_t *meta,
-                             uint8_t                 *buf,
-                             size_t                   buf_sz);
+int stream_metadata_encode(const stream_metadata_t *meta, uint8_t *buf, size_t buf_sz);
 
 /**
  * stream_metadata_decode — parse @meta from @buf
@@ -77,9 +75,7 @@ int stream_metadata_encode(const stream_metadata_t *meta,
  * @param meta    Output metadata
  * @return        0 on success, -1 on error
  */
-int stream_metadata_decode(const uint8_t    *buf,
-                             size_t            buf_sz,
-                             stream_metadata_t *meta);
+int stream_metadata_decode(const uint8_t *buf, size_t buf_sz, stream_metadata_t *meta);
 
 /**
  * stream_metadata_is_live — return true if METADATA_FLAG_LIVE is set

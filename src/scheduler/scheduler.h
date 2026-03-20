@@ -14,19 +14,19 @@
 #ifndef ROOTSTREAM_SCHEDULER_H
 #define ROOTSTREAM_SCHEDULER_H
 
-#include "schedule_entry.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "schedule_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SCHEDULER_MAX_ENTRIES  256
+#define SCHEDULER_MAX_ENTRIES 256
 
 /** Fired when a scheduled entry's start time is reached */
-typedef void (*scheduler_fire_fn)(const schedule_entry_t *entry,
-                                   void                   *user_data);
+typedef void (*scheduler_fire_fn)(const schedule_entry_t *entry, void *user_data);
 
 /** Opaque scheduler handle */
 typedef struct scheduler_s scheduler_t;

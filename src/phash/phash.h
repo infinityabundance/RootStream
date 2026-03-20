@@ -19,20 +19,20 @@
 #ifndef ROOTSTREAM_PHASH_H
 #define ROOTSTREAM_PHASH_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Size of the internal work grid */
-#define PHASH_WORK_SIZE   32
+#define PHASH_WORK_SIZE 32
 /** Size of the feature region extracted from the DCT */
-#define PHASH_FEAT_SIZE    8
+#define PHASH_FEAT_SIZE 8
 /** Resulting hash width in bits */
-#define PHASH_BITS        (PHASH_FEAT_SIZE * PHASH_FEAT_SIZE)
+#define PHASH_BITS (PHASH_FEAT_SIZE * PHASH_FEAT_SIZE)
 
 /**
  * phash_compute — compute 64-bit perceptual hash of an 8-bit luma plane
@@ -44,11 +44,7 @@ extern "C" {
  * @param out     64-bit pHash output
  * @return        0 on success, -1 on NULL/invalid args
  */
-int phash_compute(const uint8_t *luma,
-                   int            width,
-                   int            height,
-                   int            stride,
-                   uint64_t      *out);
+int phash_compute(const uint8_t *luma, int width, int height, int stride, uint64_t *out);
 
 /**
  * phash_hamming — compute Hamming distance between two pHashes

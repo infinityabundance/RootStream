@@ -21,10 +21,11 @@
 #ifndef ROOTSTREAM_FEC_DECODER_H
 #define ROOTSTREAM_FEC_DECODER_H
 
-#include "fec_matrix.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "fec_matrix.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,12 +45,8 @@ extern "C" {
  *                   Buffers for non-lost sources are left untouched.
  * @return           Number of source packets recovered (0..k), or -1 on error
  */
-int fec_decode(const uint8_t *const *pkts,
-                 const bool           *received,
-                 int                   k,
-                 int                   r,
-                 size_t                pkt_size,
-                 uint8_t             **recovered);
+int fec_decode(const uint8_t *const *pkts, const bool *received, int k, int r, size_t pkt_size,
+               uint8_t **recovered);
 
 #ifdef __cplusplus
 }

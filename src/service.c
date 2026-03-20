@@ -1,33 +1,34 @@
 /*
  * service.c - Background service/daemon
- * 
+ *
  * Runs RootStream as a systemd user service:
  * - No GUI required
  * - Starts on login
  * - Auto-restarts on failure
  * - Logs to journald
- * 
+ *
  * Modes:
  * - Host: Always ready to stream (auto-accept from known peers)
  * - Client: Automatically connect to known host
  */
 
-#include "../include/rootstream.h"
-#include "../include/rootstream_client_session.h"
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
+#include "../include/rootstream_client_session.h"
 
 #ifdef _WIN32
-  #include <io.h>
-  #include <fcntl.h>
-  #define usleep(us) Sleep((us) / 1000)
+#include <fcntl.h>
+#include <io.h>
+#define usleep(us) Sleep((us) / 1000)
 #else
-  #include <unistd.h>
-  #include <sys/stat.h>
-  #include <fcntl.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 static volatile bool service_running = true;
@@ -42,12 +43,13 @@ static void service_signal_handler(int sig) {
  * Check peer health and initiate reconnection if needed (PHASE 4)
  */
 static void check_peer_health(rootstream_ctx_t *ctx) {
-    if (!ctx) return;
-    
+    if (!ctx)
+        return;
+
     uint64_t now = get_timestamp_ms();
     for (int i = 0; i < ctx->num_peers; i++) {
         peer_t *peer = &ctx->peers[i];
-        
+
         /* Check for stale connections (30 second timeout) */
         if (peer->state == PEER_CONNECTED) {
             if (peer->last_received > 0 && now - peer->last_received > 30000) {
@@ -63,7 +65,7 @@ static void check_peer_health(rootstream_ctx_t *ctx) {
 
 /*
  * Daemonize process (if not running under systemd)
- * 
+ *
  * Steps:
  * 1. Fork and exit parent (detach from terminal)
  * 2. Create new session (become session leader)
@@ -161,7 +163,7 @@ static int vaapi_init_wrapper(rootstream_ctx_t *ctx, codec_type_t codec) {
 
 /*
  * Run as host service
- * 
+ *
  * Continuously streams to any connected peer
  */
 int service_run_host(rootstream_ctx_t *ctx) {
@@ -199,7 +201,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
             .capture_fn = rootstream_capture_frame_dummy,
             .cleanup_fn = rootstream_capture_cleanup_dummy,
         },
-        {NULL, NULL, NULL, NULL}  /* Sentinel */
+        {NULL, NULL, NULL, NULL} /* Sentinel */
     };
 
     int backend_idx = 0;
@@ -211,7 +213,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
             ctx->active_backend.capture_name = backends[backend_idx].name;
             break;
         } else {
-            printf("WARNING: Capture backend '%s' failed, trying next...\n", backends[backend_idx].name);
+            printf("WARNING: Capture backend '%s' failed, trying next...\n",
+                   backends[backend_idx].name);
             backend_idx++;
         }
     }
@@ -225,7 +228,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
      * Priority order: NVENC → VA-API → FFmpeg → Raw
      * Each encoder is tried in sequence until one succeeds
      */
-    
+
     /* Define encoder backends in priority order */
     const encoder_backend_t encoder_backends[] = {
         {
@@ -258,15 +261,16 @@ int service_run_host(rootstream_ctx_t *ctx) {
             .encode_fn = rootstream_encode_frame_raw,
             .encode_ex_fn = NULL,
             .cleanup_fn = rootstream_encoder_cleanup_raw,
-            .is_available_fn = NULL,  /* Always available */
+            .is_available_fn = NULL, /* Always available */
         },
-        {NULL}  /* Sentinel */
+        {NULL} /* Sentinel */
     };
 
     /* Determine codec from settings */
     codec_type_t codec = (strcmp(ctx->settings.video_codec, "h265") == 0 ||
-                         strcmp(ctx->settings.video_codec, "hevc") == 0) ?
-                         CODEC_H265 : CODEC_H264;
+                          strcmp(ctx->settings.video_codec, "hevc") == 0)
+                             ? CODEC_H265
+                             : CODEC_H264;
 
     printf("INFO: Initializing video encoder (codec: %s)\n",
            codec == CODEC_H265 ? "H.265/HEVC" : "H.264/AVC");
@@ -277,16 +281,16 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
     while (encoder_backends[encoder_idx].name) {
         const encoder_backend_t *backend = &encoder_backends[encoder_idx];
-        
+
         printf("INFO: Attempting encoder: %s\n", backend->name);
-        
+
         /* Check if backend is available */
         if (backend->is_available_fn && !backend->is_available_fn()) {
             printf("  → Not available on this system\n");
             encoder_idx++;
             continue;
         }
-        
+
         /* Try to initialize */
         int init_result = backend->init_fn(ctx, codec);
 
@@ -295,11 +299,11 @@ int service_run_host(rootstream_ctx_t *ctx) {
             ctx->encoder_backend = backend;
             ctx->active_backend.encoder_name = backend->name;
             encoder_initialized = true;
-            
+
             /* Warn if using fallback (software or raw) */
             if (encoder_idx >= 2) {
-                printf("⚠ WARNING: Using %s\n", 
-                       encoder_idx == 2 ? "software encoder (slow)" : "raw encoder (huge bandwidth)");
+                printf("⚠ WARNING: Using %s\n", encoder_idx == 2 ? "software encoder (slow)"
+                                                                 : "raw encoder (huge bandwidth)");
                 if (encoder_idx == 2) {
                     printf("  Recommended: Install GPU drivers or libva/libva-drm\n");
                     printf("  Performance may be limited to lower bitrate/fps\n");
@@ -307,8 +311,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
             }
             break;
         } else {
-            printf("WARNING: Encoder backend '%s' init failed, trying next...\n", 
-                   backend->name);
+            printf("WARNING: Encoder backend '%s' init failed, trying next...\n", backend->name);
             encoder_idx++;
         }
     }
@@ -325,7 +328,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
     /* Initialize input with fallback (PHASE 6) */
     printf("INFO: Initializing input backend...\n");
-    
+
     /* Try uinput first (primary) */
     if (rootstream_input_init(ctx) == 0) {
         printf("✓ Input backend 'uinput' initialized\n");
@@ -378,29 +381,30 @@ int service_run_host(rootstream_ctx_t *ctx) {
                 .init_fn = audio_capture_init_dummy,
                 .capture_fn = audio_capture_frame_dummy,
                 .cleanup_fn = audio_capture_cleanup_dummy,
-                .is_available_fn = NULL,  /* Always available */
+                .is_available_fn = NULL, /* Always available */
             },
-            {NULL}
-        };
+            {NULL}};
 
         int capture_idx = 0;
         while (capture_backends[capture_idx].name) {
-            printf("INFO: Attempting audio capture backend: %s\n", capture_backends[capture_idx].name);
-            
-            if (capture_backends[capture_idx].is_available_fn && 
+            printf("INFO: Attempting audio capture backend: %s\n",
+                   capture_backends[capture_idx].name);
+
+            if (capture_backends[capture_idx].is_available_fn &&
                 !capture_backends[capture_idx].is_available_fn()) {
                 printf("  → Not available on this system\n");
                 capture_idx++;
                 continue;
             }
-            
+
             if (capture_backends[capture_idx].init_fn(ctx) == 0) {
-                printf("✓ Audio capture backend '%s' initialized\n", capture_backends[capture_idx].name);
+                printf("✓ Audio capture backend '%s' initialized\n",
+                       capture_backends[capture_idx].name);
                 ctx->audio_capture_backend = &capture_backends[capture_idx];
                 ctx->active_backend.audio_cap_name = capture_backends[capture_idx].name;
                 break;
             } else {
-                printf("WARNING: Audio capture backend '%s' failed, trying next...\n", 
+                printf("WARNING: Audio capture backend '%s' failed, trying next...\n",
                        capture_backends[capture_idx].name);
                 capture_idx++;
             }
@@ -444,8 +448,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
     }
     uint8_t *enc_buf = malloc(enc_buf_size);
     if (!enc_buf) {
-        fprintf(stderr, "ERROR: Failed to allocate encode buffer (%zu bytes)\n",
-                enc_buf_size);
+        fprintf(stderr, "ERROR: Failed to allocate encode buffer (%zu bytes)\n", enc_buf_size);
         return -1;
     }
 
@@ -477,8 +480,8 @@ int service_run_host(rootstream_ctx_t *ctx) {
         size_t enc_size = 0;
         bool is_keyframe = false;
         uint64_t encode_start_us = get_timestamp_us();
-        if (rootstream_encode_frame_ex(ctx, &ctx->current_frame,
-                                      enc_buf, &enc_size, &is_keyframe) < 0) {
+        if (rootstream_encode_frame_ex(ctx, &ctx->current_frame, enc_buf, &enc_size, &is_keyframe) <
+            0) {
             fprintf(stderr, "ERROR: Encode failed (frame=%lu)\n", ctx->frames_captured);
             continue;
         }
@@ -494,12 +497,13 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
         /* Capture and encode audio */
         int16_t audio_samples[rootstream_opus_get_frame_size() * rootstream_opus_get_channels()];
-        uint8_t audio_buf[4000];  /* Max Opus packet size */
+        uint8_t audio_buf[4000]; /* Max Opus packet size */
         size_t audio_size = 0;
         size_t num_samples = 0;
 
         if (ctx->audio_capture_backend && ctx->audio_capture_backend->capture_fn) {
-            int audio_result = ctx->audio_capture_backend->capture_fn(ctx, audio_samples, &num_samples);
+            int audio_result =
+                ctx->audio_capture_backend->capture_fn(ctx, audio_samples, &num_samples);
             if (audio_result < 0) {
                 /* Audio capture failed, continue with video only */
                 num_samples = 0;
@@ -520,27 +524,24 @@ int service_run_host(rootstream_ctx_t *ctx) {
             peer_t *peer = &ctx->peers[i];
             if (peer->state == PEER_CONNECTED && peer->is_streaming) {
                 /* Send video */
-                if (enc_size > 0 &&
-                    rootstream_net_send_video(ctx, peer, enc_buf, enc_size,
-                                              ctx->current_frame.timestamp) < 0) {
+                if (enc_size > 0 && rootstream_net_send_video(ctx, peer, enc_buf, enc_size,
+                                                              ctx->current_frame.timestamp) < 0) {
                     fprintf(stderr, "ERROR: Video send failed (peer=%s)\n", peer->hostname);
                 }
 
                 /* Send audio if available */
                 if (audio_size > 0) {
-                    audio_packet_header_t header = {
-                        .timestamp_us = get_timestamp_us(),
-                        .sample_rate = 48000,
-                        .channels = 2,
-                        .samples = (uint16_t)num_samples
-                    };
+                    audio_packet_header_t header = {.timestamp_us = get_timestamp_us(),
+                                                    .sample_rate = 48000,
+                                                    .channels = 2,
+                                                    .samples = (uint16_t)num_samples};
 
                     uint8_t payload[sizeof(audio_packet_header_t) + 4000];
                     memcpy(payload, &header, sizeof(header));
                     memcpy(payload + sizeof(header), audio_buf, audio_size);
 
-                    if (rootstream_net_send_encrypted(ctx, peer, PKT_AUDIO,
-                                                      payload, sizeof(header) + audio_size) < 0) {
+                    if (rootstream_net_send_encrypted(ctx, peer, PKT_AUDIO, payload,
+                                                      sizeof(header) + audio_size) < 0) {
                         fprintf(stderr, "ERROR: Audio send failed (peer=%s)\n", peer->hostname);
                     }
                 }
@@ -549,12 +550,10 @@ int service_run_host(rootstream_ctx_t *ctx) {
         uint64_t send_end_us = get_timestamp_us();
 
         if (ctx->latency.enabled) {
-            latency_sample_t sample = {
-                .capture_us = capture_end_us - loop_start_us,
-                .encode_us = encode_end_us - encode_start_us,
-                .send_us = send_end_us - send_start_us,
-                .total_us = send_end_us - loop_start_us
-            };
+            latency_sample_t sample = {.capture_us = capture_end_us - loop_start_us,
+                                       .encode_us = encode_end_us - encode_start_us,
+                                       .send_us = send_end_us - send_start_us,
+                                       .total_us = send_end_us - loop_start_us};
             latency_record(&ctx->latency, &sample);
         }
 
@@ -576,7 +575,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 
 /*
  * Run as client service
- * 
+ *
  * Automatically connects to configured host
  */
 /*
@@ -603,7 +602,7 @@ int service_run_host(rootstream_ctx_t *ctx) {
 /* SDL video callback — receives one decoded frame and presents it to the
  * SDL2 display window.  Called from the session run thread. */
 typedef struct sdl_client_ctx {
-    rootstream_ctx_t *ctx;         /* Shared with the session's ctx */
+    rootstream_ctx_t *ctx; /* Shared with the session's ctx */
 } sdl_client_ctx_t;
 
 static void sdl_on_video_frame(void *user, const rs_video_frame_t *frame) {
@@ -614,17 +613,18 @@ static void sdl_on_video_frame(void *user, const rs_video_frame_t *frame) {
      * a future phase will update display_present_frame() to accept
      * rs_video_frame_t directly. */
     sdl_client_ctx_t *sdl = (sdl_client_ctx_t *)user;
-    if (!sdl || !frame || !frame->plane0) return;
+    if (!sdl || !frame || !frame->plane0)
+        return;
 
     frame_buffer_t fb;
     memset(&fb, 0, sizeof(fb));
-    fb.width  = frame->width;
+    fb.width = frame->width;
     fb.height = frame->height;
     /* point data at plane0 — display_present_frame() treats the buffer as
      * a packed pixel array.  NV12 and RGBA both work here because the SDL
      * renderer already handles colour-space conversion. */
-    fb.data   = (uint8_t *)frame->plane0;
-    fb.size   = (size_t)(frame->stride0 * frame->height);
+    fb.data = (uint8_t *)frame->plane0;
+    fb.size = (size_t)(frame->stride0 * frame->height);
     if (frame->pixfmt == RS_PIXFMT_NV12) {
         /* Include UV plane in total size so the SDL renderer can
          * upload the full NV12 frame to a two-plane texture. */
@@ -642,7 +642,8 @@ static void sdl_on_audio_frame(void *user, const rs_audio_frame_t *frame) {
      * The audio backend was selected by service_run_client() before calling
      * rs_client_session_run(). */
     sdl_client_ctx_t *sdl = (sdl_client_ctx_t *)user;
-    if (!sdl || !frame || !frame->samples) return;
+    if (!sdl || !frame || !frame->samples)
+        return;
 
     const audio_playback_backend_t *be = sdl->ctx->audio_playback_backend;
     if (be && be->playback_fn) {
@@ -651,7 +652,8 @@ static void sdl_on_audio_frame(void *user, const rs_audio_frame_t *frame) {
 }
 
 int service_run_client(rootstream_ctx_t *ctx) {
-    if (!ctx) return -1;
+    if (!ctx)
+        return -1;
 
     /* Install signal handlers (same as before PHASE-94) */
     signal(SIGTERM, service_signal_handler);
@@ -705,13 +707,11 @@ int service_run_client(rootstream_ctx_t *ctx) {
                 .cleanup_fn = audio_playback_cleanup_dummy,
                 .is_available_fn = NULL,
             },
-            {NULL}
-        };
+            {NULL}};
 
         int idx = 0;
         while (playback_backends[idx].name) {
-            printf("INFO: Attempting audio playback backend: %s\n",
-                   playback_backends[idx].name);
+            printf("INFO: Attempting audio playback backend: %s\n", playback_backends[idx].name);
             if (playback_backends[idx].is_available_fn &&
                 !playback_backends[idx].is_available_fn()) {
                 printf("  → Not available on this system\n");
@@ -719,8 +719,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
                 continue;
             }
             if (playback_backends[idx].init_fn(ctx) == 0) {
-                printf("✓ Audio playback backend '%s' initialized\n",
-                       playback_backends[idx].name);
+                printf("✓ Audio playback backend '%s' initialized\n", playback_backends[idx].name);
                 ctx->audio_playback_backend = &playback_backends[idx];
                 ctx->active_backend.audio_play_name = playback_backends[idx].name;
                 break;
@@ -750,10 +749,10 @@ int service_run_client(rootstream_ctx_t *ctx) {
      * will unify rootstream_ctx_t with rs_client_session_t so there is only
      * one context object. */
     rs_client_config_t cfg = {
-        .peer_host     = ctx->peer_host,
-        .peer_port     = ctx->peer_port,
+        .peer_host = ctx->peer_host,
+        .peer_port = ctx->peer_port,
         .audio_enabled = ctx->settings.audio_enabled,
-        .low_latency   = true,
+        .low_latency = true,
     };
 
     rs_client_session_t *session = rs_client_session_create(&cfg);
@@ -764,7 +763,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
     }
 
     /* Wire the SDL shim callbacks so decoded frames reach the SDL window */
-    sdl_client_ctx_t sdl_ctx = { .ctx = ctx };
+    sdl_client_ctx_t sdl_ctx = {.ctx = ctx};
     rs_client_session_set_video_callback(session, sdl_on_video_frame, &sdl_ctx);
 
     if (ctx->audio_playback_backend) {
@@ -790,8 +789,7 @@ int service_run_client(rootstream_ctx_t *ctx) {
      * client runs the session on a worker QThread instead. */
     int rc = rs_client_session_run(session);
 
-    printf("Decoder:       %s\n",
-           rs_client_session_decoder_name(session));
+    printf("Decoder:       %s\n", rs_client_session_decoder_name(session));
 
     /* ── Cleanup ─────────────────────────────────────────────────────── */
     rs_client_session_destroy(session);

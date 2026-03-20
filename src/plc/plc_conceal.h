@@ -19,9 +19,10 @@
 #ifndef ROOTSTREAM_PLC_CONCEAL_H
 #define ROOTSTREAM_PLC_CONCEAL_H
 
+#include <stdbool.h>
+
 #include "plc_frame.h"
 #include "plc_history.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,13 +30,13 @@ extern "C" {
 
 /** Concealment strategy */
 typedef enum {
-    PLC_STRATEGY_ZERO     = 0,  /**< Replace with silence */
-    PLC_STRATEGY_REPEAT   = 1,  /**< Repeat last good frame */
-    PLC_STRATEGY_FADE_OUT = 2,  /**< Repeat with amplitude fade-out */
+    PLC_STRATEGY_ZERO = 0,     /**< Replace with silence */
+    PLC_STRATEGY_REPEAT = 1,   /**< Repeat last good frame */
+    PLC_STRATEGY_FADE_OUT = 2, /**< Repeat with amplitude fade-out */
 } plc_strategy_t;
 
 /** Fade-out factor per consecutive loss (0.0–1.0; default 0.9) */
-#define PLC_FADE_FACTOR_DEFAULT  0.9f
+#define PLC_FADE_FACTOR_DEFAULT 0.9f
 
 /**
  * plc_conceal — synthesise one substitute frame for a lost packet
@@ -53,12 +54,8 @@ typedef enum {
  * @param out                  Output substitute frame
  * @return                     0 on success, -1 on error
  */
-int plc_conceal(const plc_history_t *history,
-                 plc_strategy_t       strategy,
-                 int                  consecutive_losses,
-                 float                fade_factor,
-                 const plc_frame_t   *ref_frame,
-                 plc_frame_t         *out);
+int plc_conceal(const plc_history_t *history, plc_strategy_t strategy, int consecutive_losses,
+                float fade_factor, const plc_frame_t *ref_frame, plc_frame_t *out);
 
 /**
  * plc_strategy_name — return human-readable strategy name

@@ -3,10 +3,11 @@
  */
 
 #include "api_server.h"
+
+#include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <pthread.h>
 
 // Stub implementation for now - will be expanded with libmicrohttpd
 // when dependencies are properly installed
@@ -41,9 +42,7 @@ api_server_t *api_server_init(const api_server_config_t *config) {
 /**
  * Register route handler
  */
-int api_server_register_route(api_server_t *server,
-                              const char *path,
-                              const char *method,
+int api_server_register_route(api_server_t *server, const char *path, const char *method,
                               request_handler_t handler) {
     if (!server || !path || !method || !handler) {
         return -1;
@@ -51,7 +50,7 @@ int api_server_register_route(api_server_t *server,
 
     // TODO: Implement route registration with libmicrohttpd
     // For now, this is a stub
-    
+
     return 0;
 }
 
@@ -68,7 +67,7 @@ int api_server_start(api_server_t *server) {
     server->running = true;
 
     printf("API server started on port %u\n", server->config.port);
-    
+
     return 0;
 }
 
@@ -84,7 +83,7 @@ int api_server_stop(api_server_t *server) {
     server->running = false;
 
     printf("API server stopped\n");
-    
+
     return 0;
 }
 
@@ -106,9 +105,7 @@ void api_server_cleanup(api_server_t *server) {
 /**
  * Helper: Send JSON response
  */
-int api_send_json_response(char **response_body,
-                           size_t *response_size,
-                           char **content_type,
+int api_send_json_response(char **response_body, size_t *response_size, char **content_type,
                            const char *json_string) {
     if (!response_body || !response_size || !content_type || !json_string) {
         return -1;
@@ -130,19 +127,15 @@ int api_send_json_response(char **response_body,
 /**
  * Helper: Send error response
  */
-int api_send_error_response(char **response_body,
-                            size_t *response_size,
-                            char **content_type,
-                            int status_code,
-                            const char *error_message) {
+int api_send_error_response(char **response_body, size_t *response_size, char **content_type,
+                            int status_code, const char *error_message) {
     if (!response_body || !response_size || !content_type || !error_message) {
         return -1;
     }
 
     // Create JSON error response
     char json[1024];
-    snprintf(json, sizeof(json),
-             "{\"error\": true, \"status\": %d, \"message\": \"%s\"}",
+    snprintf(json, sizeof(json), "{\"error\": true, \"status\": %d, \"message\": \"%s\"}",
              status_code, error_message);
 
     return api_send_json_response(response_body, response_size, content_type, json);

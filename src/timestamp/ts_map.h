@@ -24,10 +24,10 @@ extern "C" {
 
 /** PTS ↔ wall-clock linear mapper */
 typedef struct {
-    int64_t  anchor_pts;    /**< Reference PTS at last anchor update */
-    int64_t  anchor_us;     /**< Wall-clock µs at last anchor update */
-    double   us_per_tick;   /**< Conversion: µs per PTS tick */
-    int      initialised;
+    int64_t anchor_pts; /**< Reference PTS at last anchor update */
+    int64_t anchor_us;  /**< Wall-clock µs at last anchor update */
+    double us_per_tick; /**< Conversion: µs per PTS tick */
+    int initialised;
 } ts_map_t;
 
 /**

@@ -4,8 +4,9 @@
  * Used when qrencode/libpng headers are unavailable.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
+
+#include "../include/rootstream.h"
 
 int qrcode_generate(const char *data, const char *output_file) {
     (void)data;

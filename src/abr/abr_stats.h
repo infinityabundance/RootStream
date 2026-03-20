@@ -10,9 +10,10 @@
 #ifndef ROOTSTREAM_ABR_STATS_H
 #define ROOTSTREAM_ABR_STATS_H
 
-#include "abr_ladder.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "abr_ladder.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,12 +21,12 @@ extern "C" {
 
 /** Snapshot of ABR session statistics */
 typedef struct {
-    uint64_t total_ticks;           /**< Total tick count */
-    uint64_t upgrade_count;         /**< Number of quality upgrades */
-    uint64_t downgrade_count;       /**< Number of quality downgrades */
-    uint64_t stall_ticks;           /**< Ticks spent below level 1 */
+    uint64_t total_ticks;                            /**< Total tick count */
+    uint64_t upgrade_count;                          /**< Number of quality upgrades */
+    uint64_t downgrade_count;                        /**< Number of quality downgrades */
+    uint64_t stall_ticks;                            /**< Ticks spent below level 1 */
     uint64_t ticks_per_level[ABR_LADDER_MAX_LEVELS]; /**< Ticks at each level */
-    double   avg_level;             /**< Time-weighted average level index */
+    double avg_level;                                /**< Time-weighted average level index */
 } abr_stats_snapshot_t;
 
 /** Opaque ABR stats context */
@@ -54,10 +55,7 @@ void abr_stats_destroy(abr_stats_t *st);
  * @param is_stall    True if BW estimator wasn't ready
  * @return            0 on success, -1 on NULL args
  */
-int abr_stats_record(abr_stats_t *st,
-                      int          level_idx,
-                      int          prev_idx,
-                      int          is_stall);
+int abr_stats_record(abr_stats_t *st, int level_idx, int prev_idx, int is_stall);
 
 /**
  * abr_stats_snapshot — copy current statistics

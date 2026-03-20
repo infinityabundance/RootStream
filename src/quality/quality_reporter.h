@@ -26,8 +26,9 @@
 #ifndef ROOTSTREAM_QUALITY_REPORTER_H
 #define ROOTSTREAM_QUALITY_REPORTER_H
 
-#include "quality_monitor.h"
 #include <stddef.h>
+
+#include "quality_monitor.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,10 +44,8 @@ extern "C" {
  * @return               Number of bytes written (excluding NUL), or -1 if
  *                       the buffer is too small
  */
-int quality_report_json(const quality_stats_t *stats,
-                        uint64_t               scene_changes,
-                        char                  *buf,
-                        size_t                 buf_sz);
+int quality_report_json(const quality_stats_t *stats, uint64_t scene_changes, char *buf,
+                        size_t buf_sz);
 
 /**
  * quality_report_min_buf_size — return minimum buffer for quality_report_json

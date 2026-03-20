@@ -18,10 +18,10 @@ extern "C" {
 
 /** Session stats snapshot */
 typedef struct {
-    uint32_t total_admitted;   /**< Sessions successfully admitted */
-    uint32_t total_rejected;   /**< Sessions rejected (cap exceeded) */
-    uint32_t peak_count;       /**< Highest simultaneous session count */
-    uint32_t eviction_count;   /**< Forcibly evicted sessions */
+    uint32_t total_admitted; /**< Sessions successfully admitted */
+    uint32_t total_rejected; /**< Sessions rejected (cap exceeded) */
+    uint32_t peak_count;     /**< Highest simultaneous session count */
+    uint32_t eviction_count; /**< Forcibly evicted sessions */
 } sl_stats_snapshot_t;
 
 /** Opaque session stats context */

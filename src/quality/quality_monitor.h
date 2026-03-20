@@ -18,8 +18,8 @@
 #ifndef ROOTSTREAM_QUALITY_MONITOR_H
 #define ROOTSTREAM_QUALITY_MONITOR_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -27,24 +27,24 @@ extern "C" {
 #endif
 
 /** Rolling window capacity (frames) */
-#define QUALITY_WINDOW_SIZE 120   /* 2 seconds at 60 fps */
+#define QUALITY_WINDOW_SIZE 120 /* 2 seconds at 60 fps */
 
 /** Configuration */
 typedef struct {
-    double psnr_threshold;    /**< Min acceptable average PSNR (e.g. 30.0) */
-    double ssim_threshold;    /**< Min acceptable average SSIM (e.g. 0.85) */
-    int    window_size;       /**< Rolling window size (0 = use default) */
+    double psnr_threshold; /**< Min acceptable average PSNR (e.g. 30.0) */
+    double ssim_threshold; /**< Min acceptable average SSIM (e.g. 0.85) */
+    int window_size;       /**< Rolling window size (0 = use default) */
 } quality_monitor_config_t;
 
 /** Point-in-time quality statistics snapshot */
 typedef struct {
-    double  avg_psnr;         /**< Average PSNR over window */
-    double  avg_ssim;         /**< Average SSIM over window */
-    double  min_psnr;         /**< Minimum PSNR in window */
-    double  min_ssim;         /**< Minimum SSIM in window */
-    uint64_t frames_total;    /**< Total frames pushed since creation */
-    uint64_t alerts_total;    /**< Total degradation alerts fired */
-    bool     degraded;        /**< True if currently below threshold */
+    double avg_psnr;       /**< Average PSNR over window */
+    double avg_ssim;       /**< Average SSIM over window */
+    double min_psnr;       /**< Minimum PSNR in window */
+    double min_ssim;       /**< Minimum SSIM in window */
+    uint64_t frames_total; /**< Total frames pushed since creation */
+    uint64_t alerts_total; /**< Total degradation alerts fired */
+    bool degraded;         /**< True if currently below threshold */
 } quality_stats_t;
 
 /** Opaque monitor handle */
@@ -88,8 +88,7 @@ bool quality_monitor_is_degraded(const quality_monitor_t *m);
  * @param m      Monitor
  * @param stats  Output statistics
  */
-void quality_monitor_get_stats(const quality_monitor_t *m,
-                                quality_stats_t         *stats);
+void quality_monitor_get_stats(const quality_monitor_t *m, quality_stats_t *stats);
 
 /**
  * quality_monitor_reset — clear all history

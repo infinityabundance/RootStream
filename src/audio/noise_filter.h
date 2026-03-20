@@ -12,8 +12,9 @@
 #ifndef ROOTSTREAM_NOISE_FILTER_H
 #define ROOTSTREAM_NOISE_FILTER_H
 
-#include "audio_pipeline.h"
 #include <stdint.h>
+
+#include "audio_pipeline.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,9 +24,9 @@ extern "C" {
 
 /** Configuration for the noise gate */
 typedef struct {
-    float    threshold_dbfs;   /**< Gate opens above this level (e.g. -40.0) */
-    float    release_ms;       /**< Hold-open time after level drops (ms) */
-    int      sample_rate;      /**< Sample rate in Hz */
+    float threshold_dbfs; /**< Gate opens above this level (e.g. -40.0) */
+    float release_ms;     /**< Hold-open time after level drops (ms) */
+    int sample_rate;      /**< Sample rate in Hz */
 } noise_gate_config_t;
 
 /** Opaque noise gate state */
@@ -60,10 +61,10 @@ audio_filter_node_t noise_gate_make_node(noise_gate_state_t *state);
 
 /** Configuration for the spectral subtraction filter */
 typedef struct {
-    int   sample_rate;     /**< Sample rate in Hz */
-    int   channels;        /**< Channel count */
-    float over_sub;        /**< Over-subtraction factor (typically 1.5–2.0) */
-    float floor_db;        /**< Noise floor lower bound (dBFS, e.g. -60.0) */
+    int sample_rate; /**< Sample rate in Hz */
+    int channels;    /**< Channel count */
+    float over_sub;  /**< Over-subtraction factor (typically 1.5–2.0) */
+    float floor_db;  /**< Noise floor lower bound (dBFS, e.g. -60.0) */
 } spectral_sub_config_t;
 
 /** Opaque spectral subtraction state */
@@ -75,8 +76,7 @@ typedef struct spectral_sub_state_s spectral_sub_state_t;
  * @param config  Filter configuration
  * @return        Non-NULL state, or NULL on failure
  */
-spectral_sub_state_t *spectral_sub_create(
-        const spectral_sub_config_t *config);
+spectral_sub_state_t *spectral_sub_create(const spectral_sub_config_t *config);
 
 /**
  * spectral_sub_destroy — free spectral subtraction state

@@ -10,9 +10,10 @@
 #ifndef ROOTSTREAM_ANALYTICS_EXPORT_H
 #define ROOTSTREAM_ANALYTICS_EXPORT_H
 
+#include <stddef.h>
+
 #include "analytics_event.h"
 #include "analytics_stats.h"
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,9 +30,7 @@ extern "C" {
  * @param buf_sz   Buffer size in bytes
  * @return         Bytes written (excl. NUL), or -1 if buf too small
  */
-int analytics_export_stats_json(const analytics_stats_t *stats,
-                                  char                    *buf,
-                                  size_t                   buf_sz);
+int analytics_export_stats_json(const analytics_stats_t *stats, char *buf, size_t buf_sz);
 
 /**
  * analytics_export_events_json — render @n events as a JSON array into @buf
@@ -45,10 +44,8 @@ int analytics_export_stats_json(const analytics_stats_t *stats,
  * @param buf_sz   Buffer size
  * @return         Bytes written, or -1 if buf too small
  */
-int analytics_export_events_json(const analytics_event_t *events,
-                                   size_t                   n,
-                                   char                    *buf,
-                                   size_t                   buf_sz);
+int analytics_export_events_json(const analytics_event_t *events, size_t n, char *buf,
+                                 size_t buf_sz);
 
 /**
  * analytics_export_events_csv — render @n events as CSV into @buf
@@ -61,10 +58,8 @@ int analytics_export_events_json(const analytics_event_t *events,
  * @param buf_sz   Buffer size
  * @return         Bytes written, or -1 if buf too small
  */
-int analytics_export_events_csv(const analytics_event_t *events,
-                                  size_t                   n,
-                                  char                    *buf,
-                                  size_t                   buf_sz);
+int analytics_export_events_csv(const analytics_event_t *events, size_t n, char *buf,
+                                size_t buf_sz);
 
 #ifdef __cplusplus
 }

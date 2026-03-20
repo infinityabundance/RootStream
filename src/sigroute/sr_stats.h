@@ -18,19 +18,19 @@ extern "C" {
 
 /** Signal router statistics snapshot */
 typedef struct {
-    uint64_t routed;    /**< Signals delivered to ≥1 route */
-    uint64_t filtered;  /**< Signals matched but blocked by filter_fn */
-    uint64_t dropped;   /**< Signals with 0 matching routes */
+    uint64_t routed;   /**< Signals delivered to ≥1 route */
+    uint64_t filtered; /**< Signals matched but blocked by filter_fn */
+    uint64_t dropped;  /**< Signals with 0 matching routes */
 } sr_stats_snapshot_t;
 
 /** Opaque signal router stats context */
 typedef struct sr_stats_s sr_stats_t;
 
 sr_stats_t *sr_stats_create(void);
-void        sr_stats_destroy(sr_stats_t *st);
+void sr_stats_destroy(sr_stats_t *st);
 
-int  sr_stats_record_route(sr_stats_t *st, int delivered, int filtered_n);
-int  sr_stats_snapshot(const sr_stats_t *st, sr_stats_snapshot_t *out);
+int sr_stats_record_route(sr_stats_t *st, int delivered, int filtered_n);
+int sr_stats_snapshot(const sr_stats_t *st, sr_stats_snapshot_t *out);
 void sr_stats_reset(sr_stats_t *st);
 
 #ifdef __cplusplus

@@ -11,26 +11,26 @@
 #ifndef ROOTSTREAM_CHUNK_HDR_H
 #define ROOTSTREAM_CHUNK_HDR_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Chunk flags */
-#define CHUNK_FLAG_KEYFRAME  0x01u  /**< Frame is a keyframe */
-#define CHUNK_FLAG_LAST      0x02u  /**< This is the last chunk of the frame */
+#define CHUNK_FLAG_KEYFRAME 0x01u /**< Frame is a keyframe */
+#define CHUNK_FLAG_LAST 0x02u     /**< This is the last chunk of the frame */
 
 /** Chunk header (fits in 16 bytes on-wire) */
 typedef struct {
-    uint32_t stream_id;     /**< Source stream identifier */
-    uint32_t frame_seq;     /**< Frame sequence number (wraps) */
-    uint16_t chunk_idx;     /**< Zero-based chunk index within frame */
-    uint16_t chunk_count;   /**< Total chunks for this frame (≥ 1) */
-    uint16_t data_len;      /**< Payload byte length for this chunk */
-    uint8_t  flags;         /**< CHUNK_FLAG_* bitmask */
-    uint8_t  _pad;          /**< Reserved */
+    uint32_t stream_id;   /**< Source stream identifier */
+    uint32_t frame_seq;   /**< Frame sequence number (wraps) */
+    uint16_t chunk_idx;   /**< Zero-based chunk index within frame */
+    uint16_t chunk_count; /**< Total chunks for this frame (≥ 1) */
+    uint16_t data_len;    /**< Payload byte length for this chunk */
+    uint8_t flags;        /**< CHUNK_FLAG_* bitmask */
+    uint8_t _pad;         /**< Reserved */
 } chunk_hdr_t;
 
 /**
@@ -38,13 +38,8 @@ typedef struct {
  *
  * @return 0 on success, -1 on NULL or invalid params
  */
-int chunk_hdr_init(chunk_hdr_t *h,
-                   uint32_t     stream_id,
-                   uint32_t     frame_seq,
-                   uint16_t     chunk_idx,
-                   uint16_t     chunk_count,
-                   uint16_t     data_len,
-                   uint8_t      flags);
+int chunk_hdr_init(chunk_hdr_t *h, uint32_t stream_id, uint32_t frame_seq, uint16_t chunk_idx,
+                   uint16_t chunk_count, uint16_t data_len, uint8_t flags);
 
 #ifdef __cplusplus
 }

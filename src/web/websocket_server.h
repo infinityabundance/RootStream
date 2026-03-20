@@ -1,15 +1,16 @@
 /**
  * PHASE 19: Web Dashboard - WebSocket Server
- * 
+ *
  * Provides WebSocket server for real-time updates
  */
 
 #ifndef WEBSOCKET_SERVER_H
 #define WEBSOCKET_SERVER_H
 
-#include "models.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "models.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,8 +20,8 @@ extern "C" {
  * WebSocket server configuration
  */
 typedef struct {
-    uint16_t port;              // Default 8081
-    bool enable_wss;            // WSS/TLS
+    uint16_t port;    // Default 8081
+    bool enable_wss;  // WSS/TLS
     const char *cert_file;
     const char *key_file;
 } websocket_server_config_t;
@@ -54,8 +55,7 @@ int websocket_server_broadcast_metrics(websocket_server_t *server,
 /**
  * Broadcast event to all connected clients
  */
-int websocket_server_broadcast_event(websocket_server_t *server,
-                                     const char *event_type,
+int websocket_server_broadcast_event(websocket_server_t *server, const char *event_type,
                                      const char *data);
 
 /**
@@ -72,4 +72,4 @@ void websocket_server_cleanup(websocket_server_t *server);
 }
 #endif
 
-#endif // WEBSOCKET_SERVER_H
+#endif  // WEBSOCKET_SERVER_H

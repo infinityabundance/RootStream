@@ -16,9 +16,9 @@
 #ifndef ROOTSTREAM_SCENE_DETECTOR_H
 #define ROOTSTREAM_SCENE_DETECTOR_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,15 +29,15 @@ extern "C" {
 
 /** Result of a scene-change test */
 typedef struct {
-    bool     scene_changed;      /**< True if a cut/transition was detected */
-    double   histogram_diff;     /**< Normalised histogram difference [0,1] */
-    uint64_t frame_number;       /**< Frame index (monotonic, from detector) */
+    bool scene_changed;    /**< True if a cut/transition was detected */
+    double histogram_diff; /**< Normalised histogram difference [0,1] */
+    uint64_t frame_number; /**< Frame index (monotonic, from detector) */
 } scene_result_t;
 
 /** Configuration for the scene detector */
 typedef struct {
-    double threshold;            /**< Histogram diff to declare a change [0,1] */
-    int    warmup_frames;        /**< Frames to skip at startup (default: 2) */
+    double threshold;  /**< Histogram diff to declare a change [0,1] */
+    int warmup_frames; /**< Frames to skip at startup (default: 2) */
 } scene_config_t;
 
 /** Opaque scene detector state */
@@ -68,11 +68,8 @@ void scene_detector_destroy(scene_detector_t *det);
  * @param stride  Row stride in bytes (>= width)
  * @return        Scene change result for this frame
  */
-scene_result_t scene_detector_push(scene_detector_t *det,
-                                    const uint8_t    *luma,
-                                    int               width,
-                                    int               height,
-                                    int               stride);
+scene_result_t scene_detector_push(scene_detector_t *det, const uint8_t *luma, int width,
+                                   int height, int stride);
 
 /**
  * scene_detector_reset — discard history, restart warmup

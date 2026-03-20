@@ -15,9 +15,10 @@
 #ifndef ROOTSTREAM_WATERMARK_LSB_H
 #define ROOTSTREAM_WATERMARK_LSB_H
 
-#include "watermark_payload.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "watermark_payload.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,11 +34,8 @@ extern "C" {
  * @param payload    Watermark payload to embed
  * @return           Number of bits embedded, or -1 on error
  */
-int watermark_lsb_embed(uint8_t                   *luma,
-                          int                        width,
-                          int                        height,
-                          int                        stride,
-                          const watermark_payload_t *payload);
+int watermark_lsb_embed(uint8_t *luma, int width, int height, int stride,
+                        const watermark_payload_t *payload);
 
 /**
  * watermark_lsb_extract — extract bit stream from 8-bit luma plane
@@ -53,12 +51,8 @@ int watermark_lsb_embed(uint8_t                   *luma,
  * @param out        Output payload (viewer_id populated from bits)
  * @return           Number of bits extracted (64), or -1 on error
  */
-int watermark_lsb_extract(const uint8_t       *luma,
-                            int                  width,
-                            int                  height,
-                            int                  stride,
-                            uint64_t             viewer_id,
-                            watermark_payload_t  *out);
+int watermark_lsb_extract(const uint8_t *luma, int width, int height, int stride,
+                          uint64_t viewer_id, watermark_payload_t *out);
 
 #ifdef __cplusplus
 }

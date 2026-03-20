@@ -1,19 +1,20 @@
 /*
  * input.c - uinput-based input injection
- * 
+ *
  * Creates virtual keyboard and mouse devices to inject input
  * from the remote client. Works regardless of display server.
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/uinput.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/time.h>
-#include <linux/uinput.h>
+#include <unistd.h>
+
+#include "../include/rootstream.h"
 
 /*
  * Create a virtual keyboard device
@@ -105,25 +106,25 @@ static int create_mouse(void) {
  */
 static int emit_event(int fd, uint16_t type, uint16_t code, int32_t value) {
     struct input_event ev = {0};
-    
+
     ev.type = type;
     ev.code = code;
     ev.value = value;
-    
+
     /* Set timestamp */
     gettimeofday(&ev.time, NULL);
-    
+
     if (write(fd, &ev, sizeof(ev)) < 0)
         return -1;
-    
+
     /* Sync event */
     ev.type = EV_SYN;
     ev.code = SYN_REPORT;
     ev.value = 0;
-    
+
     if (write(fd, &ev, sizeof(ev)) < 0)
         return -1;
-    
+
     return 0;
 }
 
@@ -168,19 +169,16 @@ int rootstream_input_process(rootstream_ctx_t *ctx, input_event_pkt_t *event) {
             /* Keyboard or mouse button */
             if (event->code < BTN_MOUSE) {
                 /* Keyboard */
-                return emit_event(ctx->uinput_kbd_fd, EV_KEY, 
-                                event->code, event->value);
+                return emit_event(ctx->uinput_kbd_fd, EV_KEY, event->code, event->value);
             } else {
                 /* Mouse button */
-                return emit_event(ctx->uinput_mouse_fd, EV_KEY,
-                                event->code, event->value);
+                return emit_event(ctx->uinput_mouse_fd, EV_KEY, event->code, event->value);
             }
             break;
 
         case EV_REL:
             /* Mouse movement */
-            return emit_event(ctx->uinput_mouse_fd, EV_REL,
-                            event->code, event->value);
+            return emit_event(ctx->uinput_mouse_fd, EV_REL, event->code, event->value);
             break;
 
         default:

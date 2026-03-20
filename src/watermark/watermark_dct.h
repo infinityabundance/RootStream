@@ -23,16 +23,17 @@
 #ifndef ROOTSTREAM_WATERMARK_DCT_H
 #define ROOTSTREAM_WATERMARK_DCT_H
 
-#include "watermark_payload.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "watermark_payload.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Default QIM step size (chosen to exceed rounding noise after IDCT→round→DCT) */
-#define WATERMARK_DCT_DELTA_DEFAULT  32
+#define WATERMARK_DCT_DELTA_DEFAULT 32
 
 /**
  * watermark_dct_embed — embed payload bits into luma plane via QIM (in-place)
@@ -47,12 +48,8 @@ extern "C" {
  * @param delta    QIM step size (use WATERMARK_DCT_DELTA_DEFAULT)
  * @return         Bits embedded, or -1 on error
  */
-int watermark_dct_embed(uint8_t                   *luma,
-                          int                        width,
-                          int                        height,
-                          int                        stride,
-                          const watermark_payload_t *payload,
-                          int                        delta);
+int watermark_dct_embed(uint8_t *luma, int width, int height, int stride,
+                        const watermark_payload_t *payload, int delta);
 
 /**
  * watermark_dct_extract — extract payload bits from luma plane via QIM
@@ -65,12 +62,8 @@ int watermark_dct_embed(uint8_t                   *luma,
  * @param out     Output payload (viewer_id populated from bits)
  * @return        Bits extracted, or -1 on error
  */
-int watermark_dct_extract(const uint8_t       *luma,
-                            int                  width,
-                            int                  height,
-                            int                  stride,
-                            int                  delta,
-                            watermark_payload_t  *out);
+int watermark_dct_extract(const uint8_t *luma, int width, int height, int stride, int delta,
+                          watermark_payload_t *out);
 
 #ifdef __cplusplus
 }

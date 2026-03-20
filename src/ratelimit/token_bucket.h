@@ -14,9 +14,9 @@
 #ifndef ROOTSTREAM_TOKEN_BUCKET_H
 #define ROOTSTREAM_TOKEN_BUCKET_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,9 +33,7 @@ typedef struct token_bucket_s token_bucket_t;
  * @param now_us    Initial wall-clock time in µs
  * @return          Non-NULL handle, or NULL on OOM / bad parameters
  */
-token_bucket_t *token_bucket_create(double   rate_bps,
-                                      double   burst,
-                                      uint64_t now_us);
+token_bucket_t *token_bucket_create(double rate_bps, double burst, uint64_t now_us);
 
 /**
  * token_bucket_destroy — free bucket

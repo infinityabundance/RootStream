@@ -1,6 +1,6 @@
 /*
  * tray.c - GTK3 system tray application
- * 
+ *
  * Features:
  * - System tray icon with status indicator
  * - Right-click menu:
@@ -13,27 +13,27 @@
  * - QR code display window
  * - Peer list window
  * - Status notifications
- * 
+ *
  * Design:
  * - Uses GtkStatusIcon for tray (legacy but widely supported)
  * - Minimal dependencies (just GTK3)
  * - Clean, modern UI following GNOME HIG
  */
 
-#include "../include/rootstream.h"
+#include <gdk/gdk.h>
+#include <gtk/gtk.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <gtk/gtk.h>
-#include <gdk/gdk.h>
+#include "../include/rootstream.h"
 
 /* Icon paths (will be installed to /usr/share/icons) */
-#define ICON_IDLE       "rootstream-idle"
-#define ICON_HOSTING    "rootstream-hosting"
-#define ICON_CONNECTED  "rootstream-connected"
-#define ICON_ERROR      "rootstream-error"
+#define ICON_IDLE "rootstream-idle"
+#define ICON_HOSTING "rootstream-hosting"
+#define ICON_CONNECTED "rootstream-connected"
+#define ICON_ERROR "rootstream-error"
 
 /* Global context for GTK callbacks */
 static rootstream_ctx_t *g_ctx = NULL;
@@ -51,8 +51,8 @@ static gboolean on_copy_timeout(gpointer btn) {
  */
 static void on_copy_btn_clicked(GtkButton *btn, gpointer data) {
     (void)data;
-    GtkClipboard *clip = (GtkClipboard*)g_object_get_data(G_OBJECT(btn), "clipboard");
-    const char *text = (const char*)g_object_get_data(G_OBJECT(btn), "text");
+    GtkClipboard *clip = (GtkClipboard *)g_object_get_data(G_OBJECT(btn), "clipboard");
+    const char *text = (const char *)g_object_get_data(G_OBJECT(btn), "text");
     gtk_clipboard_set_text(clip, text, -1);
 
     /* Show brief notification */
@@ -62,7 +62,7 @@ static void on_copy_btn_clicked(GtkButton *btn, gpointer data) {
 
 /*
  * Show QR code window
- * 
+ *
  * Displays:
  * - Large QR code image
  * - RootStream code text (selectable)
@@ -71,9 +71,10 @@ static void on_copy_btn_clicked(GtkButton *btn, gpointer data) {
  */
 static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
     (void)item;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
 
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     /* Create window */
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -88,8 +89,8 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
 
     /* Title label */
     GtkWidget *title = gtk_label_new(NULL);
-    gtk_label_set_markup(GTK_LABEL(title), 
-        "<span font='18' weight='bold'>Share This Code to Connect</span>");
+    gtk_label_set_markup(GTK_LABEL(title),
+                         "<span font='18' weight='bold'>Share This Code to Connect</span>");
     gtk_box_pack_start(GTK_BOX(vbox), title, FALSE, FALSE, 0);
 
     /* Generate QR code image */
@@ -105,7 +106,7 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
     GtkWidget *entry = gtk_entry_new();
     gtk_entry_set_text(GTK_ENTRY(entry), ctx->keypair.rootstream_code);
     gtk_editable_set_editable(GTK_EDITABLE(entry), FALSE);
-    gtk_entry_set_alignment(GTK_ENTRY(entry), 0.5);  /* Center text */
+    gtk_entry_set_alignment(GTK_ENTRY(entry), 0.5); /* Center text */
     gtk_box_pack_start(GTK_BOX(vbox), entry, FALSE, FALSE, 0);
 
     /* Copy button */
@@ -114,18 +115,15 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
 
     /* Copy to clipboard handler */
     g_signal_connect_swapped(copy_btn, "clicked",
-        G_CALLBACK(gtk_entry_grab_focus_without_selecting), entry);
-    g_signal_connect_swapped(copy_btn, "clicked",
-        G_CALLBACK(gtk_editable_select_region), entry);
-    
+                             G_CALLBACK(gtk_entry_grab_focus_without_selecting), entry);
+    g_signal_connect_swapped(copy_btn, "clicked", G_CALLBACK(gtk_editable_select_region), entry);
+
     /* Actually copy on button click */
     GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     g_object_set_data(G_OBJECT(copy_btn), "clipboard", clipboard);
-    g_object_set_data(G_OBJECT(copy_btn), "text",
-                      g_strdup(ctx->keypair.rootstream_code));
+    g_object_set_data(G_OBJECT(copy_btn), "text", g_strdup(ctx->keypair.rootstream_code));
 
-    g_signal_connect(copy_btn, "clicked",
-        G_CALLBACK(on_copy_btn_clicked), NULL);
+    g_signal_connect(copy_btn, "clicked", G_CALLBACK(on_copy_btn_clicked), NULL);
 
     /* Instructions */
     GtkWidget *instructions = gtk_label_new(
@@ -136,8 +134,7 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
 
     /* Close button */
     GtkWidget *close_btn = gtk_button_new_with_label("Close");
-    g_signal_connect_swapped(close_btn, "clicked",
-        G_CALLBACK(gtk_widget_destroy), window);
+    g_signal_connect_swapped(close_btn, "clicked", G_CALLBACK(gtk_widget_destroy), window);
     gtk_box_pack_start(GTK_BOX(vbox), close_btn, FALSE, FALSE, 0);
 
     gtk_widget_show_all(window);
@@ -145,23 +142,20 @@ static void on_show_qr_code(GtkMenuItem *item, gpointer user_data) {
 
 /*
  * Connect to peer dialog
- * 
+ *
  * Prompts user to paste a RootStream code
  */
 static void on_connect_to_peer(GtkMenuItem *item, gpointer user_data) {
     (void)item;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
 
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     /* Create dialog */
     GtkWidget *dialog = gtk_dialog_new_with_buttons(
-        "Connect to Peer",
-        NULL,
-        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-        "Cancel", GTK_RESPONSE_CANCEL,
-        "Connect", GTK_RESPONSE_ACCEPT,
-        NULL);
+        "Connect to Peer", NULL, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Cancel",
+        GTK_RESPONSE_CANCEL, "Connect", GTK_RESPONSE_ACCEPT, NULL);
 
     gtk_window_set_default_size(GTK_WINDOW(dialog), 400, -1);
 
@@ -173,8 +167,8 @@ static void on_connect_to_peer(GtkMenuItem *item, gpointer user_data) {
     gtk_container_add(GTK_CONTAINER(content), vbox);
 
     /* Instructions */
-    GtkWidget *label = gtk_label_new(
-        "Paste the RootStream code from the peer you want to connect to:");
+    GtkWidget *label =
+        gtk_label_new("Paste the RootStream code from the peer you want to connect to:");
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
     gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
 
@@ -186,7 +180,7 @@ static void on_connect_to_peer(GtkMenuItem *item, gpointer user_data) {
     /* Example */
     GtkWidget *example = gtk_label_new(NULL);
     gtk_label_set_markup(GTK_LABEL(example),
-        "<small><i>Format: base64_pubkey@hostname</i></small>");
+                         "<small><i>Format: base64_pubkey@hostname</i></small>");
     gtk_box_pack_start(GTK_BOX(vbox), example, FALSE, FALSE, 0);
 
     gtk_widget_show_all(content);
@@ -196,27 +190,21 @@ static void on_connect_to_peer(GtkMenuItem *item, gpointer user_data) {
 
     if (response == GTK_RESPONSE_ACCEPT) {
         const char *code = gtk_entry_get_text(GTK_ENTRY(entry));
-        
+
         if (code && strlen(code) > 0) {
             printf("INFO: Connecting to peer: %s\n", code);
-            
+
             if (rootstream_connect_to_peer(ctx, code) == 0) {
                 /* Show success notification */
-                GtkWidget *msg = gtk_message_dialog_new(
-                    NULL,
-                    GTK_DIALOG_MODAL,
-                    GTK_MESSAGE_INFO,
-                    GTK_BUTTONS_OK,
-                    "Connection initiated to peer");
+                GtkWidget *msg =
+                    gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+                                           "Connection initiated to peer");
                 gtk_dialog_run(GTK_DIALOG(msg));
                 gtk_widget_destroy(msg);
             } else {
                 /* Show error */
                 GtkWidget *msg = gtk_message_dialog_new(
-                    NULL,
-                    GTK_DIALOG_MODAL,
-                    GTK_MESSAGE_ERROR,
-                    GTK_BUTTONS_OK,
+                    NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
                     "Failed to connect to peer.\n\n"
                     "Please check the RootStream code and try again.");
                 gtk_dialog_run(GTK_DIALOG(msg));
@@ -233,9 +221,10 @@ static void on_connect_to_peer(GtkMenuItem *item, gpointer user_data) {
  */
 static void on_view_peers(GtkMenuItem *item, gpointer user_data) {
     (void)item;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
 
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     /* Create window */
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -302,8 +291,7 @@ static void on_view_peers(GtkMenuItem *item, gpointer user_data) {
             gtk_box_pack_start(GTK_BOX(hbox), vbox, TRUE, TRUE, 0);
 
             char hostname_text[256];
-            snprintf(hostname_text, sizeof(hostname_text), 
-                     "<b>%s</b>", peer->hostname);
+            snprintf(hostname_text, sizeof(hostname_text), "<b>%s</b>", peer->hostname);
             GtkWidget *hostname = gtk_label_new(NULL);
             gtk_label_set_markup(GTK_LABEL(hostname), hostname_text);
             gtk_label_set_xalign(GTK_LABEL(hostname), 0);
@@ -325,17 +313,12 @@ static void on_view_peers(GtkMenuItem *item, gpointer user_data) {
  */
 static void on_settings(GtkMenuItem *item, gpointer user_data) {
     (void)item;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
 
     /* Create settings dialog */
-    GtkWidget *dialog = gtk_dialog_new_with_buttons(
-        "RootStream Settings",
-        NULL,
-        GTK_DIALOG_MODAL,
-        "_Cancel", GTK_RESPONSE_CANCEL,
-        "_Save", GTK_RESPONSE_ACCEPT,
-        NULL
-    );
+    GtkWidget *dialog =
+        gtk_dialog_new_with_buttons("RootStream Settings", NULL, GTK_DIALOG_MODAL, "_Cancel",
+                                    GTK_RESPONSE_CANCEL, "_Save", GTK_RESPONSE_ACCEPT, NULL);
 
     gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 400);
 
@@ -359,8 +342,7 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
     /* Video framerate */
     GtkWidget *fps_label = gtk_label_new("Framerate (FPS):");
     GtkWidget *fps_spin = gtk_spin_button_new_with_range(30, 144, 1);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fps_spin),
-                              ctx->settings.video_framerate);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(fps_spin), ctx->settings.video_framerate);
     gtk_box_pack_start(GTK_BOX(video_box), fps_label, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(video_box), fps_spin, FALSE, FALSE, 0);
 
@@ -379,9 +361,8 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
     if (num_displays > 0) {
         for (int i = 0; i < num_displays; i++) {
             char item[128];
-            snprintf(item, sizeof(item), "%d: %s (%dx%d @ %d Hz)",
-                     i, displays[i].name, displays[i].width,
-                     displays[i].height, displays[i].refresh_rate);
+            snprintf(item, sizeof(item), "%d: %s (%dx%d @ %d Hz)", i, displays[i].name,
+                     displays[i].width, displays[i].height, displays[i].refresh_rate);
             gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(display_combo), item);
             if (i == ctx->settings.display_index) {
                 active_index = i;
@@ -394,16 +375,14 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(display_combo), active_index);
     } else {
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(display_combo),
-                                       "No displays detected");
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(display_combo), "No displays detected");
         gtk_combo_box_set_active(GTK_COMBO_BOX(display_combo), 0);
         gtk_widget_set_sensitive(display_combo, FALSE);
     }
     gtk_box_pack_start(GTK_BOX(video_box), display_label, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(video_box), display_combo, FALSE, FALSE, 0);
 
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), video_box,
-                            gtk_label_new("Video"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), video_box, gtk_label_new("Video"));
 
     /* --- Audio Tab --- */
     GtkWidget *audio_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
@@ -411,8 +390,7 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
 
     /* Audio enabled */
     GtkWidget *audio_enabled = gtk_check_button_new_with_label("Enable Audio");
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(audio_enabled),
-                                 ctx->settings.audio_enabled);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(audio_enabled), ctx->settings.audio_enabled);
     gtk_box_pack_start(GTK_BOX(audio_box), audio_enabled, FALSE, FALSE, 0);
 
     /* Audio bitrate */
@@ -423,8 +401,7 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
     gtk_box_pack_start(GTK_BOX(audio_box), audio_bitrate_label, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(audio_box), audio_bitrate_spin, FALSE, FALSE, 0);
 
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), audio_box,
-                            gtk_label_new("Audio"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), audio_box, gtk_label_new("Audio"));
 
     /* --- Network Tab --- */
     GtkWidget *network_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
@@ -433,8 +410,7 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
     /* Network port */
     GtkWidget *port_label = gtk_label_new("UDP Port:");
     GtkWidget *port_spin = gtk_spin_button_new_with_range(1024, 65535, 1);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(port_spin),
-                              ctx->settings.network_port);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(port_spin), ctx->settings.network_port);
     gtk_box_pack_start(GTK_BOX(network_box), port_label, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(network_box), port_spin, FALSE, FALSE, 0);
 
@@ -444,8 +420,7 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
                                  ctx->settings.discovery_enabled);
     gtk_box_pack_start(GTK_BOX(network_box), discovery_enabled, FALSE, FALSE, 0);
 
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), network_box,
-                            gtk_label_new("Network"));
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), network_box, gtk_label_new("Network"));
 
     /* Show all widgets */
     gtk_widget_show_all(dialog);
@@ -455,20 +430,19 @@ static void on_settings(GtkMenuItem *item, gpointer user_data) {
 
     if (response == GTK_RESPONSE_ACCEPT) {
         /* Save settings */
-        ctx->settings.video_bitrate = (uint32_t)(
-            gtk_spin_button_get_value(GTK_SPIN_BUTTON(bitrate_spin)) * 1000000);
-        ctx->settings.video_framerate = (uint32_t)
-            gtk_spin_button_get_value(GTK_SPIN_BUTTON(fps_spin));
+        ctx->settings.video_bitrate =
+            (uint32_t)(gtk_spin_button_get_value(GTK_SPIN_BUTTON(bitrate_spin)) * 1000000);
+        ctx->settings.video_framerate =
+            (uint32_t)gtk_spin_button_get_value(GTK_SPIN_BUTTON(fps_spin));
         if (num_displays > 0) {
-            ctx->settings.display_index =
-                gtk_combo_box_get_active(GTK_COMBO_BOX(display_combo));
+            ctx->settings.display_index = gtk_combo_box_get_active(GTK_COMBO_BOX(display_combo));
         }
         ctx->settings.audio_enabled =
             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(audio_enabled));
-        ctx->settings.audio_bitrate = (uint32_t)(
-            gtk_spin_button_get_value(GTK_SPIN_BUTTON(audio_bitrate_spin)) * 1000);
-        ctx->settings.network_port = (uint16_t)
-            gtk_spin_button_get_value(GTK_SPIN_BUTTON(port_spin));
+        ctx->settings.audio_bitrate =
+            (uint32_t)(gtk_spin_button_get_value(GTK_SPIN_BUTTON(audio_bitrate_spin)) * 1000);
+        ctx->settings.network_port =
+            (uint16_t)gtk_spin_button_get_value(GTK_SPIN_BUTTON(port_spin));
         ctx->settings.discovery_enabled =
             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(discovery_enabled));
 
@@ -492,13 +466,13 @@ static void on_about(GtkMenuItem *item, gpointer user_data) {
     gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(dialog), "RootStream");
     gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(dialog), ROOTSTREAM_VERSION);
     gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
-        "Secure peer-to-peer game streaming\n"
-        "Direct kernel access, no accounts, no BS");
-    gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(dialog), 
-        "https://github.com/yourusername/rootstream");
+                                  "Secure peer-to-peer game streaming\n"
+                                  "Direct kernel access, no accounts, no BS");
+    gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(dialog),
+                                 "https://github.com/yourusername/rootstream");
     gtk_about_dialog_set_license_type(GTK_ABOUT_DIALOG(dialog), GTK_LICENSE_MIT_X11);
 
-    const char *authors[] = { "RootStream Contributors", NULL };
+    const char *authors[] = {"RootStream Contributors", NULL};
     gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(dialog), authors);
 
     gtk_dialog_run(GTK_DIALOG(dialog));
@@ -510,12 +484,12 @@ static void on_about(GtkMenuItem *item, gpointer user_data) {
  */
 static void on_quit(GtkMenuItem *item, gpointer user_data) {
     (void)item;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
-    
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
+
     if (ctx) {
         ctx->running = false;
     }
-    
+
     gtk_main_quit();
 }
 
@@ -523,7 +497,7 @@ static void on_quit(GtkMenuItem *item, gpointer user_data) {
  * Create tray menu
  */
 static void create_menu(rootstream_ctx_t *ctx, GtkStatusIcon *tray_icon) {
-    (void)tray_icon;  /* Passed for potential future use */
+    (void)tray_icon; /* Passed for potential future use */
     GtkWidget *menu = gtk_menu_new();
 
     /* My QR Code */
@@ -575,8 +549,8 @@ static void create_menu(rootstream_ctx_t *ctx, GtkStatusIcon *tray_icon) {
  */
 static void on_tray_activate(GtkStatusIcon *icon, gpointer user_data) {
     (void)icon;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
-    
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
+
     /* Left-click: show QR code */
     on_show_qr_code(NULL, ctx);
 }
@@ -584,14 +558,13 @@ static void on_tray_activate(GtkStatusIcon *icon, gpointer user_data) {
 /*
  * Tray icon right-clicked (popup menu)
  */
-static void on_tray_popup(GtkStatusIcon *icon, guint button, 
-                         guint activate_time, gpointer user_data) {
+static void on_tray_popup(GtkStatusIcon *icon, guint button, guint activate_time,
+                          gpointer user_data) {
     (void)icon;
-    rootstream_ctx_t *ctx = (rootstream_ctx_t*)user_data;
-    
+    rootstream_ctx_t *ctx = (rootstream_ctx_t *)user_data;
+
     if (ctx->tray.menu) {
-        gtk_menu_popup(GTK_MENU(ctx->tray.menu), NULL, NULL, NULL, NULL,
-                      button, activate_time);
+        gtk_menu_popup(GTK_MENU(ctx->tray.menu), NULL, NULL, NULL, NULL, button, activate_time);
     }
 }
 
@@ -604,7 +577,7 @@ int tray_init(rootstream_ctx_t *ctx, int argc, char **argv) {
         return -1;
     }
 
-    g_ctx = ctx;  /* Store for callbacks */
+    g_ctx = ctx; /* Store for callbacks */
 
     /* Initialize GTK */
     gtk_init(&argc, &argv);
@@ -639,9 +612,10 @@ int tray_init(rootstream_ctx_t *ctx, int argc, char **argv) {
  * Update tray status (icon and tooltip)
  */
 void tray_update_status(rootstream_ctx_t *ctx, tray_status_t status) {
-    if (!ctx || !ctx->tray.tray_icon) return;
+    if (!ctx || !ctx->tray.tray_icon)
+        return;
 
-    GtkStatusIcon *icon = (GtkStatusIcon*)ctx->tray.tray_icon;
+    GtkStatusIcon *icon = (GtkStatusIcon *)ctx->tray.tray_icon;
     ctx->tray.status = status;
 
     const char *icon_name = NULL;
@@ -674,8 +648,9 @@ void tray_update_status(rootstream_ctx_t *ctx, tray_status_t status) {
  * Run GTK main loop
  */
 void tray_run(rootstream_ctx_t *ctx) {
-    if (!ctx) return;
-    
+    if (!ctx)
+        return;
+
     /* This will block until gtk_main_quit() is called */
     gtk_main();
 }
@@ -684,7 +659,8 @@ void tray_run(rootstream_ctx_t *ctx) {
  * Cleanup tray resources
  */
 void tray_cleanup(rootstream_ctx_t *ctx) {
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     if (ctx->tray.tray_icon) {
         g_object_unref(ctx->tray.tray_icon);

@@ -11,8 +11,9 @@
 #ifndef ROOTSTREAM_EB_STATS_H
 #define ROOTSTREAM_EB_STATS_H
 
-#include "eb_event.h"
 #include <stdint.h>
+
+#include "eb_event.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +21,9 @@ extern "C" {
 
 /** Event bus statistics snapshot */
 typedef struct {
-    uint64_t published_count;  /**< Total events published */
-    uint64_t dispatch_count;   /**< Total subscriber invocations */
-    uint64_t dropped_count;    /**< Published events with 0 subscribers */
+    uint64_t published_count; /**< Total events published */
+    uint64_t dispatch_count;  /**< Total subscriber invocations */
+    uint64_t dropped_count;   /**< Published events with 0 subscribers */
 } eb_stats_snapshot_t;
 
 /** Opaque event bus stats context */

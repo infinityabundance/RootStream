@@ -7,17 +7,18 @@
 
 #ifdef _WIN32
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
 
+#include "../include/rootstream.h"
+
 /* Media Foundation headers */
-#include <mfapi.h>
-#include <mfidl.h>
-#include <mfreadwrite.h>
-#include <mferror.h>
 #include <d3d11.h>
 #include <dxgi.h>
+#include <mfapi.h>
+#include <mferror.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
 
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfuuid.lib")
@@ -47,16 +48,16 @@ typedef struct {
 } mf_decoder_ctx_t;
 
 /* GUIDs for Media Foundation */
-static const GUID MF_MT_MAJOR_TYPE_Video = {0x73646976, 0x0000, 0x0010,
-    {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
-static const GUID MFMediaType_Video = {0x73646976, 0x0000, 0x0010,
-    {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
-static const GUID MFVideoFormat_H264 = {0x34363248, 0x0000, 0x0010,
-    {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
-static const GUID MFVideoFormat_HEVC = {0x43564548, 0x0000, 0x0010,
-    {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
-static const GUID MFVideoFormat_NV12 = {0x3231564E, 0x0000, 0x0010,
-    {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+static const GUID MF_MT_MAJOR_TYPE_Video = {
+    0x73646976, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+static const GUID MFMediaType_Video = {
+    0x73646976, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+static const GUID MFVideoFormat_H264 = {
+    0x34363248, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+static const GUID MFVideoFormat_HEVC = {
+    0x43564548, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
+static const GUID MFVideoFormat_NV12 = {
+    0x3231564E, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};
 
 /* Forward declarations */
 static int mf_create_decoder(mf_decoder_ctx_t *ctx);
@@ -81,7 +82,7 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
 
     /* Store in rootstream context */
     ctx->decoder.backend_ctx = mf;
-    mf->codec = ctx->encoder.codec;  /* Use same codec as encoder setting */
+    mf->codec = ctx->encoder.codec; /* Use same codec as encoder setting */
     mf->width = ctx->display.width;
     mf->height = ctx->display.height;
 
@@ -129,10 +130,8 @@ int rootstream_decoder_init(rootstream_ctx_t *ctx) {
     }
 
     mf->initialized = true;
-    printf("MF Decoder: Initialized (%s, %dx%d, %s)\n",
-           mf->codec == CODEC_H265 ? "H.265" : "H.264",
-           mf->width, mf->height,
-           mf->d3d_device ? "hardware" : "software");
+    printf("MF Decoder: Initialized (%s, %dx%d, %s)\n", mf->codec == CODEC_H265 ? "H.265" : "H.264",
+           mf->width, mf->height, mf->d3d_device ? "hardware" : "software");
 
     return 0;
 }
@@ -147,16 +146,10 @@ static int mf_init_d3d11(mf_decoder_ctx_t *ctx) {
 #endif
 
     /* Create D3D11 device */
-    hr = D3D11CreateDevice(
-        NULL,                    /* Default adapter */
-        D3D_DRIVER_TYPE_HARDWARE,
-        NULL,
-        flags,
-        NULL, 0,                 /* Default feature level */
-        D3D11_SDK_VERSION,
-        &ctx->d3d_device,
-        &feature_level,
-        &ctx->d3d_context);
+    hr = D3D11CreateDevice(NULL, /* Default adapter */
+                           D3D_DRIVER_TYPE_HARDWARE, NULL, flags, NULL,
+                           0, /* Default feature level */
+                           D3D11_SDK_VERSION, &ctx->d3d_device, &feature_level, &ctx->d3d_context);
 
     if (FAILED(hr)) {
         fprintf(stderr, "MF Decoder: D3D11CreateDevice failed: 0x%08lx\n", hr);
@@ -175,8 +168,8 @@ static int mf_init_d3d11(mf_decoder_ctx_t *ctx) {
     }
 
     /* Reset device manager with our D3D11 device */
-    hr = ctx->dxgi_manager->lpVtbl->ResetDevice(
-        ctx->dxgi_manager, (IUnknown *)ctx->d3d_device, ctx->dxgi_reset_token);
+    hr = ctx->dxgi_manager->lpVtbl->ResetDevice(ctx->dxgi_manager, (IUnknown *)ctx->d3d_device,
+                                                ctx->dxgi_reset_token);
     if (FAILED(hr)) {
         fprintf(stderr, "MF Decoder: ResetDevice failed: 0x%08lx\n", hr);
         ctx->dxgi_manager->lpVtbl->Release(ctx->dxgi_manager);
@@ -207,23 +200,14 @@ static int mf_create_decoder(mf_decoder_ctx_t *ctx) {
         flags |= MFT_ENUM_FLAG_HARDWARE;
     }
 
-    hr = MFTEnumEx(
-        MFT_CATEGORY_VIDEO_DECODER,
-        flags,
-        &input_type,
-        NULL,               /* Any output type */
-        &activates,
-        &count);
+    hr = MFTEnumEx(MFT_CATEGORY_VIDEO_DECODER, flags, &input_type, NULL, /* Any output type */
+                   &activates, &count);
 
     if (FAILED(hr) || count == 0) {
         /* Try without hardware flag */
-        hr = MFTEnumEx(
-            MFT_CATEGORY_VIDEO_DECODER,
-            MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_SORTANDFILTER,
-            &input_type,
-            NULL,
-            &activates,
-            &count);
+        hr = MFTEnumEx(MFT_CATEGORY_VIDEO_DECODER,
+                       MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_SORTANDFILTER, &input_type, NULL,
+                       &activates, &count);
 
         if (FAILED(hr) || count == 0) {
             fprintf(stderr, "MF Decoder: No decoder found for codec\n");
@@ -232,8 +216,8 @@ static int mf_create_decoder(mf_decoder_ctx_t *ctx) {
     }
 
     /* Activate first decoder */
-    hr = activates[0]->lpVtbl->ActivateObject(
-        activates[0], &IID_IMFTransform, (void **)&ctx->decoder);
+    hr = activates[0]->lpVtbl->ActivateObject(activates[0], &IID_IMFTransform,
+                                              (void **)&ctx->decoder);
 
     /* Release activates */
     for (UINT32 i = 0; i < count; i++) {
@@ -248,9 +232,8 @@ static int mf_create_decoder(mf_decoder_ctx_t *ctx) {
 
     /* Set D3D11 device manager on decoder (for hardware decode) */
     if (ctx->dxgi_manager) {
-        hr = ctx->decoder->lpVtbl->ProcessMessage(
-            ctx->decoder, MFT_MESSAGE_SET_D3D_MANAGER,
-            (ULONG_PTR)ctx->dxgi_manager);
+        hr = ctx->decoder->lpVtbl->ProcessMessage(ctx->decoder, MFT_MESSAGE_SET_D3D_MANAGER,
+                                                  (ULONG_PTR)ctx->dxgi_manager);
         if (FAILED(hr)) {
             fprintf(stderr, "MF Decoder: Failed to set D3D manager: 0x%08lx\n", hr);
             /* Continue without D3D - will use software */
@@ -270,15 +253,15 @@ static int mf_configure_decoder(mf_decoder_ctx_t *ctx) {
     }
 
     ctx->input_type->lpVtbl->SetGUID(ctx->input_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Video);
-    ctx->input_type->lpVtbl->SetGUID(ctx->input_type, &MF_MT_SUBTYPE,
+    ctx->input_type->lpVtbl->SetGUID(
+        ctx->input_type, &MF_MT_SUBTYPE,
         (ctx->codec == CODEC_H265) ? &MFVideoFormat_HEVC : &MFVideoFormat_H264);
     ctx->input_type->lpVtbl->SetUINT32(ctx->input_type, &MF_MT_INTERLACE_MODE,
-        MFVideoInterlace_Progressive);
+                                       MFVideoInterlace_Progressive);
 
     /* Set frame size if known */
     if (ctx->width > 0 && ctx->height > 0) {
-        MFSetAttributeSize(ctx->input_type, &MF_MT_FRAME_SIZE,
-                          ctx->width, ctx->height);
+        MFSetAttributeSize(ctx->input_type, &MF_MT_FRAME_SIZE, ctx->width, ctx->height);
     }
 
     hr = ctx->decoder->lpVtbl->SetInputType(ctx->decoder, 0, ctx->input_type, 0);
@@ -291,8 +274,7 @@ static int mf_configure_decoder(mf_decoder_ctx_t *ctx) {
     DWORD output_index = 0;
     while (true) {
         IMFMediaType *out_type = NULL;
-        hr = ctx->decoder->lpVtbl->GetOutputAvailableType(
-            ctx->decoder, 0, output_index, &out_type);
+        hr = ctx->decoder->lpVtbl->GetOutputAvailableType(ctx->decoder, 0, output_index, &out_type);
 
         if (hr == MF_E_NO_MORE_TYPES) {
             break;
@@ -316,8 +298,7 @@ static int mf_configure_decoder(mf_decoder_ctx_t *ctx) {
 
     if (!ctx->output_type) {
         /* Fall back to first available output type */
-        hr = ctx->decoder->lpVtbl->GetOutputAvailableType(
-            ctx->decoder, 0, 0, &ctx->output_type);
+        hr = ctx->decoder->lpVtbl->GetOutputAvailableType(ctx->decoder, 0, 0, &ctx->output_type);
         if (FAILED(hr)) {
             fprintf(stderr, "MF Decoder: No output type available\n");
             return -1;
@@ -331,14 +312,12 @@ static int mf_configure_decoder(mf_decoder_ctx_t *ctx) {
     }
 
     /* Start streaming */
-    hr = ctx->decoder->lpVtbl->ProcessMessage(
-        ctx->decoder, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
+    hr = ctx->decoder->lpVtbl->ProcessMessage(ctx->decoder, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
     if (FAILED(hr)) {
         fprintf(stderr, "MF Decoder: BEGIN_STREAMING failed: 0x%08lx\n", hr);
     }
 
-    hr = ctx->decoder->lpVtbl->ProcessMessage(
-        ctx->decoder, MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
+    hr = ctx->decoder->lpVtbl->ProcessMessage(ctx->decoder, MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
     if (FAILED(hr)) {
         fprintf(stderr, "MF Decoder: START_OF_STREAM failed: 0x%08lx\n", hr);
     }
@@ -350,8 +329,7 @@ static int mf_configure_decoder(mf_decoder_ctx_t *ctx) {
  * Decoding
  * ============================================================================ */
 
-int rootstream_decode_frame(rootstream_ctx_t *ctx,
-                            const uint8_t *in, size_t in_size,
+int rootstream_decode_frame(rootstream_ctx_t *ctx, const uint8_t *in, size_t in_size,
                             frame_buffer_t *out) {
     mf_decoder_ctx_t *mf = (mf_decoder_ctx_t *)ctx->decoder.backend_ctx;
     HRESULT hr;
@@ -431,21 +409,24 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
 
     if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) {
         /* Need more input data */
-        if (output_sample) output_sample->lpVtbl->Release(output_sample);
+        if (output_sample)
+            output_sample->lpVtbl->Release(output_sample);
         return 0;
     }
 
     if (FAILED(hr)) {
-        if (output_sample) output_sample->lpVtbl->Release(output_sample);
-        if (output_buffer.pEvents) output_buffer.pEvents->lpVtbl->Release(output_buffer.pEvents);
+        if (output_sample)
+            output_sample->lpVtbl->Release(output_sample);
+        if (output_buffer.pEvents)
+            output_buffer.pEvents->lpVtbl->Release(output_buffer.pEvents);
         return -1;
     }
 
     /* Extract frame data */
     if (output_buffer.pSample) {
         IMFMediaBuffer *media_buffer = NULL;
-        hr = output_buffer.pSample->lpVtbl->ConvertToContiguousBuffer(
-            output_buffer.pSample, &media_buffer);
+        hr = output_buffer.pSample->lpVtbl->ConvertToContiguousBuffer(output_buffer.pSample,
+                                                                      &media_buffer);
 
         if (SUCCEEDED(hr)) {
             BYTE *data;
@@ -454,8 +435,8 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
 
             if (SUCCEEDED(hr)) {
                 /* Copy to output frame buffer */
-                size_t copy_size = (data_len < mf->frame_buffer_size) ?
-                                   data_len : mf->frame_buffer_size;
+                size_t copy_size =
+                    (data_len < mf->frame_buffer_size) ? data_len : mf->frame_buffer_size;
                 memcpy(mf->frame_buffer, data, copy_size);
 
                 /* Fill output frame info */
@@ -464,8 +445,8 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
                 out->capacity = (uint32_t)mf->frame_buffer_size;
                 out->width = mf->width;
                 out->height = mf->height;
-                out->pitch = mf->width;  /* NV12 Y-plane pitch */
-                out->format = 0x3231564E;  /* NV12 fourcc */
+                out->pitch = mf->width;   /* NV12 Y-plane pitch */
+                out->format = 0x3231564E; /* NV12 fourcc */
 
                 media_buffer->lpVtbl->Unlock(media_buffer);
             }
@@ -493,10 +474,8 @@ int rootstream_decode_frame(rootstream_ctx_t *ctx,
 
 static void mf_release_resources(mf_decoder_ctx_t *ctx) {
     if (ctx->decoder) {
-        ctx->decoder->lpVtbl->ProcessMessage(
-            ctx->decoder, MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
-        ctx->decoder->lpVtbl->ProcessMessage(
-            ctx->decoder, MFT_MESSAGE_COMMAND_DRAIN, 0);
+        ctx->decoder->lpVtbl->ProcessMessage(ctx->decoder, MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+        ctx->decoder->lpVtbl->ProcessMessage(ctx->decoder, MFT_MESSAGE_COMMAND_DRAIN, 0);
         ctx->decoder->lpVtbl->Release(ctx->decoder);
     }
     if (ctx->input_type) {

@@ -11,29 +11,29 @@
 #ifndef ROOTSTREAM_HR_ENTRY_H
 #define ROOTSTREAM_HR_ENTRY_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HR_PATH_MAX  256   /**< Maximum plugin path length (incl. NUL) */
+#define HR_PATH_MAX 256 /**< Maximum plugin path length (incl. NUL) */
 
 /** Plugin state */
 typedef enum {
-    HR_STATE_UNLOADED  = 0,
-    HR_STATE_LOADED    = 1,
-    HR_STATE_FAILED    = 2,
+    HR_STATE_UNLOADED = 0,
+    HR_STATE_LOADED = 1,
+    HR_STATE_FAILED = 2,
 } hr_state_t;
 
 /** Hot-reload plugin entry */
 typedef struct {
-    char      path[HR_PATH_MAX];  /**< Shared library path */
-    void     *handle;             /**< dlopen handle (NULL if not loaded) */
-    uint32_t  version;            /**< Reload counter (0 = never loaded) */
+    char path[HR_PATH_MAX]; /**< Shared library path */
+    void *handle;           /**< dlopen handle (NULL if not loaded) */
+    uint32_t version;       /**< Reload counter (0 = never loaded) */
     hr_state_t state;
-    uint64_t  last_load_us;       /**< Timestamp of last successful load (µs) */
+    uint64_t last_load_us; /**< Timestamp of last successful load (µs) */
 } hr_entry_t;
 
 /**

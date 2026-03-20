@@ -19,15 +19,15 @@
 extern "C" {
 #endif
 
-#define TS_DRIFT_EWMA_ALPHA  0.1   /**< EWMA smoothing factor */
+#define TS_DRIFT_EWMA_ALPHA 0.1 /**< EWMA smoothing factor */
 
 /** Clock drift estimator */
 typedef struct {
-    double   ewma_error_us;     /**< Smoothed (observed-expected) µs */
-    double   drift_us_per_sec;  /**< Estimated drift in µs/second */
-    uint64_t last_obs_us;       /**< Last observed wall-clock µs */
-    uint64_t sample_count;      /**< Total measurements */
-    int      initialised;
+    double ewma_error_us;    /**< Smoothed (observed-expected) µs */
+    double drift_us_per_sec; /**< Estimated drift in µs/second */
+    uint64_t last_obs_us;    /**< Last observed wall-clock µs */
+    uint64_t sample_count;   /**< Total measurements */
+    int initialised;
 } ts_drift_t;
 
 /**

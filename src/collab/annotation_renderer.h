@@ -11,9 +11,10 @@
 #ifndef ROOTSTREAM_ANNOTATION_RENDERER_H
 #define ROOTSTREAM_ANNOTATION_RENDERER_H
 
-#include "annotation_protocol.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "annotation_protocol.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,9 +23,9 @@ extern "C" {
 /** Maximum strokes retained in the annotation layer */
 #define ANNOT_RENDERER_MAX_STROKES 256
 /** Maximum points per stroke */
-#define ANNOT_RENDERER_MAX_POINTS  1024
+#define ANNOT_RENDERER_MAX_POINTS 1024
 /** Maximum text annotations */
-#define ANNOT_RENDERER_MAX_TEXTS   64
+#define ANNOT_RENDERER_MAX_TEXTS 64
 
 /** Opaque renderer handle */
 typedef struct annotation_renderer_s annotation_renderer_t;
@@ -49,7 +50,7 @@ void annotation_renderer_destroy(annotation_renderer_t *renderer);
  * @param renderer  Annotation renderer
  * @param event     Decoded annotation event
  */
-void annotation_renderer_apply_event(annotation_renderer_t  *renderer,
+void annotation_renderer_apply_event(annotation_renderer_t *renderer,
                                      const annotation_event_t *event);
 
 /**
@@ -64,11 +65,8 @@ void annotation_renderer_apply_event(annotation_renderer_t  *renderer,
  * @param height    Frame height in pixels
  * @param stride    Row stride in bytes (≥ width × 4)
  */
-void annotation_renderer_composite(annotation_renderer_t *renderer,
-                                   uint8_t               *pixels,
-                                   int                    width,
-                                   int                    height,
-                                   int                    stride);
+void annotation_renderer_composite(annotation_renderer_t *renderer, uint8_t *pixels, int width,
+                                   int height, int stride);
 
 /**
  * annotation_renderer_clear — remove all strokes and texts
@@ -83,8 +81,7 @@ void annotation_renderer_clear(annotation_renderer_t *renderer);
  * @param renderer  Annotation renderer
  * @return          Stroke count
  */
-size_t annotation_renderer_stroke_count(
-        const annotation_renderer_t *renderer);
+size_t annotation_renderer_stroke_count(const annotation_renderer_t *renderer);
 
 #ifdef __cplusplus
 }

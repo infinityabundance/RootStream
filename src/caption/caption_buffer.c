@@ -9,7 +9,7 @@
 
 struct caption_buffer_s {
     caption_event_t events[CAPTION_BUFFER_CAPACITY];
-    int             count;
+    int count;
 };
 
 caption_buffer_t *caption_buffer_create(void) {
@@ -21,7 +21,8 @@ void caption_buffer_destroy(caption_buffer_t *buf) {
 }
 
 void caption_buffer_clear(caption_buffer_t *buf) {
-    if (!buf) return;
+    if (!buf)
+        return;
     buf->count = 0;
 }
 
@@ -29,9 +30,9 @@ size_t caption_buffer_count(const caption_buffer_t *buf) {
     return buf ? (size_t)buf->count : 0;
 }
 
-int caption_buffer_push(caption_buffer_t      *buf,
-                         const caption_event_t *event) {
-    if (!buf || !event) return -1;
+int caption_buffer_push(caption_buffer_t *buf, const caption_event_t *event) {
+    if (!buf || !event)
+        return -1;
 
     /* If full, drop the oldest (index 0) */
     if (buf->count >= CAPTION_BUFFER_CAPACITY) {
@@ -42,8 +43,8 @@ int caption_buffer_push(caption_buffer_t      *buf,
 
     /* Insertion sort by pts_us */
     int pos = buf->count;
-    while (pos > 0 && buf->events[pos-1].pts_us > event->pts_us) {
-        buf->events[pos] = buf->events[pos-1];
+    while (pos > 0 && buf->events[pos - 1].pts_us > event->pts_us) {
+        buf->events[pos] = buf->events[pos - 1];
         pos--;
     }
     buf->events[pos] = *event;
@@ -51,11 +52,10 @@ int caption_buffer_push(caption_buffer_t      *buf,
     return 0;
 }
 
-int caption_buffer_query(const caption_buffer_t *buf,
-                          uint64_t                now_us,
-                          caption_event_t        *out,
-                          int                     max_out) {
-    if (!buf || !out || max_out <= 0) return 0;
+int caption_buffer_query(const caption_buffer_t *buf, uint64_t now_us, caption_event_t *out,
+                         int max_out) {
+    if (!buf || !out || max_out <= 0)
+        return 0;
 
     int n = 0;
     for (int i = 0; i < buf->count && n < max_out; i++) {
@@ -67,13 +67,13 @@ int caption_buffer_query(const caption_buffer_t *buf,
 }
 
 int caption_buffer_expire(caption_buffer_t *buf, uint64_t now_us) {
-    if (!buf) return 0;
+    if (!buf)
+        return 0;
 
     int removed = 0;
     int out = 0;
     for (int i = 0; i < buf->count; i++) {
-        uint64_t end = buf->events[i].pts_us +
-                       (uint64_t)buf->events[i].duration_us;
+        uint64_t end = buf->events[i].pts_us + (uint64_t)buf->events[i].duration_us;
         if (end <= now_us) {
             removed++;
         } else {

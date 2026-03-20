@@ -23,25 +23,25 @@
 #ifndef ROOTSTREAM_WATERMARK_PAYLOAD_H
 #define ROOTSTREAM_WATERMARK_PAYLOAD_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define WATERMARK_MAGIC          0x574D4B50UL  /* 'WMKP' */
-#define WATERMARK_HDR_SIZE       32
-#define WATERMARK_MAX_DATA_BYTES 8   /* 64 bits — enough for viewer + session */
+#define WATERMARK_MAGIC 0x574D4B50UL /* 'WMKP' */
+#define WATERMARK_HDR_SIZE 32
+#define WATERMARK_MAX_DATA_BYTES 8 /* 64 bits — enough for viewer + session */
 
 /** Watermark payload */
 typedef struct {
     uint64_t viewer_id;
     uint64_t session_id;
     uint64_t timestamp_us;
-    uint16_t payload_bits;   /**< Number of meaningful bits in @data */
-    uint8_t  data[WATERMARK_MAX_DATA_BYTES];
+    uint16_t payload_bits; /**< Number of meaningful bits in @data */
+    uint8_t data[WATERMARK_MAX_DATA_BYTES];
 } watermark_payload_t;
 
 /**
@@ -52,9 +52,7 @@ typedef struct {
  * @param buf_sz   Size of @buf
  * @return         Bytes written, or -1 on error
  */
-int watermark_payload_encode(const watermark_payload_t *payload,
-                              uint8_t                   *buf,
-                              size_t                     buf_sz);
+int watermark_payload_encode(const watermark_payload_t *payload, uint8_t *buf, size_t buf_sz);
 
 /**
  * watermark_payload_decode — parse @payload from @buf
@@ -64,9 +62,7 @@ int watermark_payload_encode(const watermark_payload_t *payload,
  * @param payload  Output payload
  * @return         0 on success, -1 on error
  */
-int watermark_payload_decode(const uint8_t      *buf,
-                              size_t              buf_sz,
-                              watermark_payload_t *payload);
+int watermark_payload_decode(const uint8_t *buf, size_t buf_sz, watermark_payload_t *payload);
 
 /**
  * watermark_payload_to_bits — convert payload to a bit array
@@ -78,9 +74,7 @@ int watermark_payload_decode(const uint8_t      *buf,
  * @param max_bits  Capacity of @bits
  * @return          Number of bits written, or -1 on error
  */
-int watermark_payload_to_bits(const watermark_payload_t *payload,
-                               uint8_t                   *bits,
-                               size_t                     max_bits);
+int watermark_payload_to_bits(const watermark_payload_t *payload, uint8_t *bits, size_t max_bits);
 
 /**
  * watermark_payload_from_bits — reconstruct viewer_id from bit array
@@ -90,9 +84,7 @@ int watermark_payload_to_bits(const watermark_payload_t *payload,
  * @param payload  Output payload (only viewer_id is populated)
  * @return         0 on success, -1 on error
  */
-int watermark_payload_from_bits(const uint8_t       *bits,
-                                 int                  n_bits,
-                                 watermark_payload_t  *payload);
+int watermark_payload_from_bits(const uint8_t *bits, int n_bits, watermark_payload_t *payload);
 
 #ifdef __cplusplus
 }

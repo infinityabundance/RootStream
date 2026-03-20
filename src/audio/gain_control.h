@@ -18,12 +18,12 @@ extern "C" {
 
 /** AGC configuration */
 typedef struct {
-    float target_dbfs;    /**< Desired output RMS level (e.g. -18.0) */
-    float max_gain_db;    /**< Maximum gain to apply (e.g. +30.0) */
-    float min_gain_db;    /**< Minimum gain to apply (e.g. -20.0) */
-    float attack_ms;      /**< Gain increase time constant in ms */
-    float release_ms;     /**< Gain decrease time constant in ms */
-    int   sample_rate;    /**< Sample rate in Hz */
+    float target_dbfs; /**< Desired output RMS level (e.g. -18.0) */
+    float max_gain_db; /**< Maximum gain to apply (e.g. +30.0) */
+    float min_gain_db; /**< Minimum gain to apply (e.g. -20.0) */
+    float attack_ms;   /**< Gain increase time constant in ms */
+    float release_ms;  /**< Gain decrease time constant in ms */
+    int sample_rate;   /**< Sample rate in Hz */
 } agc_config_t;
 
 /** Opaque AGC state */

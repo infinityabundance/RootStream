@@ -10,8 +10,9 @@
 #ifndef ROOTSTREAM_GOP_STATS_H
 #define ROOTSTREAM_GOP_STATS_H
 
-#include "gop_controller.h"
 #include <stdint.h>
+
+#include "gop_controller.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,12 +20,12 @@ extern "C" {
 
 /** GOP statistics snapshot */
 typedef struct {
-    uint64_t total_frames;          /**< Total frames recorded */
-    uint64_t idr_natural;           /**< IDRs from max-interval */
-    uint64_t idr_scene_change;      /**< IDRs from scene-change detection */
-    uint64_t idr_loss_recovery;     /**< IDRs from loss-recovery logic */
-    uint64_t total_idrs;            /**< Sum of all IDR types */
-    double   avg_gop_length;        /**< Average frames between IDRs */
+    uint64_t total_frames;      /**< Total frames recorded */
+    uint64_t idr_natural;       /**< IDRs from max-interval */
+    uint64_t idr_scene_change;  /**< IDRs from scene-change detection */
+    uint64_t idr_loss_recovery; /**< IDRs from loss-recovery logic */
+    uint64_t total_idrs;        /**< Sum of all IDR types */
+    double avg_gop_length;      /**< Average frames between IDRs */
 } gop_stats_snapshot_t;
 
 /** Opaque GOP stats context */

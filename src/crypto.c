@@ -1,6 +1,6 @@
 /*
  * crypto.c - Ed25519 keypair management and ChaCha20-Poly1305 encryption
- * 
+ *
  * Security Architecture:
  * =====================
  * 1. Each device generates an Ed25519 keypair on first run
@@ -10,13 +10,13 @@
  * 5. All packets encrypted with ChaCha20-Poly1305
  * 6. Nonce = packet counter (monotonically increasing)
  * 7. MAC prevents tampering and authenticates sender
- * 
+ *
  * Why Ed25519?
  * - Fast (tens of thousands of operations/sec)
  * - Small keys (32 bytes public, 32 bytes private)
  * - Audited, battle-tested (used by SSH, Tor, Signal)
  * - No trusted setup or weak curves
- * 
+ *
  * Why ChaCha20-Poly1305?
  * - Fast in software (faster than AES without hardware)
  * - Authenticated encryption (prevents tampering)
@@ -24,12 +24,13 @@
  * - No timing attacks
  */
 
-#include "../include/rootstream.h"
-#include "platform/platform.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
+#include "platform/platform.h"
 
 /* Platform-specific includes for stat (permission checking on Linux) */
 #ifndef RS_PLATFORM_WINDOWS
@@ -47,8 +48,8 @@
  *
  * Output format: xxxx-xxxx-xxxx-xxxx (16 hex chars + 3 dashes).
  */
-int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len,
-                              char *output, size_t output_len) {
+int crypto_format_fingerprint(const uint8_t *public_key, size_t key_len, char *output,
+                              size_t output_len) {
     if (!public_key || key_len == 0 || !output) {
         fprintf(stderr, "ERROR: crypto_format_fingerprint invalid arguments\n");
         return -1;
@@ -95,17 +96,17 @@ int crypto_init(void) {
 
 /*
  * Generate a new Ed25519 keypair
- * 
+ *
  * @param kp       Keypair structure to fill
  * @param hostname Device hostname (used in RootStream code)
  * @return         0 on success, -1 on error
- * 
+ *
  * The RootStream code format is:
  *   <base64_public_key>@<hostname>
- * 
+ *
  * Example:
  *   kXx7YqZ3...Qp9w==@gaming-pc
- * 
+ *
  * This allows:
  * - Easy sharing via QR code or text
  * - Human-readable hostname
@@ -132,18 +133,16 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname) {
     /* Create RootStream code: base64(public_key)@hostname
      * Base64 of 32 bytes = 44 chars + null = 45, leaving 82 chars for hostname
      * (128 - 45 - 1 for '@') */
-    char b64_pubkey[48];  /* 44 chars + null + padding */
-    sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey),
-                     kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
-                     sodium_base64_VARIANT_ORIGINAL);
+    char b64_pubkey[48]; /* 44 chars + null + padding */
+    sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey), kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
+                      sodium_base64_VARIANT_ORIGINAL);
 
     /* Truncate hostname to fit: 128 total - 48 b64 - 1 '@' - 1 null = 78 max */
     char truncated_host[80];
     strncpy(truncated_host, hostname, sizeof(truncated_host) - 1);
     truncated_host[sizeof(truncated_host) - 1] = '\0';
 
-    snprintf(kp->rootstream_code, sizeof(kp->rootstream_code),
-             "%s@%s", b64_pubkey, truncated_host);
+    snprintf(kp->rootstream_code, sizeof(kp->rootstream_code), "%s@%s", b64_pubkey, truncated_host);
 
     printf("✓ Generated new keypair\n");
     printf("  Identity: %s\n", kp->identity);
@@ -154,11 +153,11 @@ int crypto_generate_keypair(keypair_t *kp, const char *hostname) {
 
 /*
  * Load keypair from disk
- * 
+ *
  * @param kp         Keypair structure to fill
  * @param config_dir Configuration directory path
  * @return           0 on success, -1 on error
- * 
+ *
  * Keys are stored in:
  *   ~/.config/rootstream/identity.pub  (public key)
  *   ~/.config/rootstream/identity.key  (private key, mode 0600)
@@ -251,18 +250,16 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
     /* Reconstruct RootStream code
      * Base64 of 32 bytes = 44 chars + null = 45, leaving 82 chars for identity
      * (128 - 45 - 1 for '@') */
-    char b64_pubkey[48];  /* 44 chars + null + padding */
-    sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey),
-                     kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
-                     sodium_base64_VARIANT_ORIGINAL);
+    char b64_pubkey[48]; /* 44 chars + null + padding */
+    sodium_bin2base64(b64_pubkey, sizeof(b64_pubkey), kp->public_key, CRYPTO_PUBLIC_KEY_BYTES,
+                      sodium_base64_VARIANT_ORIGINAL);
 
     /* Truncate identity to fit: 128 total - 48 b64 - 1 '@' - 1 null = 78 max */
     char truncated_id[80];
     strncpy(truncated_id, kp->identity, sizeof(truncated_id) - 1);
     truncated_id[sizeof(truncated_id) - 1] = '\0';
 
-    snprintf(kp->rootstream_code, sizeof(kp->rootstream_code),
-             "%s@%s", b64_pubkey, truncated_id);
+    snprintf(kp->rootstream_code, sizeof(kp->rootstream_code), "%s@%s", b64_pubkey, truncated_id);
 
     printf("✓ Loaded existing keypair\n");
     printf("  Identity: %s\n", kp->identity);
@@ -272,11 +269,11 @@ int crypto_load_keypair(keypair_t *kp, const char *config_dir) {
 
 /*
  * Save keypair to disk
- * 
+ *
  * @param kp         Keypair to save
  * @param config_dir Configuration directory path
  * @return           0 on success, -1 on error
- * 
+ *
  * Security:
  * - Private key saved with mode 0600 (owner read/write only)
  * - Public key saved with mode 0644 (world readable)
@@ -316,7 +313,7 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", seckey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        rs_unlink(seckey_path);  /* Remove incomplete file */
+        rs_unlink(seckey_path); /* Remove incomplete file */
         return -1;
     }
 
@@ -331,7 +328,7 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
     }
 
     fclose(f);
-    rs_chmod(seckey_path, 0600);  /* Owner read/write only */
+    rs_chmod(seckey_path, 0600); /* Owner read/write only */
 
     /* Save public key (mode 0644) */
     f = fopen(pubkey_path, "wb");
@@ -350,8 +347,8 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
         fprintf(stderr, "FILE: %s\n", pubkey_path);
         fprintf(stderr, "REASON: %s\n", strerror(errno));
         fclose(f);
-        rs_unlink(pubkey_path);  /* Remove incomplete file */
-        rs_unlink(seckey_path);  /* Remove secret key too for consistency */
+        rs_unlink(pubkey_path); /* Remove incomplete file */
+        rs_unlink(seckey_path); /* Remove secret key too for consistency */
         return -1;
     }
 
@@ -367,7 +364,7 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
     }
 
     fclose(f);
-    rs_chmod(pubkey_path, 0644);  /* World readable */
+    rs_chmod(pubkey_path, 0644); /* World readable */
 
     /* Save identity */
     f = fopen(identity_path, "w");
@@ -383,24 +380,23 @@ int crypto_save_keypair(const keypair_t *kp, const char *config_dir) {
 
 /*
  * Create encrypted session with peer
- * 
+ *
  * @param session      Session structure to fill
  * @param my_secret    Our private key
  * @param peer_public  Peer's public key
  * @return             0 on success, -1 on error
- * 
+ *
  * Uses X25519 (Curve25519) Diffie-Hellman key exchange to derive
  * a shared secret that both parties can compute but nobody else can.
- * 
+ *
  * Math: shared_secret = my_private * peer_public
  *     = peer_private * my_public
- * 
+ *
  * This is the "magic" of Diffie-Hellman: both sides get the same secret
  * without ever transmitting it over the network.
  */
-int crypto_create_session(crypto_session_t *session,
-                         const uint8_t *my_secret,
-                         const uint8_t *peer_public) {
+int crypto_create_session(crypto_session_t *session, const uint8_t *my_secret,
+                          const uint8_t *peer_public) {
     if (!session || !my_secret || !peer_public) {
         fprintf(stderr, "ERROR: Invalid arguments to crypto_create_session\n");
         return -1;
@@ -408,12 +404,12 @@ int crypto_create_session(crypto_session_t *session,
 
     /* Convert Ed25519 keys to Curve25519 for key exchange */
     uint8_t my_curve_secret[32], peer_curve_public[32];
-    
+
     if (crypto_sign_ed25519_sk_to_curve25519(my_curve_secret, my_secret) != 0) {
         fprintf(stderr, "ERROR: Failed to convert secret key\n");
         return -1;
     }
-    
+
     if (crypto_sign_ed25519_pk_to_curve25519(peer_curve_public, peer_public) != 0) {
         fprintf(stderr, "ERROR: Failed to convert public key\n");
         return -1;
@@ -437,7 +433,7 @@ int crypto_create_session(crypto_session_t *session,
 
 /*
  * Encrypt packet using ChaCha20-Poly1305
- * 
+ *
  * @param session      Encryption session
  * @param plaintext    Data to encrypt
  * @param plain_len    Length of plaintext
@@ -445,18 +441,16 @@ int crypto_create_session(crypto_session_t *session,
  * @param cipher_len   Output: length of ciphertext (includes MAC)
  * @param nonce        Packet nonce (must be unique per packet)
  * @return             0 on success, -1 on error
- * 
+ *
  * ChaCha20-Poly1305 is an AEAD (Authenticated Encryption with Associated Data):
  * - Encrypts data (confidentiality)
  * - Adds authentication tag (integrity + authenticity)
  * - Prevents tampering, replay, or forgery
- * 
+ *
  * Output format: [ciphertext][16-byte MAC]
  */
-int crypto_encrypt_packet(const crypto_session_t *session,
-                         const void *plaintext, size_t plain_len,
-                         void *ciphertext, size_t *cipher_len,
-                         uint64_t nonce) {
+int crypto_encrypt_packet(const crypto_session_t *session, const void *plaintext, size_t plain_len,
+                          void *ciphertext, size_t *cipher_len, uint64_t nonce) {
     if (!session || !plaintext || !ciphertext || !cipher_len) {
         fprintf(stderr, "ERROR: Invalid arguments to crypto_encrypt_packet\n");
         return -1;
@@ -473,13 +467,10 @@ int crypto_encrypt_packet(const crypto_session_t *session,
 
     /* Encrypt with ChaCha20-Poly1305 */
     unsigned long long actual_cipher_len;
-    if (crypto_aead_chacha20poly1305_ietf_encrypt(
-            ciphertext, &actual_cipher_len,
-            plaintext, plain_len,
-            NULL, 0,  /* No additional data */
-            NULL,     /* No secret nonce */
-            nonce_bytes,
-            session->shared_key) != 0) {
+    if (crypto_aead_chacha20poly1305_ietf_encrypt(ciphertext, &actual_cipher_len, plaintext,
+                                                  plain_len, NULL, 0, /* No additional data */
+                                                  NULL,               /* No secret nonce */
+                                                  nonce_bytes, session->shared_key) != 0) {
         fprintf(stderr, "ERROR: Encryption failed\n");
         return -1;
     }
@@ -490,7 +481,7 @@ int crypto_encrypt_packet(const crypto_session_t *session,
 
 /*
  * Decrypt packet using ChaCha20-Poly1305
- * 
+ *
  * @param session      Decryption session
  * @param ciphertext   Encrypted data (includes MAC)
  * @param cipher_len   Length of ciphertext
@@ -498,16 +489,14 @@ int crypto_encrypt_packet(const crypto_session_t *session,
  * @param plain_len    Output: length of plaintext
  * @param nonce        Packet nonce (must match encryption nonce)
  * @return             0 on success, -1 on error
- * 
+ *
  * Verification:
  * 1. MAC is verified first (prevents tampering)
  * 2. If MAC invalid, decryption aborts (no data leaked)
  * 3. Only valid, authenticated packets are decrypted
  */
-int crypto_decrypt_packet(const crypto_session_t *session,
-                         const void *ciphertext, size_t cipher_len,
-                         void *plaintext, size_t *plain_len,
-                         uint64_t nonce) {
+int crypto_decrypt_packet(const crypto_session_t *session, const void *ciphertext,
+                          size_t cipher_len, void *plaintext, size_t *plain_len, uint64_t nonce) {
     if (!session || !ciphertext || !plaintext || !plain_len) {
         fprintf(stderr, "ERROR: Invalid arguments to crypto_decrypt_packet\n");
         return -1;
@@ -525,12 +514,9 @@ int crypto_decrypt_packet(const crypto_session_t *session,
     /* Decrypt and verify MAC */
     unsigned long long actual_plain_len;
     if (crypto_aead_chacha20poly1305_ietf_decrypt(
-            plaintext, &actual_plain_len,
-            NULL,  /* No secret nonce */
-            ciphertext, cipher_len,
-            NULL, 0,  /* No additional data */
-            nonce_bytes,
-            session->shared_key) != 0) {
+            plaintext, &actual_plain_len, NULL, /* No secret nonce */
+            ciphertext, cipher_len, NULL, 0,    /* No additional data */
+            nonce_bytes, session->shared_key) != 0) {
         fprintf(stderr, "ERROR: Decryption failed\n");
         fprintf(stderr, "REASON: Invalid MAC (packet tampered or from wrong peer)\n");
         return -1;
@@ -542,11 +528,11 @@ int crypto_decrypt_packet(const crypto_session_t *session,
 
 /*
  * Verify peer's public key
- * 
+ *
  * @param public_key Public key to verify
  * @param key_len    Length of key (should be 32)
  * @return           0 if valid, -1 if invalid
- * 
+ *
  * Checks:
  * - Correct length (32 bytes)
  * - Not all zeros (invalid key)

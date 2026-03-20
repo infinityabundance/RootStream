@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
 #include "openxr_manager.h"
 
 // UI interaction mode
@@ -40,27 +41,26 @@ typedef struct {
 typedef struct VRUIFramework VRUIFramework;
 
 // Creation and initialization
-VRUIFramework* vr_ui_framework_create(void);
+VRUIFramework *vr_ui_framework_create(void);
 int vr_ui_framework_init(VRUIFramework *framework);
 void vr_ui_framework_cleanup(VRUIFramework *framework);
 void vr_ui_framework_destroy(VRUIFramework *framework);
 
 // UI panel management
-uint32_t vr_ui_create_panel(VRUIFramework *framework, const XrVector3f *position,
-                            float width, float height, UIMode mode);
+uint32_t vr_ui_create_panel(VRUIFramework *framework, const XrVector3f *position, float width,
+                            float height, UIMode mode);
 int vr_ui_pin_panel_to_head(VRUIFramework *framework, uint32_t panelId, float distance);
-int vr_ui_set_panel_world_position(VRUIFramework *framework, uint32_t panelId, 
+int vr_ui_set_panel_world_position(VRUIFramework *framework, uint32_t panelId,
                                    const XrVector3f *position);
 int vr_ui_show_panel(VRUIFramework *framework, uint32_t panelId, bool visible);
 
 // Raycasting for UI interaction
 bool vr_ui_raycast(VRUIFramework *framework, const XrVector3f *rayOrigin,
-                  const XrVector3f *rayDirection, uint32_t *hitPanelId,
-                  XrVector3f *hitPoint);
+                   const XrVector3f *rayDirection, uint32_t *hitPanelId, XrVector3f *hitPoint);
 
 // Gaze interaction
 int vr_ui_update_gaze(VRUIFramework *framework, const XrVector3f *gazeOrigin,
-                     const XrVector3f *gazeDirection);
+                      const XrVector3f *gazeDirection);
 
 // Teleportation
 int vr_ui_init_teleportation(VRUIFramework *framework);
@@ -75,4 +75,4 @@ LocomotionMode vr_ui_get_locomotion_mode(VRUIFramework *framework);
 }
 #endif
 
-#endif // VR_UI_FRAMEWORK_H
+#endif  // VR_UI_FRAMEWORK_H

@@ -4,9 +4,9 @@
 
 #include "schedule_clock.h"
 
-#include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 uint64_t schedule_clock_now_us(void) {
     struct timespec ts;
@@ -22,13 +22,14 @@ uint64_t schedule_clock_mono_us(void) {
 
 void schedule_clock_sleep_us(uint64_t us) {
     struct timespec req;
-    req.tv_sec  = (time_t)(us / 1000000ULL);
+    req.tv_sec = (time_t)(us / 1000000ULL);
     req.tv_nsec = (long)((us % 1000000ULL) * 1000ULL);
     nanosleep(&req, NULL);
 }
 
 char *schedule_clock_format(uint64_t us, char *buf, size_t buf_sz) {
-    if (!buf || buf_sz < 20) return NULL;
+    if (!buf || buf_sz < 20)
+        return NULL;
     time_t sec = (time_t)(us / 1000000ULL);
     struct tm tm_info;
     gmtime_r(&sec, &tm_info);

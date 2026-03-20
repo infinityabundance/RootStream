@@ -5,11 +5,12 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "head_tracker.h"
 #include "openxr_manager.h"
 #include "stereoscopic_renderer.h"
-#include "head_tracker.h"
 
 // VR Platform enumeration
 typedef enum {
@@ -34,7 +35,7 @@ typedef struct {
 typedef struct VRManager VRManager;
 
 // Creation and initialization
-VRManager* vr_manager_create(void);
+VRManager *vr_manager_create(void);
 int vr_manager_init(VRManager *manager, const VRConfig *config);
 void vr_manager_cleanup(VRManager *manager);
 void vr_manager_destroy(VRManager *manager);
@@ -67,7 +68,7 @@ VRPerformanceMetrics vr_manager_get_performance_metrics(VRManager *manager);
 // Status
 bool vr_manager_is_initialized(VRManager *manager);
 bool vr_manager_is_session_active(VRManager *manager);
-const char* vr_manager_get_platform_name(VRManager *manager);
+const char *vr_manager_get_platform_name(VRManager *manager);
 
 // Configuration
 int vr_manager_set_render_scale(VRManager *manager, float scale);
@@ -77,4 +78,4 @@ int vr_manager_enable_foveated_rendering(VRManager *manager, bool enable);
 }
 #endif
 
-#endif // VR_MANAGER_H
+#endif  // VR_MANAGER_H

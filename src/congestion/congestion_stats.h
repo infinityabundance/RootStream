@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_CONGESTION_STATS_H
 #define ROOTSTREAM_CONGESTION_STATS_H
 
-#include "rtt_estimator.h"
 #include "loss_detector.h"
+#include "rtt_estimator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +19,11 @@ extern "C" {
 
 /** Composite congestion statistics */
 typedef struct {
-    rtt_snapshot_t rtt;              /**< RTT estimates */
-    double         loss_fraction;    /**< Current window loss fraction */
-    bool           congested;        /**< Current congestion state */
-    uint64_t       congestion_events; /**< Times congestion was first detected */
-    uint64_t       recovery_events;   /**< Times congestion cleared */
+    rtt_snapshot_t rtt;         /**< RTT estimates */
+    double loss_fraction;       /**< Current window loss fraction */
+    bool congested;             /**< Current congestion state */
+    uint64_t congestion_events; /**< Times congestion was first detected */
+    uint64_t recovery_events;   /**< Times congestion cleared */
 } congestion_snapshot_t;
 
 /** Opaque congestion stats context */
@@ -60,8 +60,7 @@ int congestion_stats_record_rtt(congestion_stats_t *cs, uint64_t rtt_us);
  * @param outcome  RECEIVED or LOST
  * @return         LOSS_SIGNAL_* from underlying detector
  */
-loss_signal_t congestion_stats_record_packet(congestion_stats_t *cs,
-                                               loss_outcome_t      outcome);
+loss_signal_t congestion_stats_record_packet(congestion_stats_t *cs, loss_outcome_t outcome);
 
 /**
  * congestion_stats_snapshot — copy current statistics
@@ -70,8 +69,7 @@ loss_signal_t congestion_stats_record_packet(congestion_stats_t *cs,
  * @param out  Output snapshot
  * @return     0 on success, -1 on NULL
  */
-int congestion_stats_snapshot(const congestion_stats_t *cs,
-                                congestion_snapshot_t    *out);
+int congestion_stats_snapshot(const congestion_stats_t *cs, congestion_snapshot_t *out);
 
 /**
  * congestion_stats_reset — clear all statistics

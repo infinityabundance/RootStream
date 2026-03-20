@@ -16,9 +16,10 @@
 #ifndef ROOTSTREAM_M3U8_WRITER_H
 #define ROOTSTREAM_M3U8_WRITER_H
 
-#include "hls_config.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "hls_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,9 +27,9 @@ extern "C" {
 
 /** A single HLS segment descriptor */
 typedef struct {
-    char     filename[HLS_MAX_SEG_NAME];  /**< Segment file name (base) */
-    double   duration_s;                  /**< Actual segment duration (s) */
-    bool     is_discontinuity;            /**< Insert #EXT-X-DISCONTINUITY */
+    char filename[HLS_MAX_SEG_NAME]; /**< Segment file name (base) */
+    double duration_s;               /**< Actual segment duration (s) */
+    bool is_discontinuity;           /**< Insert #EXT-X-DISCONTINUITY */
 } hls_segment_t;
 
 /**
@@ -43,13 +44,8 @@ typedef struct {
  * @param buf_sz        Size of @buf
  * @return              Bytes written (excl. NUL), or -1 if buf too small
  */
-int m3u8_write_live(const hls_segment_t *segments,
-                     int                  n,
-                     int                  window_size,
-                     int                  target_dur_s,
-                     int                  media_seq,
-                     char                *buf,
-                     size_t               buf_sz);
+int m3u8_write_live(const hls_segment_t *segments, int n, int window_size, int target_dur_s,
+                    int media_seq, char *buf, size_t buf_sz);
 
 /**
  * m3u8_write_vod — generate a VOD (complete) M3U8 into @buf
@@ -61,11 +57,8 @@ int m3u8_write_live(const hls_segment_t *segments,
  * @param buf_sz        Size of @buf
  * @return              Bytes written (excl. NUL), or -1 if buf too small
  */
-int m3u8_write_vod(const hls_segment_t *segments,
-                    int                  n,
-                    int                  target_dur_s,
-                    char                *buf,
-                    size_t               buf_sz);
+int m3u8_write_vod(const hls_segment_t *segments, int n, int target_dur_s, char *buf,
+                   size_t buf_sz);
 
 /**
  * m3u8_write_master — generate a master playlist for multi-bitrate HLS
@@ -79,13 +72,8 @@ int m3u8_write_vod(const hls_segment_t *segments,
  * @param buf_sz        Size of @buf
  * @return              Bytes written, or -1
  */
-int m3u8_write_master(const char **uris,
-                       const int   *bandwidths,
-                       int          n,
-                       int          width,
-                       int          height,
-                       char        *buf,
-                       size_t       buf_sz);
+int m3u8_write_master(const char **uris, const int *bandwidths, int n, int width, int height,
+                      char *buf, size_t buf_sz);
 
 #ifdef __cplusplus
 }

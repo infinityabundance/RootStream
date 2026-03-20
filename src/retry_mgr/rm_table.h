@@ -13,14 +13,15 @@
 #ifndef ROOTSTREAM_RM_TABLE_H
 #define ROOTSTREAM_RM_TABLE_H
 
-#include "rm_entry.h"
 #include <stddef.h>
+
+#include "rm_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RM_MAX_SLOTS  32   /**< Maximum tracked requests */
+#define RM_MAX_SLOTS 32 /**< Maximum tracked requests */
 
 /** Opaque retry table */
 typedef struct rm_table_s rm_table_t;
@@ -47,11 +48,8 @@ void rm_table_destroy(rm_table_t *t);
  * @param max_attempts  Maximum attempts (> 0)
  * @return              Pointer to new entry (owned by table), or NULL if full
  */
-rm_entry_t *rm_table_add(rm_table_t *t,
-                          uint64_t    request_id,
-                          uint64_t    now_us,
-                          uint64_t    base_delay_us,
-                          uint32_t    max_attempts);
+rm_entry_t *rm_table_add(rm_table_t *t, uint64_t request_id, uint64_t now_us,
+                         uint64_t base_delay_us, uint32_t max_attempts);
 
 /**
  * rm_table_remove — remove a request by ID
@@ -88,10 +86,8 @@ int rm_table_count(const rm_table_t *t);
  * @param user   Passed through to cb
  * @return       Number of entries processed
  */
-int rm_table_tick(rm_table_t *t,
-                  uint64_t    now_us,
-                  void      (*cb)(rm_entry_t *e, void *user),
-                  void       *user);
+int rm_table_tick(rm_table_t *t, uint64_t now_us, void (*cb)(rm_entry_t *e, void *user),
+                  void *user);
 
 #ifdef __cplusplus
 }

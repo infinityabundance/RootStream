@@ -9,16 +9,16 @@
 #ifndef ROOTSTREAM_PLUGIN_REGISTRY_H
 #define ROOTSTREAM_PLUGIN_REGISTRY_H
 
-#include "plugin_loader.h"
 #include <stddef.h>
+
+#include "plugin_loader.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Default plugin search path (colon-separated, like $PATH) */
-#define PLUGIN_DEFAULT_SEARCH_PATH \
-    "/usr/lib/rootstream/plugins:/usr/local/lib/rootstream/plugins"
+#define PLUGIN_DEFAULT_SEARCH_PATH "/usr/lib/rootstream/plugins:/usr/local/lib/rootstream/plugins"
 
 /** Maximum number of simultaneously loaded plugins */
 #define PLUGIN_REGISTRY_MAX 64
@@ -87,8 +87,7 @@ size_t plugin_registry_count(const plugin_registry_t *registry);
  * @param index     0-based index (< plugin_registry_count())
  * @return          Plugin handle, or NULL if out of range
  */
-plugin_handle_t *plugin_registry_get(const plugin_registry_t *registry,
-                                     size_t index);
+plugin_handle_t *plugin_registry_get(const plugin_registry_t *registry, size_t index);
 
 /**
  * plugin_registry_find_by_name — look up a plugin by descriptor name
@@ -97,8 +96,7 @@ plugin_handle_t *plugin_registry_get(const plugin_registry_t *registry,
  * @param name      Exact match of plugin_descriptor_t::name
  * @return          Plugin handle, or NULL if not found
  */
-plugin_handle_t *plugin_registry_find_by_name(
-        const plugin_registry_t *registry, const char *name);
+plugin_handle_t *plugin_registry_find_by_name(const plugin_registry_t *registry, const char *name);
 
 /**
  * plugin_registry_find_by_type — return first plugin matching @type
@@ -107,8 +105,8 @@ plugin_handle_t *plugin_registry_find_by_name(
  * @param type      Plugin category
  * @return          Plugin handle, or NULL if none registered for @type
  */
-plugin_handle_t *plugin_registry_find_by_type(
-        const plugin_registry_t *registry, plugin_type_t type);
+plugin_handle_t *plugin_registry_find_by_type(const plugin_registry_t *registry,
+                                              plugin_type_t type);
 
 #ifdef __cplusplus
 }

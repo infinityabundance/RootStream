@@ -15,9 +15,10 @@
 #ifndef ROOTSTREAM_CAPTION_BUFFER_H
 #define ROOTSTREAM_CAPTION_BUFFER_H
 
-#include "caption_event.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "caption_event.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,8 +54,7 @@ void caption_buffer_destroy(caption_buffer_t *buf);
  * @param event  Event to insert (copied by value)
  * @return       0 on success, -1 on NULL args
  */
-int caption_buffer_push(caption_buffer_t      *buf,
-                         const caption_event_t *event);
+int caption_buffer_push(caption_buffer_t *buf, const caption_event_t *event);
 
 /**
  * caption_buffer_query — fill @out with events active at @now_us
@@ -65,10 +65,8 @@ int caption_buffer_push(caption_buffer_t      *buf,
  * @param max_out    Capacity of @out array
  * @return           Number of active events written (>= 0)
  */
-int caption_buffer_query(const caption_buffer_t *buf,
-                          uint64_t                now_us,
-                          caption_event_t        *out,
-                          int                     max_out);
+int caption_buffer_query(const caption_buffer_t *buf, uint64_t now_us, caption_event_t *out,
+                         int max_out);
 
 /**
  * caption_buffer_expire — remove events whose end-time < @now_us

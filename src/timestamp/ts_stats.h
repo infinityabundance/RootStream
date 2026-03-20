@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_TS_STATS_H
 #define ROOTSTREAM_TS_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,8 +20,8 @@ extern "C" {
 /** Timestamp statistics snapshot */
 typedef struct {
     uint64_t sample_count;       /**< Drift measurements taken */
-    int64_t  max_drift_us;       /**< Maximum |error| observed (µs) */
-    int64_t  total_correction_us;/**< Sum of all |error| values (µs) */
+    int64_t max_drift_us;        /**< Maximum |error| observed (µs) */
+    int64_t total_correction_us; /**< Sum of all |error| values (µs) */
 } ts_stats_snapshot_t;
 
 /** Opaque timestamp stats context */

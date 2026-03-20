@@ -15,28 +15,28 @@
 #ifndef ROOTSTREAM_RTT_ESTIMATOR_H
 #define ROOTSTREAM_RTT_ESTIMATOR_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** RFC 6298 clock granularity in µs (1 ms) */
-#define RTT_CLOCK_GRANULARITY_US  1000ULL
+#define RTT_CLOCK_GRANULARITY_US 1000ULL
 
 /** RFC 6298 K constant */
-#define RTT_K  4
+#define RTT_K 4
 
 /** RTT statistics snapshot */
 typedef struct {
-    double   srtt_us;        /**< Smoothed RTT (µs) */
-    double   rttvar_us;      /**< RTT variance (µs) */
-    double   rto_us;         /**< Retransmit timeout (µs) */
-    double   min_rtt_us;     /**< Minimum observed RTT (µs) */
-    double   max_rtt_us;     /**< Maximum observed RTT (µs) */
-    uint64_t sample_count;   /**< Total RTT samples processed */
+    double srtt_us;        /**< Smoothed RTT (µs) */
+    double rttvar_us;      /**< RTT variance (µs) */
+    double rto_us;         /**< Retransmit timeout (µs) */
+    double min_rtt_us;     /**< Minimum observed RTT (µs) */
+    double max_rtt_us;     /**< Maximum observed RTT (µs) */
+    uint64_t sample_count; /**< Total RTT samples processed */
 } rtt_snapshot_t;
 
 /** Opaque RTT estimator */

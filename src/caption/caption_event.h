@@ -23,34 +23,34 @@
 #ifndef ROOTSTREAM_CAPTION_EVENT_H
 #define ROOTSTREAM_CAPTION_EVENT_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CAPTION_MAGIC           0x43415054UL  /* 'CAPT' */
-#define CAPTION_MAX_TEXT_BYTES  256
-#define CAPTION_HDR_SIZE        20
+#define CAPTION_MAGIC 0x43415054UL /* 'CAPT' */
+#define CAPTION_MAX_TEXT_BYTES 256
+#define CAPTION_HDR_SIZE 20
 
 /** Caption style flags */
-#define CAPTION_FLAG_NONE       0x00
-#define CAPTION_FLAG_BOLD       0x01
-#define CAPTION_FLAG_ITALIC     0x02
-#define CAPTION_FLAG_UNDERLINE  0x04
-#define CAPTION_FLAG_BOTTOM     0x08  /**< Default: anchor at bottom */
-#define CAPTION_FLAG_TOP        0x10  /**< Anchor at top of frame */
+#define CAPTION_FLAG_NONE 0x00
+#define CAPTION_FLAG_BOLD 0x01
+#define CAPTION_FLAG_ITALIC 0x02
+#define CAPTION_FLAG_UNDERLINE 0x04
+#define CAPTION_FLAG_BOTTOM 0x08 /**< Default: anchor at bottom */
+#define CAPTION_FLAG_TOP 0x10    /**< Anchor at top of frame */
 
 /** A single caption text segment */
 typedef struct {
-    uint64_t pts_us;            /**< Presentation timestamp (µs) */
-    uint32_t duration_us;       /**< Display duration (µs) */
-    uint8_t  flags;             /**< CAPTION_FLAG_* bitmask */
-    uint8_t  row;               /**< Screen row 0–14 (0 = top) */
-    uint16_t text_len;          /**< Byte length of text */
-    char     text[CAPTION_MAX_TEXT_BYTES + 1];  /**< NUL-terminated UTF-8 */
+    uint64_t pts_us;                       /**< Presentation timestamp (µs) */
+    uint32_t duration_us;                  /**< Display duration (µs) */
+    uint8_t flags;                         /**< CAPTION_FLAG_* bitmask */
+    uint8_t row;                           /**< Screen row 0–14 (0 = top) */
+    uint16_t text_len;                     /**< Byte length of text */
+    char text[CAPTION_MAX_TEXT_BYTES + 1]; /**< NUL-terminated UTF-8 */
 } caption_event_t;
 
 /**
@@ -61,9 +61,7 @@ typedef struct {
  * @param buf_sz  Size of @buf
  * @return        Bytes written, or -1 on error / buffer too small
  */
-int caption_event_encode(const caption_event_t *event,
-                          uint8_t               *buf,
-                          size_t                 buf_sz);
+int caption_event_encode(const caption_event_t *event, uint8_t *buf, size_t buf_sz);
 
 /**
  * caption_event_decode — parse @event from @buf
@@ -73,9 +71,7 @@ int caption_event_encode(const caption_event_t *event,
  * @param event   Output event
  * @return        0 on success, -1 on parse error
  */
-int caption_event_decode(const uint8_t   *buf,
-                          size_t           buf_sz,
-                          caption_event_t *event);
+int caption_event_decode(const uint8_t *buf, size_t buf_sz, caption_event_t *event);
 
 /**
  * caption_event_encoded_size — return serialised size for @event

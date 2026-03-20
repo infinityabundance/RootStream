@@ -14,14 +14,15 @@
 #ifndef ROOTSTREAM_DQ_QUEUE_H
 #define ROOTSTREAM_DQ_QUEUE_H
 
-#include "dq_entry.h"
 #include <stddef.h>
+
+#include "dq_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define DQ_MAX_ENTRIES  128   /**< Maximum queued entries */
+#define DQ_MAX_ENTRIES 128 /**< Maximum queued entries */
 
 /** Drain callback used by dq_queue_drain_all() */
 typedef void (*dq_drain_fn)(const dq_entry_t *e, void *user);

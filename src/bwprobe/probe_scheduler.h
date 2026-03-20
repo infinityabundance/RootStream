@@ -15,23 +15,24 @@
 #ifndef ROOTSTREAM_PROBE_SCHEDULER_H
 #define ROOTSTREAM_PROBE_SCHEDULER_H
 
-#include "probe_packet.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "probe_packet.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Default probe interval: 200 ms */
-#define PROBE_DEFAULT_INTERVAL_US  200000ULL
+#define PROBE_DEFAULT_INTERVAL_US 200000ULL
 /** Default burst size: 3 packets */
-#define PROBE_DEFAULT_BURST_SIZE   3
+#define PROBE_DEFAULT_BURST_SIZE 3
 
 /** Scheduler decision */
 typedef enum {
-    PROBE_SCHED_WAIT = 0,   /**< Too early — do not send yet */
-    PROBE_SCHED_SEND = 1,   /**< Fill and send a packet now */
+    PROBE_SCHED_WAIT = 0, /**< Too early — do not send yet */
+    PROBE_SCHED_SEND = 1, /**< Fill and send a packet now */
 } probe_sched_decision_t;
 
 /** Opaque probe scheduler */
@@ -44,8 +45,7 @@ typedef struct probe_scheduler_s probe_scheduler_t;
  * @param burst_size   Packets per burst (>= 1)
  * @return             Non-NULL handle, or NULL on error
  */
-probe_scheduler_t *probe_scheduler_create(uint64_t interval_us,
-                                            int      burst_size);
+probe_scheduler_t *probe_scheduler_create(uint64_t interval_us, int burst_size);
 
 /**
  * probe_scheduler_destroy — free scheduler
@@ -67,9 +67,8 @@ void probe_scheduler_destroy(probe_scheduler_t *s);
  * @param pkt_out  Output packet to fill (only valid when SEND is returned)
  * @return         PROBE_SCHED_WAIT or PROBE_SCHED_SEND
  */
-probe_sched_decision_t probe_scheduler_tick(probe_scheduler_t *s,
-                                               uint64_t           now_us,
-                                               probe_packet_t    *pkt_out);
+probe_sched_decision_t probe_scheduler_tick(probe_scheduler_t *s, uint64_t now_us,
+                                            probe_packet_t *pkt_out);
 
 /**
  * probe_scheduler_set_interval — update burst interval

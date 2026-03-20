@@ -21,40 +21,40 @@
 #ifndef ROOTSTREAM_ANALYTICS_EVENT_H
 #define ROOTSTREAM_ANALYTICS_EVENT_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define ANALYTICS_MAGIC         0x414E4C59UL  /* 'ANLY' */
-#define ANALYTICS_HDR_SIZE      32
-#define ANALYTICS_MAX_PAYLOAD   128
+#define ANALYTICS_MAGIC 0x414E4C59UL /* 'ANLY' */
+#define ANALYTICS_HDR_SIZE 32
+#define ANALYTICS_MAX_PAYLOAD 128
 
 /** Analytics event types */
 typedef enum {
-    ANALYTICS_VIEWER_JOIN    = 0x01,  /**< Viewer connected */
-    ANALYTICS_VIEWER_LEAVE   = 0x02,  /**< Viewer disconnected */
-    ANALYTICS_BITRATE_CHANGE = 0x03,  /**< Encoder bitrate changed; value=kbps */
-    ANALYTICS_FRAME_DROP     = 0x04,  /**< Frame dropped; value=drop_count */
-    ANALYTICS_QUALITY_ALERT  = 0x05,  /**< Quality below threshold */
-    ANALYTICS_SCENE_CHANGE   = 0x06,  /**< Scene cut detected */
-    ANALYTICS_STREAM_START   = 0x07,  /**< Stream started */
-    ANALYTICS_STREAM_STOP    = 0x08,  /**< Stream stopped */
-    ANALYTICS_LATENCY_SAMPLE = 0x09,  /**< Latency sample; value=µs */
+    ANALYTICS_VIEWER_JOIN = 0x01,    /**< Viewer connected */
+    ANALYTICS_VIEWER_LEAVE = 0x02,   /**< Viewer disconnected */
+    ANALYTICS_BITRATE_CHANGE = 0x03, /**< Encoder bitrate changed; value=kbps */
+    ANALYTICS_FRAME_DROP = 0x04,     /**< Frame dropped; value=drop_count */
+    ANALYTICS_QUALITY_ALERT = 0x05,  /**< Quality below threshold */
+    ANALYTICS_SCENE_CHANGE = 0x06,   /**< Scene cut detected */
+    ANALYTICS_STREAM_START = 0x07,   /**< Stream started */
+    ANALYTICS_STREAM_STOP = 0x08,    /**< Stream stopped */
+    ANALYTICS_LATENCY_SAMPLE = 0x09, /**< Latency sample; value=µs */
 } analytics_event_type_t;
 
 /** Single analytics event */
 typedef struct {
-    uint64_t               timestamp_us;
+    uint64_t timestamp_us;
     analytics_event_type_t type;
-    uint8_t                flags;
-    uint16_t               payload_len;
-    uint64_t               session_id;
-    uint64_t               value;
-    char                   payload[ANALYTICS_MAX_PAYLOAD + 1];
+    uint8_t flags;
+    uint16_t payload_len;
+    uint64_t session_id;
+    uint64_t value;
+    char payload[ANALYTICS_MAX_PAYLOAD + 1];
 } analytics_event_t;
 
 /**
@@ -65,9 +65,7 @@ typedef struct {
  * @param buf_sz  Size of @buf
  * @return        Bytes written, or -1 on error
  */
-int analytics_event_encode(const analytics_event_t *event,
-                             uint8_t                 *buf,
-                             size_t                   buf_sz);
+int analytics_event_encode(const analytics_event_t *event, uint8_t *buf, size_t buf_sz);
 
 /**
  * analytics_event_decode — parse event from @buf
@@ -77,9 +75,7 @@ int analytics_event_encode(const analytics_event_t *event,
  * @param event   Output event
  * @return        0 on success, -1 on error
  */
-int analytics_event_decode(const uint8_t      *buf,
-                             size_t              buf_sz,
-                             analytics_event_t  *event);
+int analytics_event_decode(const uint8_t *buf, size_t buf_sz, analytics_event_t *event);
 
 /**
  * analytics_event_encoded_size — return serialised byte count for @event

@@ -5,8 +5,8 @@
 #ifndef ROOTSTREAM_AUDIT_LOG_H
 #define ROOTSTREAM_AUDIT_LOG_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +27,7 @@ typedef enum {
 
 /*
  * Initialize audit logging
- * 
+ *
  * @param log_file  Path to log file (NULL for stderr)
  * @return          0 on success, -1 on error
  */
@@ -35,7 +35,7 @@ int audit_log_init(const char *log_file);
 
 /*
  * Log security event
- * 
+ *
  * @param type      Event type
  * @param username  Username (can be NULL)
  * @param ip_addr   IP address (can be NULL)
@@ -43,12 +43,8 @@ int audit_log_init(const char *log_file);
  * @param critical  Is this a critical event?
  * @return          0 on success, -1 on error
  */
-int audit_log_event(
-    audit_event_type_t type,
-    const char *username,
-    const char *ip_addr,
-    const char *details,
-    bool critical);
+int audit_log_event(audit_event_type_t type, const char *username, const char *ip_addr,
+                    const char *details, bool critical);
 
 /*
  * Cleanup audit logging

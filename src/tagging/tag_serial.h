@@ -18,8 +18,9 @@
 #ifndef ROOTSTREAM_TAG_SERIAL_H
 #define ROOTSTREAM_TAG_SERIAL_H
 
-#include "tag_store.h"
 #include <stddef.h>
+
+#include "tag_store.h"
 
 #ifdef __cplusplus
 extern "C" {

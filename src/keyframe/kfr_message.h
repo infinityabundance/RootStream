@@ -23,30 +23,30 @@
 #ifndef ROOTSTREAM_KFR_MESSAGE_H
 #define ROOTSTREAM_KFR_MESSAGE_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define KFR_MSG_MAGIC   0x4B465251UL  /* 'KFRQ' */
-#define KFR_MSG_SIZE    24
+#define KFR_MSG_MAGIC 0x4B465251UL /* 'KFRQ' */
+#define KFR_MSG_SIZE 24
 
 /** Keyframe request type */
 typedef enum {
-    KFR_TYPE_PLI = 1,  /**< Picture Loss Indication */
-    KFR_TYPE_FIR = 2,  /**< Full Intra Request */
+    KFR_TYPE_PLI = 1, /**< Picture Loss Indication */
+    KFR_TYPE_FIR = 2, /**< Full Intra Request */
 } kfr_type_t;
 
 /** Keyframe request message */
 typedef struct {
     kfr_type_t type;
-    uint8_t    priority;
-    uint16_t   seq;
-    uint32_t   ssrc;
-    uint64_t   timestamp_us;
+    uint8_t priority;
+    uint16_t seq;
+    uint32_t ssrc;
+    uint64_t timestamp_us;
 } kfr_message_t;
 
 /**
@@ -57,9 +57,7 @@ typedef struct {
  * @param buf_sz  Buffer size
  * @return        KFR_MSG_SIZE on success, -1 on error
  */
-int kfr_message_encode(const kfr_message_t *msg,
-                         uint8_t             *buf,
-                         size_t               buf_sz);
+int kfr_message_encode(const kfr_message_t *msg, uint8_t *buf, size_t buf_sz);
 
 /**
  * kfr_message_decode — parse @msg from @buf
@@ -69,9 +67,7 @@ int kfr_message_encode(const kfr_message_t *msg,
  * @param msg     Output message
  * @return        0 on success, -1 on error
  */
-int kfr_message_decode(const uint8_t *buf,
-                         size_t         buf_sz,
-                         kfr_message_t *msg);
+int kfr_message_decode(const uint8_t *buf, size_t buf_sz, kfr_message_t *msg);
 
 /**
  * kfr_type_name — human-readable type name

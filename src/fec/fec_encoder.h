@@ -15,9 +15,10 @@
 #ifndef ROOTSTREAM_FEC_ENCODER_H
 #define ROOTSTREAM_FEC_ENCODER_H
 
-#include "fec_matrix.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "fec_matrix.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,11 +35,7 @@ extern "C" {
  * @param pkt_size  Payload size in bytes (<= FEC_MAX_PKT_SIZE)
  * @return          0 on success, -1 on error
  */
-int fec_encode(const uint8_t *const *sources,
-                 int                   k,
-                 int                   r,
-                 uint8_t              **out,
-                 size_t                pkt_size);
+int fec_encode(const uint8_t *const *sources, int k, int r, uint8_t **out, size_t pkt_size);
 
 #ifdef __cplusplus
 }

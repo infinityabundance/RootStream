@@ -18,12 +18,13 @@
  *   uint64_t timestamp_us  - Capture timestamp
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define RAW_MAGIC 0x52535452  /* "RSTR" */
+#include "../include/rootstream.h"
+
+#define RAW_MAGIC 0x52535452 /* "RSTR" */
 #define RAW_FORMAT_RGBA 1
 
 typedef struct {
@@ -49,7 +50,7 @@ int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec) {
         return -1;
     }
 
-    (void)codec;  /* Raw encoder ignores codec type */
+    (void)codec; /* Raw encoder ignores codec type */
 
     /* Allocate raw encoder context */
     raw_ctx_t *raw = calloc(1, sizeof(raw_ctx_t));
@@ -63,16 +64,15 @@ int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec) {
     raw->frame_count = 0;
 
     ctx->encoder.type = ENCODER_RAW;
-    ctx->encoder.codec = codec;  /* Store but not used */
+    ctx->encoder.codec = codec; /* Store but not used */
     ctx->encoder.hw_ctx = raw;
     ctx->encoder.low_latency = true;
-    ctx->encoder.max_output_size = sizeof(raw_header_t) + 
-                                   (size_t)raw->width * raw->height * 4;
+    ctx->encoder.max_output_size = sizeof(raw_header_t) + (size_t)raw->width * raw->height * 4;
 
-    size_t bandwidth_mb_per_sec = (ctx->encoder.max_output_size * ctx->display.refresh_rate) / (1024 * 1024);
+    size_t bandwidth_mb_per_sec =
+        (ctx->encoder.max_output_size * ctx->display.refresh_rate) / (1024 * 1024);
 
-    printf("✓ Raw pass-through encoder ready: %dx%d (debug mode)\n",
-           raw->width, raw->height);
+    printf("✓ Raw pass-through encoder ready: %dx%d (debug mode)\n", raw->width, raw->height);
     printf("  ⚠ WARNING: Uncompressed - ~%zu MB/s bandwidth required\n", bandwidth_mb_per_sec);
     printf("  Use only for testing/debugging on high-bandwidth networks\n");
 
@@ -82,26 +82,24 @@ int rootstream_encoder_init_raw(rootstream_ctx_t *ctx, codec_type_t codec) {
 /*
  * Encode raw frame (just copy with header)
  */
-int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in,
-                                uint8_t *out, size_t *out_size) {
+int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in, uint8_t *out,
+                                size_t *out_size) {
     if (!ctx || !in || !out || !out_size) {
         return -1;
     }
 
-    raw_ctx_t *raw = (raw_ctx_t*)ctx->encoder.hw_ctx;
+    raw_ctx_t *raw = (raw_ctx_t *)ctx->encoder.hw_ctx;
     if (!raw) {
         fprintf(stderr, "ERROR: Raw encoder not initialized\n");
         return -1;
     }
 
     /* Build header */
-    raw_header_t header = {
-        .magic = RAW_MAGIC,
-        .width = in->width,
-        .height = in->height,
-        .format = RAW_FORMAT_RGBA,
-        .timestamp_us = in->timestamp
-    };
+    raw_header_t header = {.magic = RAW_MAGIC,
+                           .width = in->width,
+                           .height = in->height,
+                           .format = RAW_FORMAT_RGBA,
+                           .timestamp_us = in->timestamp};
 
     /* Copy header */
     memcpy(out, &header, sizeof(header));
@@ -114,9 +112,9 @@ int rootstream_encode_frame_raw(rootstream_ctx_t *ctx, frame_buffer_t *in,
 
     /* All frames are "keyframes" in raw mode */
     in->is_keyframe = true;
-    
+
     raw->frame_count++;
-    
+
     return 0;
 }
 
@@ -128,7 +126,7 @@ void rootstream_encoder_cleanup_raw(rootstream_ctx_t *ctx) {
         return;
     }
 
-    raw_ctx_t *raw = (raw_ctx_t*)ctx->encoder.hw_ctx;
+    raw_ctx_t *raw = (raw_ctx_t *)ctx->encoder.hw_ctx;
     free(raw);
     ctx->encoder.hw_ctx = NULL;
 }

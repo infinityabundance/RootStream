@@ -11,13 +11,13 @@
  * - Small buffer for low latency
  */
 
-#include "../include/rootstream.h"
+#include <alsa/asoundlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
-#include <alsa/asoundlib.h>
+#include "../include/rootstream.h"
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
@@ -52,11 +52,9 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     playback->channels = CHANNELS;
 
     /* Open ALSA device for playback */
-    int err = snd_pcm_open(&playback->handle, "default",
-                          SND_PCM_STREAM_PLAYBACK, 0);
+    int err = snd_pcm_open(&playback->handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot open audio playback device: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot open audio playback device: %s\n", snd_strerror(err));
         free(playback);
         return -1;
     }
@@ -67,22 +65,18 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     snd_pcm_hw_params_any(playback->handle, hw_params);
 
     /* Set access type (interleaved) */
-    err = snd_pcm_hw_params_set_access(playback->handle, hw_params,
-                                       SND_PCM_ACCESS_RW_INTERLEAVED);
+    err = snd_pcm_hw_params_set_access(playback->handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set audio access type: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set audio access type: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
     }
 
     /* Set sample format (16-bit signed) */
-    err = snd_pcm_hw_params_set_format(playback->handle, hw_params,
-                                       SND_PCM_FORMAT_S16_LE);
+    err = snd_pcm_hw_params_set_format(playback->handle, hw_params, SND_PCM_FORMAT_S16_LE);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set audio format: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set audio format: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
@@ -92,25 +86,22 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     unsigned int rate = playback->sample_rate;
     err = snd_pcm_hw_params_set_rate_near(playback->handle, hw_params, &rate, 0);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set sample rate: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set sample rate: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
     }
 
     if (rate != (unsigned int)playback->sample_rate) {
-        fprintf(stderr, "WARNING: Playback rate %u Hz (requested %d Hz)\n",
-                rate, playback->sample_rate);
+        fprintf(stderr, "WARNING: Playback rate %u Hz (requested %d Hz)\n", rate,
+                playback->sample_rate);
         playback->sample_rate = rate;
     }
 
     /* Set channels */
-    err = snd_pcm_hw_params_set_channels(playback->handle, hw_params,
-                                        playback->channels);
+    err = snd_pcm_hw_params_set_channels(playback->handle, hw_params, playback->channels);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot set channel count: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot set channel count: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
@@ -118,27 +109,22 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
 
     /* Set period size (240 samples = 5ms at 48kHz) */
     snd_pcm_uframes_t period_size = 240;
-    err = snd_pcm_hw_params_set_period_size_near(playback->handle, hw_params,
-                                                 &period_size, NULL);
+    err = snd_pcm_hw_params_set_period_size_near(playback->handle, hw_params, &period_size, NULL);
     if (err < 0) {
-        fprintf(stderr, "WARNING: Cannot set period size: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "WARNING: Cannot set period size: %s\n", snd_strerror(err));
     }
 
     /* Set buffer size (4 periods = 20ms) */
     snd_pcm_uframes_t buffer_size = period_size * 4;
-    err = snd_pcm_hw_params_set_buffer_size_near(playback->handle, hw_params,
-                                                 &buffer_size);
+    err = snd_pcm_hw_params_set_buffer_size_near(playback->handle, hw_params, &buffer_size);
     if (err < 0) {
-        fprintf(stderr, "WARNING: Cannot set buffer size: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "WARNING: Cannot set buffer size: %s\n", snd_strerror(err));
     }
 
     /* Apply hardware parameters */
     err = snd_pcm_hw_params(playback->handle, hw_params);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot apply hardware parameters: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot apply hardware parameters: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
@@ -147,8 +133,7 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     /* Prepare device */
     err = snd_pcm_prepare(playback->handle);
     if (err < 0) {
-        fprintf(stderr, "ERROR: Cannot prepare audio device: %s\n",
-                snd_strerror(err));
+        fprintf(stderr, "ERROR: Cannot prepare audio device: %s\n", snd_strerror(err));
         snd_pcm_close(playback->handle);
         free(playback);
         return -1;
@@ -160,8 +145,8 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
     /* For now, reuse a pointer - proper integration in rootstream.h update */
     ctx->tray.menu = playback;
 
-    printf("✓ Audio playback ready: %d Hz, %d channels\n",
-           playback->sample_rate, playback->channels);
+    printf("✓ Audio playback ready: %d Hz, %d channels\n", playback->sample_rate,
+           playback->channels);
 
     return 0;
 }
@@ -174,20 +159,18 @@ int audio_playback_init_alsa(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success, -1 on error
  */
-int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples,
-                              size_t num_samples) {
+int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples) {
     if (!ctx || !samples || num_samples == 0) {
         return -1;
     }
 
-    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t*)ctx->tray.menu;
+    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t *)ctx->tray.menu;
     if (!playback || !playback->initialized) {
         return -1;
     }
 
     /* Write PCM samples to device */
-    snd_pcm_sframes_t frames = snd_pcm_writei(playback->handle, samples,
-                                              num_samples);
+    snd_pcm_sframes_t frames = snd_pcm_writei(playback->handle, samples, num_samples);
 
     if (frames < 0) {
         /* Handle ALSA errors */
@@ -207,15 +190,13 @@ int audio_playback_write_alsa(rootstream_ctx_t *ctx, const int16_t *samples,
             }
             return -1;
         } else {
-            fprintf(stderr, "ERROR: Audio playback failed: %s\n",
-                    snd_strerror(frames));
+            fprintf(stderr, "ERROR: Audio playback failed: %s\n", snd_strerror(frames));
             return -1;
         }
     }
 
     if (frames != (snd_pcm_sframes_t)num_samples) {
-        fprintf(stderr, "WARNING: Short write: %ld frames (expected %zu)\n",
-                frames, num_samples);
+        fprintf(stderr, "WARNING: Short write: %ld frames (expected %zu)\n", frames, num_samples);
     }
 
     return 0;
@@ -229,7 +210,7 @@ void audio_playback_cleanup_alsa(rootstream_ctx_t *ctx) {
         return;
     }
 
-    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t*)ctx->tray.menu;
+    alsa_internal_ctx_t *playback = (alsa_internal_ctx_t *)ctx->tray.menu;
 
     if (playback->handle) {
         snd_pcm_drain(playback->handle);
@@ -261,15 +242,15 @@ void audio_playback_cleanup(rootstream_ctx_t *ctx) {
 bool audio_playback_alsa_available(void) {
     /* Try to open ALSA device to check availability */
     snd_pcm_t *test_handle = NULL;
-    
+
     /* Suppress ALSA error output during availability check */
     int err = snd_pcm_open(&test_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if (err < 0) {
         return false;
     }
-    
+
     /* Close handle after successful open */
     snd_pcm_close(test_handle);
-    
+
     return true;
 }

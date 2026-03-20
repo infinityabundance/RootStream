@@ -14,25 +14,26 @@
 #ifndef ROOTSTREAM_KFR_HANDLER_H
 #define ROOTSTREAM_KFR_HANDLER_H
 
-#include "kfr_message.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "kfr_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Maximum tracked SSRCs */
-#define KFR_MAX_SSRC  64
+#define KFR_MAX_SSRC 64
 
 /** Default minimum interval between forwarded requests per SSRC (250 ms) */
-#define KFR_DEFAULT_COOLDOWN_US  250000ULL
+#define KFR_DEFAULT_COOLDOWN_US 250000ULL
 
 /** Handler decision */
 typedef enum {
-    KFR_DECISION_FORWARD  = 0,  /**< Forward request to encoder */
-    KFR_DECISION_SUPPRESS = 1,  /**< Suppress (duplicate / too soon) */
+    KFR_DECISION_FORWARD = 0,  /**< Forward request to encoder */
+    KFR_DECISION_SUPPRESS = 1, /**< Suppress (duplicate / too soon) */
 } kfr_decision_t;
 
 /** Opaque keyframe request handler */
@@ -61,9 +62,7 @@ void kfr_handler_destroy(kfr_handler_t *h);
  * @param now_us  Current time in µs
  * @return        FORWARD or SUPPRESS
  */
-kfr_decision_t kfr_handler_submit(kfr_handler_t       *h,
-                                    const kfr_message_t *msg,
-                                    uint64_t             now_us);
+kfr_decision_t kfr_handler_submit(kfr_handler_t *h, const kfr_message_t *msg, uint64_t now_us);
 
 /**
  * kfr_handler_flush_ssrc — forcibly reset cooldown for @ssrc

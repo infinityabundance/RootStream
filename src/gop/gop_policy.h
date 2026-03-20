@@ -17,27 +17,27 @@
 #ifndef ROOTSTREAM_GOP_POLICY_H
 #define ROOTSTREAM_GOP_POLICY_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Default policy constants */
-#define GOP_DEFAULT_MIN_FRAMES         15   /**< 0.5 s at 30 fps */
-#define GOP_DEFAULT_MAX_FRAMES         300  /**< 10 s at 30 fps */
-#define GOP_DEFAULT_SCENE_THRESHOLD    0.8f /**< Scene-change score */
-#define GOP_DEFAULT_RTT_THRESHOLD_US   200000ULL  /**< 200 ms */
-#define GOP_DEFAULT_LOSS_THRESHOLD     0.02f      /**< 2% loss */
+#define GOP_DEFAULT_MIN_FRAMES 15              /**< 0.5 s at 30 fps */
+#define GOP_DEFAULT_MAX_FRAMES 300             /**< 10 s at 30 fps */
+#define GOP_DEFAULT_SCENE_THRESHOLD 0.8f       /**< Scene-change score */
+#define GOP_DEFAULT_RTT_THRESHOLD_US 200000ULL /**< 200 ms */
+#define GOP_DEFAULT_LOSS_THRESHOLD 0.02f       /**< 2% loss */
 
 /** GOP policy */
 typedef struct {
-    int      min_gop_frames;          /**< Min frames between forced IDRs */
-    int      max_gop_frames;          /**< Max frames before natural IDR */
-    float    scene_change_threshold;  /**< [0.0, 1.0] scene-change score */
-    uint64_t rtt_threshold_us;        /**< RTT (µs) above which = suppress */
-    float    loss_threshold;          /**< Loss fraction above which shorten GOP */
+    int min_gop_frames;           /**< Min frames between forced IDRs */
+    int max_gop_frames;           /**< Max frames before natural IDR */
+    float scene_change_threshold; /**< [0.0, 1.0] scene-change score */
+    uint64_t rtt_threshold_us;    /**< RTT (µs) above which = suppress */
+    float loss_threshold;         /**< Loss fraction above which shorten GOP */
 } gop_policy_t;
 
 /**

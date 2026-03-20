@@ -38,9 +38,9 @@
 #ifndef ROOTSTREAM_AV1_ENCODER_H
 #define ROOTSTREAM_AV1_ENCODER_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,32 +48,32 @@ extern "C" {
 
 /** Available AV1 encoding backends */
 typedef enum {
-    AV1_BACKEND_NONE   = 0,  /**< No backend available                     */
-    AV1_BACKEND_VAAPI  = 1,  /**< VA-API hardware (Intel/AMD)              */
-    AV1_BACKEND_NVENC  = 2,  /**< NVENC hardware (NVIDIA RTX 40xx)         */
-    AV1_BACKEND_SVT    = 3,  /**< SVT-AV1 software (fast multi-core)       */
-    AV1_BACKEND_LIBAOM = 4,  /**< libaom reference software (slow/quality) */
+    AV1_BACKEND_NONE = 0,   /**< No backend available                     */
+    AV1_BACKEND_VAAPI = 1,  /**< VA-API hardware (Intel/AMD)              */
+    AV1_BACKEND_NVENC = 2,  /**< NVENC hardware (NVIDIA RTX 40xx)         */
+    AV1_BACKEND_SVT = 3,    /**< SVT-AV1 software (fast multi-core)       */
+    AV1_BACKEND_LIBAOM = 4, /**< libaom reference software (slow/quality) */
 } av1_backend_t;
 
 /** AV1 encoder tuning presets */
 typedef enum {
-    AV1_PRESET_SPEED    = 0,  /**< Fastest encode, highest CPU efficiency    */
-    AV1_PRESET_BALANCED = 1,  /**< Balance between speed and quality          */
-    AV1_PRESET_QUALITY  = 2,  /**< Best quality, slower encode               */
-    AV1_PRESET_LOSSLESS = 3,  /**< Near-lossless (very high bitrate)         */
+    AV1_PRESET_SPEED = 0,    /**< Fastest encode, highest CPU efficiency    */
+    AV1_PRESET_BALANCED = 1, /**< Balance between speed and quality          */
+    AV1_PRESET_QUALITY = 2,  /**< Best quality, slower encode               */
+    AV1_PRESET_LOSSLESS = 3, /**< Near-lossless (very high bitrate)         */
 } av1_preset_t;
 
 /** AV1 encoder configuration */
 typedef struct {
-    int           width;           /**< Frame width in pixels                */
-    int           height;          /**< Frame height in pixels               */
-    int           fps;             /**< Target frame rate                    */
-    uint32_t      bitrate_kbps;    /**< Target bitrate (kilobits/sec)        */
-    av1_preset_t  preset;          /**< Speed/quality tradeoff               */
+    int width;                       /**< Frame width in pixels                */
+    int height;                      /**< Frame height in pixels               */
+    int fps;                         /**< Target frame rate                    */
+    uint32_t bitrate_kbps;           /**< Target bitrate (kilobits/sec)        */
+    av1_preset_t preset;             /**< Speed/quality tradeoff               */
     av1_backend_t preferred_backend; /**< Preferred backend (AUTO selects best) */
-    bool          low_latency;     /**< Enable zero-latency mode (disables B-frames) */
-    uint8_t       tile_columns;    /**< Parallel encoding tiles (SVT-AV1/libaom) */
-    uint8_t       tile_rows;       /**< Parallel encoding tile rows          */
+    bool low_latency;                /**< Enable zero-latency mode (disables B-frames) */
+    uint8_t tile_columns;            /**< Parallel encoding tiles (SVT-AV1/libaom) */
+    uint8_t tile_rows;               /**< Parallel encoding tile rows          */
 } av1_encoder_config_t;
 
 /** Opaque AV1 encoder context */
@@ -133,12 +133,8 @@ void av1_encoder_destroy(av1_encoder_ctx_t *ctx);
  * @param is_keyframe  Out: true if output is a keyframe (intra-only frame)
  * @return             0 on success, -1 on error
  */
-int av1_encoder_encode(av1_encoder_ctx_t *ctx,
-                       const uint8_t     *yuv420,
-                       size_t             yuv_size,
-                       uint8_t           *out,
-                       size_t            *out_size,
-                       bool              *is_keyframe);
+int av1_encoder_encode(av1_encoder_ctx_t *ctx, const uint8_t *yuv420, size_t yuv_size, uint8_t *out,
+                       size_t *out_size, bool *is_keyframe);
 
 /**
  * av1_encoder_request_keyframe — force the next encoded frame to be an
@@ -157,9 +153,7 @@ av1_backend_t av1_encoder_get_backend(const av1_encoder_ctx_t *ctx);
  * av1_encoder_get_stats — populate *bitrate_kbps and *fps_actual from the
  * last second of encoded data.  May be NULL pointers (silently skipped).
  */
-void av1_encoder_get_stats(const av1_encoder_ctx_t *ctx,
-                           uint32_t *bitrate_kbps,
-                           float    *fps_actual);
+void av1_encoder_get_stats(const av1_encoder_ctx_t *ctx, uint32_t *bitrate_kbps, float *fps_actual);
 
 #ifdef __cplusplus
 }

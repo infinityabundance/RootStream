@@ -11,8 +11,8 @@
 #ifndef ROOTSTREAM_HS_STATS_H
 #define ROOTSTREAM_HS_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,13 +20,13 @@ extern "C" {
 
 /** Handshake statistics snapshot */
 typedef struct {
-    uint64_t attempts;          /**< Total handshake attempts started */
-    uint64_t successes;         /**< Handshakes reaching READY state */
-    uint64_t failures;          /**< Handshakes ending in ERROR */
-    uint64_t timeouts;          /**< Handshakes aborted for timeout */
-    double   avg_rtt_us;        /**< Mean HELLO→READY latency (µs) */
-    double   min_rtt_us;        /**< Minimum HELLO→READY latency (µs) */
-    double   max_rtt_us;        /**< Maximum HELLO→READY latency (µs) */
+    uint64_t attempts;  /**< Total handshake attempts started */
+    uint64_t successes; /**< Handshakes reaching READY state */
+    uint64_t failures;  /**< Handshakes ending in ERROR */
+    uint64_t timeouts;  /**< Handshakes aborted for timeout */
+    double avg_rtt_us;  /**< Mean HELLO→READY latency (µs) */
+    double min_rtt_us;  /**< Minimum HELLO→READY latency (µs) */
+    double max_rtt_us;  /**< Maximum HELLO→READY latency (µs) */
 } hs_stats_snapshot_t;
 
 /** Opaque handshake stats context */

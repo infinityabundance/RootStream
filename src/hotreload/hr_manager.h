@@ -18,19 +18,20 @@
 #ifndef ROOTSTREAM_HR_MANAGER_H
 #define ROOTSTREAM_HR_MANAGER_H
 
-#include "hr_entry.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "hr_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HR_MAX_PLUGINS  16   /**< Maximum managed plugins */
+#define HR_MAX_PLUGINS 16 /**< Maximum managed plugins */
 
 /** dl function pointer types (overridable for testing) */
 typedef void *(*hr_dlopen_fn)(const char *path, int flags);
-typedef int   (*hr_dlclose_fn)(void *handle);
+typedef int (*hr_dlclose_fn)(void *handle);
 
 /** Opaque hot-reload manager */
 typedef struct hr_manager_s hr_manager_t;
@@ -42,8 +43,7 @@ typedef struct hr_manager_s hr_manager_t;
  * @param dlclose_fn  Override for dlclose (NULL → use system dlclose)
  * @return            Non-NULL handle, or NULL on OOM
  */
-hr_manager_t *hr_manager_create(hr_dlopen_fn  dlopen_fn,
-                                  hr_dlclose_fn dlclose_fn);
+hr_manager_t *hr_manager_create(hr_dlopen_fn dlopen_fn, hr_dlclose_fn dlclose_fn);
 
 /**
  * hr_manager_destroy — free manager (does NOT dlclose loaded plugins)

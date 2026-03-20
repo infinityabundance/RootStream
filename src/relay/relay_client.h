@@ -12,9 +12,10 @@
 #ifndef ROOTSTREAM_RELAY_CLIENT_H
 #define ROOTSTREAM_RELAY_CLIENT_H
 
-#include "relay_protocol.h"
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "relay_protocol.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,10 +24,10 @@ extern "C" {
 /** Relay client connection state */
 typedef enum {
     RELAY_CLIENT_DISCONNECTED = 0,
-    RELAY_CLIENT_CONNECTING   = 1,
-    RELAY_CLIENT_HELLO_SENT   = 2,
-    RELAY_CLIENT_READY        = 3,  /**< Fully paired and relaying */
-    RELAY_CLIENT_ERROR        = 4,
+    RELAY_CLIENT_CONNECTING = 1,
+    RELAY_CLIENT_HELLO_SENT = 2,
+    RELAY_CLIENT_READY = 3, /**< Fully paired and relaying */
+    RELAY_CLIENT_ERROR = 4,
 } relay_client_state_t;
 
 /** I/O callbacks provided by the host application */
@@ -51,9 +52,7 @@ typedef struct relay_client_s relay_client_t;
  * @param is_host  true = host role, false = viewer
  * @return         Non-NULL handle, or NULL on failure
  */
-relay_client_t *relay_client_create(const relay_io_t *io,
-                                     const uint8_t    *token,
-                                     bool              is_host);
+relay_client_t *relay_client_create(const relay_io_t *io, const uint8_t *token, bool is_host);
 
 /**
  * relay_client_destroy — free relay client
@@ -88,11 +87,8 @@ int relay_client_connect(relay_client_t *client);
  * @param data_ud     user_data passed to data_cb
  * @return            0 on success, -1 on parse error
  */
-int relay_client_receive(relay_client_t *client,
-                          const uint8_t  *buf,
-                          size_t          len,
-                          void (*data_cb)(const uint8_t *, size_t, void *),
-                          void           *data_ud);
+int relay_client_receive(relay_client_t *client, const uint8_t *buf, size_t len,
+                         void (*data_cb)(const uint8_t *, size_t, void *), void *data_ud);
 
 /**
  * relay_client_send_data — send a data payload through the relay server
@@ -104,9 +100,7 @@ int relay_client_receive(relay_client_t *client,
  * @param payload_len  Size in bytes
  * @return             0 on success, -1 on error or not READY
  */
-int relay_client_send_data(relay_client_t *client,
-                            const uint8_t  *payload,
-                            size_t          payload_len);
+int relay_client_send_data(relay_client_t *client, const uint8_t *payload, size_t payload_len);
 
 /**
  * relay_client_get_state — return current connection state

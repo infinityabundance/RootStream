@@ -15,8 +15,8 @@
 #ifndef ROOTSTREAM_FRC_CLOCK_H
 #define ROOTSTREAM_FRC_CLOCK_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +56,9 @@ bool frc_clock_is_stub(void);
  * @param ns  Nanoseconds
  * @return    Microseconds (truncated)
  */
-static inline uint64_t frc_clock_ns_to_us(uint64_t ns) { return ns / 1000ULL; }
+static inline uint64_t frc_clock_ns_to_us(uint64_t ns) {
+    return ns / 1000ULL;
+}
 
 /**
  * frc_clock_ns_to_ms — convert nanoseconds to milliseconds
@@ -64,7 +66,9 @@ static inline uint64_t frc_clock_ns_to_us(uint64_t ns) { return ns / 1000ULL; }
  * @param ns  Nanoseconds
  * @return    Milliseconds (truncated)
  */
-static inline uint64_t frc_clock_ns_to_ms(uint64_t ns) { return ns / 1000000ULL; }
+static inline uint64_t frc_clock_ns_to_ms(uint64_t ns) {
+    return ns / 1000000ULL;
+}
 
 #ifdef __cplusplus
 }

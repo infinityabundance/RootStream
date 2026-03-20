@@ -4,13 +4,15 @@
  */
 
 #include "auth_manager.h"
-#include "../security/user_auth.h"
-#include "../security/crypto_primitives.h"
+
+#include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <time.h>
-#include <pthread.h>
+
+#include "../security/crypto_primitives.h"
+#include "../security/user_auth.h"
 
 #define MAX_USERS 100
 #define MAX_SESSIONS 1000
@@ -46,27 +48,27 @@ static int validate_password_strength(const char *password) {
     if (!password) {
         return -1;
     }
-    
+
     size_t len = strlen(password);
-    
+
     // Minimum length check
     if (len < 8) {
         fprintf(stderr, "Password too short (minimum 8 characters)\n");
         return -1;
     }
-    
+
     // Maximum length check
     if (len > 128) {
         fprintf(stderr, "Password too long (maximum 128 characters)\n");
         return -1;
     }
-    
+
     // Check for at least one letter and one number
     bool has_letter = false;
     bool has_digit = false;
-    
+
     for (size_t i = 0; i < len; i++) {
-        if ((password[i] >= 'a' && password[i] <= 'z') || 
+        if ((password[i] >= 'a' && password[i] <= 'z') ||
             (password[i] >= 'A' && password[i] <= 'Z')) {
             has_letter = true;
         }
@@ -74,12 +76,12 @@ static int validate_password_strength(const char *password) {
             has_digit = true;
         }
     }
-    
+
     if (!has_letter || !has_digit) {
         fprintf(stderr, "Password must contain at least one letter and one number\n");
         return -1;
     }
-    
+
     return 0;
 }
 
@@ -95,11 +97,11 @@ static int generate_token(const char *username, user_role_t role, char *token, s
         crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
         return -1;
     }
-    
+
     // Convert to hex string
     const char hex[] = "0123456789abcdef";
     size_t pos = 0;
-    
+
     // Add prefix with username and role for debugging (optional)
     int written = snprintf(token + pos, token_size - pos, "%s_%d_", username, role);
     if (written < 0 || (size_t)written >= token_size - pos) {
@@ -108,14 +110,14 @@ static int generate_token(const char *username, user_role_t role, char *token, s
         return -1;
     }
     pos += written;
-    
+
     // Add random hex string
     for (size_t i = 0; i < sizeof(random_bytes) && pos < token_size - 2; i++) {
         token[pos++] = hex[(random_bytes[i] >> 4) & 0xF];
         token[pos++] = hex[random_bytes[i] & 0xF];
     }
     token[pos] = '\0';
-    
+
     // Securely wipe random bytes from memory
     crypto_prim_secure_wipe(random_bytes, sizeof(random_bytes));
     return 0;
@@ -136,7 +138,7 @@ auth_manager_t *auth_manager_init(void) {
         free(auth);
         return NULL;
     }
-    
+
     if (user_auth_init() != 0) {
         fprintf(stderr, "Failed to initialize user authentication\n");
         free(auth);
@@ -152,7 +154,7 @@ auth_manager_t *auth_manager_init(void) {
     // Check environment variable for initial admin setup
     const char *admin_user = getenv("ROOTSTREAM_ADMIN_USERNAME");
     const char *admin_pass = getenv("ROOTSTREAM_ADMIN_PASSWORD");
-    
+
     if (admin_user && admin_pass && strlen(admin_user) > 0 && strlen(admin_pass) > 0) {
         if (auth_manager_add_user(auth, admin_user, admin_pass, ROLE_ADMIN) == 0) {
             printf("Initial admin user created from environment variables\n");
@@ -160,8 +162,9 @@ auth_manager_t *auth_manager_init(void) {
             fprintf(stderr, "WARNING: Failed to create initial admin user\n");
         }
     } else {
-        printf("WARNING: No initial admin user created. Set ROOTSTREAM_ADMIN_USERNAME "
-               "and ROOTSTREAM_ADMIN_PASSWORD environment variables to create one.\n");
+        printf(
+            "WARNING: No initial admin user created. Set ROOTSTREAM_ADMIN_USERNAME "
+            "and ROOTSTREAM_ADMIN_PASSWORD environment variables to create one.\n");
     }
 
     return auth;
@@ -170,20 +173,18 @@ auth_manager_t *auth_manager_init(void) {
 /**
  * Add user with password strength validation and Argon2 hashing
  */
-int auth_manager_add_user(auth_manager_t *auth,
-                         const char *username,
-                         const char *password,
-                         user_role_t role) {
+int auth_manager_add_user(auth_manager_t *auth, const char *username, const char *password,
+                          user_role_t role) {
     if (!auth || !username || !password || auth->user_count >= MAX_USERS) {
         return -1;
     }
-    
+
     // Validate username
-    if (strlen(username) == 0 || strlen(username) >= sizeof(((user_entry_t*)0)->username)) {
+    if (strlen(username) == 0 || strlen(username) >= sizeof(((user_entry_t *)0)->username)) {
         fprintf(stderr, "Invalid username length\n");
         return -1;
     }
-    
+
     // Validate password strength
     if (validate_password_strength(password) != 0) {
         return -1;
@@ -204,14 +205,14 @@ int auth_manager_add_user(auth_manager_t *auth,
     user_entry_t *user = &auth->users[auth->user_count];
     strncpy(user->username, username, sizeof(user->username) - 1);
     user->username[sizeof(user->username) - 1] = '\0';
-    
+
     // Hash password using Argon2 via user_auth
     if (user_auth_hash_password(password, user->password_hash) != 0) {
         pthread_mutex_unlock(&auth->lock);
         fprintf(stderr, "Failed to hash password\n");
         return -1;
     }
-    
+
     user->role = role;
     user->is_active = true;
 
@@ -220,7 +221,7 @@ int auth_manager_add_user(auth_manager_t *auth,
     pthread_mutex_unlock(&auth->lock);
 
     printf("Added user: %s (role: %d) with Argon2 hashed password\n", username, role);
-    
+
     return 0;
 }
 
@@ -250,13 +251,12 @@ int auth_manager_remove_user(auth_manager_t *auth, const char *username) {
 /**
  * Change password with validation and Argon2 hashing
  */
-int auth_manager_change_password(auth_manager_t *auth,
-                                const char *username,
-                                const char *new_password) {
+int auth_manager_change_password(auth_manager_t *auth, const char *username,
+                                 const char *new_password) {
     if (!auth || !username || !new_password) {
         return -1;
     }
-    
+
     // Validate password strength
     if (validate_password_strength(new_password) != 0) {
         return -1;
@@ -286,11 +286,8 @@ int auth_manager_change_password(auth_manager_t *auth,
 /**
  * Authenticate user and generate token
  */
-int auth_manager_authenticate(auth_manager_t *auth,
-                             const char *username,
-                             const char *password,
-                             char *token_out,
-                             size_t token_size) {
+int auth_manager_authenticate(auth_manager_t *auth, const char *username, const char *password,
+                              char *token_out, size_t token_size) {
     if (!auth || !username || !password || !token_out) {
         return -1;
     }
@@ -300,8 +297,7 @@ int auth_manager_authenticate(auth_manager_t *auth,
     // Find user
     user_entry_t *user = NULL;
     for (int i = 0; i < auth->user_count; i++) {
-        if (strcmp(auth->users[i].username, username) == 0 &&
-            auth->users[i].is_active) {
+        if (strcmp(auth->users[i].username, username) == 0 && auth->users[i].is_active) {
             user = &auth->users[i];
             break;
         }
@@ -339,18 +335,15 @@ int auth_manager_authenticate(auth_manager_t *auth,
     pthread_mutex_unlock(&auth->lock);
 
     printf("User authenticated: %s\n", username);
-    
+
     return 0;
 }
 
 /**
  * Verify token and get user info
  */
-int auth_manager_verify_token(auth_manager_t *auth,
-                              const char *token,
-                              char *username_out,
-                              size_t username_size,
-                              user_role_t *role_out) {
+int auth_manager_verify_token(auth_manager_t *auth, const char *token, char *username_out,
+                              size_t username_size, user_role_t *role_out) {
     if (!auth || !token) {
         return -1;
     }

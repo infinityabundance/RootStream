@@ -43,9 +43,10 @@
 #ifndef ROOTSTREAM_CODEC_FALLBACK_H
 #define ROOTSTREAM_CODEC_FALLBACK_H
 
-#include "codec_registry.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "codec_registry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,19 +55,19 @@ extern "C" {
 /* ── Built-in fallback chain definitions ─────────────────────────── */
 
 /** Maximum number of codecs in a fallback chain */
-#define CFB_MAX_CHAIN  16
+#define CFB_MAX_CHAIN 16
 
 /** Option flags for cfb_select_best() */
-#define CFB_OPT_NONE      0x00
-#define CFB_OPT_HW_FIRST  0x01  /**< Prefer HW-accelerated codec if available */
-#define CFB_OPT_SW_ONLY   0x02  /**< Force software-only (testing / debugging) */
+#define CFB_OPT_NONE 0x00
+#define CFB_OPT_HW_FIRST 0x01 /**< Prefer HW-accelerated codec if available */
+#define CFB_OPT_SW_ONLY 0x02  /**< Force software-only (testing / debugging) */
 
 /** Result of a fallback selection */
 typedef struct {
-    uint8_t  codec_id;       /**< Selected CREG_VCODEC_* codec                */
-    bool     hw_available;   /**< HW acceleration is available for the codec  */
-    bool     is_fallback;    /**< true if the preferred codec was not available */
-    int      chain_position; /**< Zero-based index in the fallback chain       */
+    uint8_t codec_id;   /**< Selected CREG_VCODEC_* codec                */
+    bool hw_available;  /**< HW acceleration is available for the codec  */
+    bool is_fallback;   /**< true if the preferred codec was not available */
+    int chain_position; /**< Zero-based index in the fallback chain       */
 } cfb_result_t;
 
 /* ── Pre-defined chains (convenience) ────────────────────────────── */
@@ -77,7 +78,7 @@ typedef struct {
  * Use when maximum compression efficiency is the priority.
  */
 extern const uint8_t cfb_chain_quality[];
-extern const int     cfb_chain_quality_len;
+extern const int cfb_chain_quality_len;
 
 /**
  * cfb_chain_compat — compatibility-first chain (widest device support).
@@ -85,7 +86,7 @@ extern const int     cfb_chain_quality_len;
  * Use for streaming to older devices or when decoder support is uncertain.
  */
 extern const uint8_t cfb_chain_compat[];
-extern const int     cfb_chain_compat_len;
+extern const int cfb_chain_compat_len;
 
 /**
  * cfb_chain_modern — balanced chain (modern devices, good quality).
@@ -93,7 +94,7 @@ extern const int     cfb_chain_compat_len;
  * Use for most streaming sessions — widely supported, good quality.
  */
 extern const uint8_t cfb_chain_modern[];
-extern const int     cfb_chain_modern_len;
+extern const int cfb_chain_modern_len;
 
 /**
  * cfb_chain_discord — libdave-first chain.
@@ -101,7 +102,7 @@ extern const int     cfb_chain_modern_len;
  * Use when the remote endpoint is a Discord-compatible receiver.
  */
 extern const uint8_t cfb_chain_discord[];
-extern const int     cfb_chain_discord_len;
+extern const int cfb_chain_discord_len;
 
 /* ── Selection function ───────────────────────────────────────────── */
 
@@ -118,12 +119,8 @@ extern const int     cfb_chain_discord_len;
  * @return  CREG_VCODEC_* ID of selected codec, or CREG_VCODEC_H264 if
  *          absolutely nothing is available (H.264 software is always compiled in)
  */
-uint8_t cfb_select_best(const creg_registry_t *r,
-                         uint8_t                preferred,
-                         const uint8_t         *chain,
-                         int                    chain_len,
-                         uint8_t                options,
-                         cfb_result_t          *result);
+uint8_t cfb_select_best(const creg_registry_t *r, uint8_t preferred, const uint8_t *chain,
+                        int chain_len, uint8_t options, cfb_result_t *result);
 
 /**
  * cfb_select_for_session — convenience wrapper that picks the appropriate
@@ -140,10 +137,8 @@ uint8_t cfb_select_best(const creg_registry_t *r,
  * @param result    Output: selected codec info
  * @return          Selected CREG_VCODEC_* ID
  */
-uint8_t cfb_select_for_session(const creg_registry_t *r,
-                                uint8_t                preferred,
-                                uint8_t                options,
-                                cfb_result_t          *result);
+uint8_t cfb_select_for_session(const creg_registry_t *r, uint8_t preferred, uint8_t options,
+                               cfb_result_t *result);
 
 /**
  * cfb_result_codec_name — return the human-readable name for the result.
@@ -152,8 +147,7 @@ uint8_t cfb_select_for_session(const creg_registry_t *r,
  * @param res cfb_result_t from cfb_select_best()
  * @return    Static string (never NULL)
  */
-const char *cfb_result_codec_name(const creg_registry_t *r,
-                                   const cfb_result_t    *res);
+const char *cfb_result_codec_name(const creg_registry_t *r, const cfb_result_t *res);
 
 #ifdef __cplusplus
 }

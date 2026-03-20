@@ -17,13 +17,13 @@
 extern "C" {
 #endif
 
-#define MX_GAUGE_NAME_MAX  48   /**< Maximum gauge name length (incl. NUL) */
+#define MX_GAUGE_NAME_MAX 48 /**< Maximum gauge name length (incl. NUL) */
 
 /** Named integer gauge */
 typedef struct {
-    char    name[MX_GAUGE_NAME_MAX];  /**< Human-readable identifier */
-    int64_t value;                    /**< Current value */
-    int     in_use;                   /**< Non-zero when registered */
+    char name[MX_GAUGE_NAME_MAX]; /**< Human-readable identifier */
+    int64_t value;                /**< Current value */
+    int in_use;                   /**< Non-zero when registered */
 } mx_gauge_t;
 
 /**

@@ -61,9 +61,9 @@
 #ifndef ROOTSTREAM_CLIENT_SESSION_H
 #define ROOTSTREAM_CLIENT_SESSION_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,15 +76,15 @@ extern "C" {
  * The actual format depends on the decode backend and the source bitstream.
  */
 typedef enum {
-    RS_PIXFMT_NV12  = 0,   /**< YUV 4:2:0, Y plane + interleaved UV plane
-                              *  Most common for VA-API decoded frames.
-                              *  plane0 = Y (stride0), plane1 = UV (stride1) */
-    RS_PIXFMT_YUV420 = 1,  /**< YUV 4:2:0 planar (I420)
-                              *  plane0=Y, plane1=U, plane2=V (stride0, stride1, stride2) */
-    RS_PIXFMT_RGBA  = 2,   /**< 32-bit RGBA, 4 bytes/pixel, plane1=NULL
-                              *  Used by software decoder / test paths */
-    RS_PIXFMT_BGRA  = 3,   /**< 32-bit BGRA (Windows / Direct3D format) */
-    RS_PIXFMT_P010  = 4,   /**< 10-bit NV12 (HDR content) */
+    RS_PIXFMT_NV12 = 0,   /**< YUV 4:2:0, Y plane + interleaved UV plane
+                           *  Most common for VA-API decoded frames.
+                           *  plane0 = Y (stride0), plane1 = UV (stride1) */
+    RS_PIXFMT_YUV420 = 1, /**< YUV 4:2:0 planar (I420)
+                           *  plane0=Y, plane1=U, plane2=V (stride0, stride1, stride2) */
+    RS_PIXFMT_RGBA = 2,   /**< 32-bit RGBA, 4 bytes/pixel, plane1=NULL
+                           *  Used by software decoder / test paths */
+    RS_PIXFMT_BGRA = 3,   /**< 32-bit BGRA (Windows / Direct3D format) */
+    RS_PIXFMT_P010 = 4,   /**< 10-bit NV12 (HDR content) */
 } rs_pixfmt_t;
 
 /* ── Video frame descriptor ───────────────────────────────────────── */
@@ -105,17 +105,17 @@ typedef enum {
  *   plane1 = plane2 = NULL
  */
 typedef struct {
-    int            width;       /**< Frame width in pixels                   */
-    int            height;      /**< Frame height in pixels                  */
-    rs_pixfmt_t    pixfmt;      /**< Pixel format of plane0/plane1/plane2    */
-    const uint8_t *plane0;      /**< Primary plane (Y for NV12, RGBA data)   */
-    const uint8_t *plane1;      /**< Secondary plane (UV for NV12), or NULL  */
-    const uint8_t *plane2;      /**< Tertiary plane (V for I420), or NULL    */
-    int            stride0;     /**< Bytes per row for plane0                */
-    int            stride1;     /**< Bytes per row for plane1 (0 if NULL)    */
-    int            stride2;     /**< Bytes per row for plane2 (0 if NULL)    */
-    uint64_t       pts_us;      /**< Presentation timestamp (microseconds)   */
-    bool           is_keyframe; /**< True if this is an intra-coded frame     */
+    int width;             /**< Frame width in pixels                   */
+    int height;            /**< Frame height in pixels                  */
+    rs_pixfmt_t pixfmt;    /**< Pixel format of plane0/plane1/plane2    */
+    const uint8_t *plane0; /**< Primary plane (Y for NV12, RGBA data)   */
+    const uint8_t *plane1; /**< Secondary plane (UV for NV12), or NULL  */
+    const uint8_t *plane2; /**< Tertiary plane (V for I420), or NULL    */
+    int stride0;           /**< Bytes per row for plane0                */
+    int stride1;           /**< Bytes per row for plane1 (0 if NULL)    */
+    int stride2;           /**< Bytes per row for plane2 (0 if NULL)    */
+    uint64_t pts_us;       /**< Presentation timestamp (microseconds)   */
+    bool is_keyframe;      /**< True if this is an intra-coded frame     */
 } rs_video_frame_t;
 
 /* ── Audio frame descriptor ───────────────────────────────────────── */
@@ -127,11 +127,11 @@ typedef struct {
  * Copy samples if you need them after the callback returns.
  */
 typedef struct {
-    int16_t       *samples;      /**< Interleaved PCM, int16 little-endian   */
-    size_t         num_samples;  /**< Total samples (frames × channels)      */
-    int            channels;     /**< Number of audio channels               */
-    int            sample_rate;  /**< Samples per second (e.g. 48000)        */
-    uint64_t       pts_us;       /**< Presentation timestamp (microseconds)  */
+    int16_t *samples;   /**< Interleaved PCM, int16 little-endian   */
+    size_t num_samples; /**< Total samples (frames × channels)      */
+    int channels;       /**< Number of audio channels               */
+    int sample_rate;    /**< Samples per second (e.g. 48000)        */
+    uint64_t pts_us;    /**< Presentation timestamp (microseconds)  */
 } rs_audio_frame_t;
 
 /* ── Callback types ───────────────────────────────────────────────── */
@@ -174,11 +174,11 @@ typedef void (*rs_on_state_change_fn)(void *user, const char *state);
  * (Typically stack-allocated configs are fine since create() is synchronous.)
  */
 typedef struct {
-    const char *peer_host;      /**< Peer hostname or IP address            */
-    int         peer_port;      /**< Peer port number                       */
-    const char *peer_code;      /**< Optional peer pairing code             */
-    bool        audio_enabled;  /**< Enable audio decode + callback         */
-    bool        low_latency;    /**< Request low-latency decode mode        */
+    const char *peer_host; /**< Peer hostname or IP address            */
+    int peer_port;         /**< Peer port number                       */
+    const char *peer_code; /**< Optional peer pairing code             */
+    bool audio_enabled;    /**< Enable audio decode + callback         */
+    bool low_latency;      /**< Request low-latency decode mode        */
 } rs_client_config_t;
 
 /* ── Session handle ───────────────────────────────────────────────── */
@@ -224,9 +224,8 @@ void rs_client_session_destroy(rs_client_session_t *s);
  * @param cb    Callback function (may be NULL to disable video output)
  * @param user  Opaque pointer forwarded to every cb invocation
  */
-void rs_client_session_set_video_callback(rs_client_session_t    *s,
-                                          rs_on_video_frame_fn    cb,
-                                          void                   *user);
+void rs_client_session_set_video_callback(rs_client_session_t *s, rs_on_video_frame_fn cb,
+                                          void *user);
 
 /**
  * rs_client_session_set_audio_callback — register the audio callback.
@@ -235,9 +234,8 @@ void rs_client_session_set_video_callback(rs_client_session_t    *s,
  * @param cb    Callback (may be NULL to disable audio output)
  * @param user  Opaque pointer forwarded to every cb invocation
  */
-void rs_client_session_set_audio_callback(rs_client_session_t    *s,
-                                          rs_on_audio_frame_fn    cb,
-                                          void                   *user);
+void rs_client_session_set_audio_callback(rs_client_session_t *s, rs_on_audio_frame_fn cb,
+                                          void *user);
 
 /**
  * rs_client_session_set_state_callback — register the state-change callback.
@@ -246,9 +244,8 @@ void rs_client_session_set_audio_callback(rs_client_session_t    *s,
  * @param cb    Callback (may be NULL)
  * @param user  Opaque pointer forwarded to every cb invocation
  */
-void rs_client_session_set_state_callback(rs_client_session_t    *s,
-                                          rs_on_state_change_fn   cb,
-                                          void                   *user);
+void rs_client_session_set_state_callback(rs_client_session_t *s, rs_on_state_change_fn cb,
+                                          void *user);
 
 /* ── Run / stop ───────────────────────────────────────────────────── */
 

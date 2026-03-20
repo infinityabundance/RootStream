@@ -15,19 +15,20 @@
 #ifndef ROOTSTREAM_SR_ROUTE_H
 #define ROOTSTREAM_SR_ROUTE_H
 
-#include "sr_signal.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "sr_signal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SR_MAX_ROUTES  32
+#define SR_MAX_ROUTES 32
 
 /** Route handle */
 typedef int sr_route_handle_t;
-#define SR_INVALID_HANDLE  (-1)
+#define SR_INVALID_HANDLE (-1)
 
 /** Optional filter predicate — return true to allow delivery */
 typedef bool (*sr_filter_fn)(const sr_signal_t *s, void *user);
@@ -65,12 +66,8 @@ void sr_router_destroy(sr_router_t *r);
  * @param user      Passed through to filter_fn and deliver
  * @return          Route handle, or SR_INVALID_HANDLE if table full
  */
-sr_route_handle_t sr_router_add_route(sr_router_t   *r,
-                                       uint32_t       src_mask,
-                                       uint32_t       match_id,
-                                       sr_filter_fn   filter_fn,
-                                       sr_deliver_fn  deliver,
-                                       void          *user);
+sr_route_handle_t sr_router_add_route(sr_router_t *r, uint32_t src_mask, uint32_t match_id,
+                                      sr_filter_fn filter_fn, sr_deliver_fn deliver, void *user);
 
 /**
  * sr_router_remove_route — remove a route by handle

@@ -7,20 +7,23 @@
 #include <string.h>
 
 int lw_init(loss_window_t *w) {
-    if (!w) return -1;
+    if (!w)
+        return -1;
     memset(w, 0, sizeof(*w));
     return 0;
 }
 
 void lw_reset(loss_window_t *w) {
-    if (w) memset(w, 0, sizeof(*w));
+    if (w)
+        memset(w, 0, sizeof(*w));
 }
 
 /* Advance window to accommodate seq, marking skipped slots lost */
 static void lw_advance(loss_window_t *w, uint16_t seq) {
     /* How many slots to advance? */
     int delta = (int)(uint16_t)(seq - w->base_seq);
-    if (delta <= 0) return; /* old or duplicate */
+    if (delta <= 0)
+        return; /* old or duplicate */
 
     if (delta >= LOSS_WIN_SIZE) {
         /* All slots are now stale — mark the whole window lost */
@@ -47,16 +50,18 @@ static void lw_advance(loss_window_t *w, uint16_t seq) {
 }
 
 int lw_receive(loss_window_t *w, uint16_t seq) {
-    if (!w) return -1;
+    if (!w)
+        return -1;
 
     if (!w->initialised) {
-        w->base_seq    = seq;
+        w->base_seq = seq;
         w->initialised = true;
     }
 
     /* Advance window if needed */
     int16_t delta = (int16_t)(seq - w->base_seq);
-    if (delta > 0) lw_advance(w, seq);
+    if (delta > 0)
+        lw_advance(w, seq);
 
     /* Mark slot received */
     int slot = seq % LOSS_WIN_SIZE;
@@ -66,6 +71,7 @@ int lw_receive(loss_window_t *w, uint16_t seq) {
 }
 
 double lw_loss_rate(const loss_window_t *w) {
-    if (!w || w->total_seen == 0) return 0.0;
+    if (!w || w->total_seen == 0)
+        return 0.0;
     return (double)w->total_lost / (double)w->total_seen;
 }

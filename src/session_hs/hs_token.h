@@ -13,15 +13,15 @@
 #ifndef ROOTSTREAM_HS_TOKEN_H
 #define ROOTSTREAM_HS_TOKEN_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HS_TOKEN_SIZE  16  /**< Token length in bytes */
+#define HS_TOKEN_SIZE 16 /**< Token length in bytes */
 
 /** 128-bit session token */
 typedef struct {

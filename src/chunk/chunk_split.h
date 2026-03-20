@@ -15,20 +15,21 @@
 #ifndef ROOTSTREAM_CHUNK_SPLIT_H
 #define ROOTSTREAM_CHUNK_SPLIT_H
 
-#include "chunk_hdr.h"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "chunk_hdr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CHUNK_SPLIT_MAX  256   /**< Maximum chunks per frame */
+#define CHUNK_SPLIT_MAX 256 /**< Maximum chunks per frame */
 
 /** One output chunk: header + pointer into source buffer */
 typedef struct {
-    chunk_hdr_t  hdr;         /**< Filled-in chunk header */
-    const void  *data;        /**< Pointer into caller's frame_data */
+    chunk_hdr_t hdr;  /**< Filled-in chunk header */
+    const void *data; /**< Pointer into caller's frame_data */
 } chunk_t;
 
 /**
@@ -44,14 +45,8 @@ typedef struct {
  * @param max_out     Size of out array
  * @return            Number of chunks produced, or -1 on invalid params
  */
-int chunk_split(const void *frame_data,
-                size_t      frame_len,
-                size_t      mtu,
-                uint32_t    stream_id,
-                uint32_t    frame_seq,
-                uint8_t     flags,
-                chunk_t    *out,
-                int         max_out);
+int chunk_split(const void *frame_data, size_t frame_len, size_t mtu, uint32_t stream_id,
+                uint32_t frame_seq, uint8_t flags, chunk_t *out, int max_out);
 
 #ifdef __cplusplus
 }

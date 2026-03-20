@@ -4,9 +4,10 @@
  * Cross-platform helpers used by both Linux host and Windows client.
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <string.h>
+
+#include "../include/rootstream.h"
 
 /*
  * Initialize RootStream context
@@ -26,7 +27,7 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     ctx->uinput_kbd_fd = -1;
     ctx->uinput_mouse_fd = -1;
     ctx->running = true;
-    ctx->port = 0;  /* Will use default */
+    ctx->port = 0; /* Will use default */
 
     /* Initialize crypto library */
     if (crypto_init() < 0) {
@@ -49,9 +50,8 @@ int rootstream_init(rootstream_ctx_t *ctx) {
     printf("\n");
     printf("Device Identity: %s\n", ctx->keypair.identity);
     char fingerprint[32];
-    if (crypto_format_fingerprint(ctx->keypair.public_key,
-                                  CRYPTO_PUBLIC_KEY_BYTES,
-                                  fingerprint, sizeof(fingerprint)) == 0) {
+    if (crypto_format_fingerprint(ctx->keypair.public_key, CRYPTO_PUBLIC_KEY_BYTES, fingerprint,
+                                  sizeof(fingerprint)) == 0) {
         printf("Device Fingerprint: %s\n", fingerprint);
     } else {
         fprintf(stderr, "WARNING: Unable to format device fingerprint\n");
@@ -81,7 +81,8 @@ int rootstream_init(rootstream_ctx_t *ctx) {
  * Cleanup all resources
  */
 void rootstream_cleanup(rootstream_ctx_t *ctx) {
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     printf("\nINFO: Cleaning up...\n");
 
@@ -109,10 +110,11 @@ void rootstream_cleanup(rootstream_ctx_t *ctx) {
  * Print session statistics
  */
 void rootstream_print_stats(rootstream_ctx_t *ctx) {
-    if (!ctx) return;
+    if (!ctx)
+        return;
 
     if (ctx->frames_captured == 0 && ctx->bytes_sent == 0) {
-        return;  /* No activity, skip stats */
+        return; /* No activity, skip stats */
     }
 
     printf("\n");

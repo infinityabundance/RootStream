@@ -10,8 +10,8 @@
 #ifndef ROOTSTREAM_OUTPUT_STATS_H
 #define ROOTSTREAM_OUTPUT_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,10 +19,10 @@ extern "C" {
 
 /** Output stats snapshot */
 typedef struct {
-    uint64_t bytes_sent;     /**< Total bytes transmitted across all targets */
-    uint32_t connect_count;  /**< Successful connect events */
-    uint32_t error_count;    /**< Failed connect / error events */
-    int      active_count;   /**< Currently active (OT_ACTIVE) targets */
+    uint64_t bytes_sent;    /**< Total bytes transmitted across all targets */
+    uint32_t connect_count; /**< Successful connect events */
+    uint32_t error_count;   /**< Failed connect / error events */
+    int active_count;       /**< Currently active (OT_ACTIVE) targets */
 } output_stats_snapshot_t;
 
 /** Opaque output stats context */

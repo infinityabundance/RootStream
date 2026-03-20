@@ -1,23 +1,24 @@
 /*
  * qrcode.c - QR code generation for RootStream codes
- * 
+ *
  * Uses qrencode library to generate QR codes that can be:
  * - Displayed in GTK window
  * - Saved as PNG
  * - Printed to terminal (ASCII art)
- * 
+ *
  * QR code contains the full RootStream code:
  *   base64_pubkey@hostname
- * 
+ *
  * Scanning this QR code on another device allows instant pairing.
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <unistd.h>
+
+#include "../include/rootstream.h"
 
 /* libqrencode for QR code generation */
 #include <qrencode.h>
@@ -27,11 +28,11 @@
 
 /*
  * Generate QR code and save as PNG
- * 
+ *
  * @param data        Data to encode (RootStream code)
  * @param output_file Output PNG file path
  * @return            0 on success, -1 on error
- * 
+ *
  * QR code settings:
  * - Version: auto (adaptive)
  * - Error correction: Medium (15% recovery)
@@ -66,8 +67,7 @@ int qrcode_generate(const char *data, const char *output_file) {
         return -1;
     }
 
-    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, 
-                                              NULL, NULL, NULL);
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png) {
         fclose(fp);
         QRcode_free(qr);
@@ -90,9 +90,8 @@ int qrcode_generate(const char *data, const char *output_file) {
     }
 
     png_init_io(png, fp);
-    png_set_IHDR(png, info, size, size, 8, PNG_COLOR_TYPE_GRAY,
-                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
-                PNG_FILTER_TYPE_DEFAULT);
+    png_set_IHDR(png, info, size, size, 8, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     png_write_info(png, info);
 
     /* Allocate row buffer */
@@ -112,7 +111,7 @@ int qrcode_generate(const char *data, const char *output_file) {
 
             /* White border */
             if (qr_x < 0 || qr_y < 0 || qr_x >= qr->width || qr_y >= qr->width) {
-                row[x] = 255;  /* White */
+                row[x] = 255; /* White */
             } else {
                 /* Black if module is set, white otherwise */
                 int index = qr_y * qr->width + qr_x;
@@ -137,15 +136,16 @@ int qrcode_generate(const char *data, const char *output_file) {
 
 /*
  * Print QR code to terminal (ASCII art)
- * 
+ *
  * @param data RootStream code to encode
- * 
+ *
  * Uses Unicode block characters for better visual:
  * - █ (full block) for black modules
  * - ' ' (space) for white modules
  */
 void qrcode_print_terminal(const char *data) {
-    if (!data) return;
+    if (!data)
+        return;
 
     QRcode *qr = QRcode_encodeString(data, 0, QR_ECLEVEL_M, QR_MODE_8, 1);
     if (!qr) {
@@ -178,11 +178,11 @@ void qrcode_print_terminal(const char *data) {
 
 /*
  * Display QR code in GTK window
- * 
+ *
  * @param ctx  RootStream context
  * @param code RootStream code to display
  * @return     0 on success, -1 on error
- * 
+ *
  * Creates a simple GTK window showing:
  * - QR code image
  * - RootStream code text
@@ -201,8 +201,11 @@ int qrcode_display(rootstream_ctx_t *ctx, const char *code) {
         return -1;
     }
 
-    /* TODO: Display in GTK window (see tray.c) */
-    /* For now, just print to terminal */
+    /* In HEADLESS or non-GTK builds the QR code is printed to the terminal.
+     * When a GTK system tray is available, tray.c integrates the QR PNG via
+     * the gtk_image_new_from_file() path — see tray.c for the GTK display
+     * implementation.  The terminal path below is the canonical headless
+     * entrypoint and is always available regardless of build flags. */
     qrcode_print_terminal(code);
 
     return 0;

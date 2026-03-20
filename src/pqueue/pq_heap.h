@@ -11,14 +11,15 @@
 #ifndef ROOTSTREAM_PQ_HEAP_H
 #define ROOTSTREAM_PQ_HEAP_H
 
-#include "pq_entry.h"
 #include <stddef.h>
+
+#include "pq_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PQ_MAX_SIZE  64   /**< Maximum entries in the heap */
+#define PQ_MAX_SIZE 64 /**< Maximum entries in the heap */
 
 /** Opaque priority queue */
 typedef struct pq_heap_s pq_heap_t;

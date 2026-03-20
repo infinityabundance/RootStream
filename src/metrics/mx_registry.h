@@ -11,14 +11,15 @@
 #ifndef ROOTSTREAM_MX_REGISTRY_H
 #define ROOTSTREAM_MX_REGISTRY_H
 
-#include "mx_gauge.h"
 #include <stddef.h>
+
+#include "mx_gauge.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define MX_MAX_GAUGES  64
+#define MX_MAX_GAUGES 64
 
 /** Opaque gauge registry */
 typedef struct mx_registry_s mx_registry_t;
@@ -65,9 +66,7 @@ int mx_registry_count(const mx_registry_t *r);
  * @param max_out  Size of out array
  * @return         Number of gauges copied
  */
-int mx_registry_snapshot_all(const mx_registry_t *r,
-                              mx_gauge_t          *out,
-                              int                  max_out);
+int mx_registry_snapshot_all(const mx_registry_t *r, mx_gauge_t *out, int max_out);
 
 #ifdef __cplusplus
 }

@@ -13,14 +13,15 @@
 #ifndef ROOTSTREAM_TAG_STORE_H
 #define ROOTSTREAM_TAG_STORE_H
 
-#include "tag_entry.h"
 #include <stddef.h>
+
+#include "tag_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define TAG_STORE_MAX  32   /**< Maximum number of tags */
+#define TAG_STORE_MAX 32 /**< Maximum number of tags */
 
 /** Opaque tag store */
 typedef struct tag_store_s tag_store_t;
@@ -80,9 +81,8 @@ int tag_store_count(const tag_store_t *s);
 /**
  * tag_store_foreach — iterate active tags
  */
-void tag_store_foreach(const tag_store_t *s,
-                        void (*cb)(const tag_entry_t *e, void *user),
-                        void *user);
+void tag_store_foreach(const tag_store_t *s, void (*cb)(const tag_entry_t *e, void *user),
+                       void *user);
 
 #ifdef __cplusplus
 }

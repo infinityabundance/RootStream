@@ -20,31 +20,31 @@
 #ifndef ROOTSTREAM_RELAY_PROTOCOL_H
 #define ROOTSTREAM_RELAY_PROTOCOL_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RELAY_MAGIC        0x5253U   /* 'RS' */
-#define RELAY_VERSION      1
-#define RELAY_HDR_SIZE     10        /* bytes */
-#define RELAY_MAX_PAYLOAD  65535     /* bytes */
-#define RELAY_TOKEN_LEN    32        /* bytes — HMAC-SHA256 output */
+#define RELAY_MAGIC 0x5253U /* 'RS' */
+#define RELAY_VERSION 1
+#define RELAY_HDR_SIZE 10       /* bytes */
+#define RELAY_MAX_PAYLOAD 65535 /* bytes */
+#define RELAY_TOKEN_LEN 32      /* bytes — HMAC-SHA256 output */
 
 /** Relay message types */
 typedef enum {
-    RELAY_MSG_HELLO        = 0x01,  /**< Client → server: announce intent    */
-    RELAY_MSG_HELLO_ACK    = 0x02,  /**< Server → client: session assigned   */
-    RELAY_MSG_CONNECT      = 0x03,  /**< Client → server: connect to peer    */
-    RELAY_MSG_CONNECT_ACK  = 0x04,  /**< Server → client: peer found / ready */
-    RELAY_MSG_DATA         = 0x05,  /**< Bi-directional: relayed data frame  */
-    RELAY_MSG_PING         = 0x06,  /**< Keepalive ping                      */
-    RELAY_MSG_PONG         = 0x07,  /**< Keepalive pong                      */
-    RELAY_MSG_DISCONNECT   = 0x08,  /**< Graceful teardown                   */
-    RELAY_MSG_ERROR        = 0x09,  /**< Server → client: error notification */
+    RELAY_MSG_HELLO = 0x01,       /**< Client → server: announce intent    */
+    RELAY_MSG_HELLO_ACK = 0x02,   /**< Server → client: session assigned   */
+    RELAY_MSG_CONNECT = 0x03,     /**< Client → server: connect to peer    */
+    RELAY_MSG_CONNECT_ACK = 0x04, /**< Server → client: peer found / ready */
+    RELAY_MSG_DATA = 0x05,        /**< Bi-directional: relayed data frame  */
+    RELAY_MSG_PING = 0x06,        /**< Keepalive ping                      */
+    RELAY_MSG_PONG = 0x07,        /**< Keepalive pong                      */
+    RELAY_MSG_DISCONNECT = 0x08,  /**< Graceful teardown                   */
+    RELAY_MSG_ERROR = 0x09,       /**< Server → client: error notification */
 } relay_msg_type_t;
 
 /** Relay session identifier */
@@ -52,9 +52,9 @@ typedef uint32_t relay_session_id_t;
 
 /** Decoded relay message header */
 typedef struct {
-    relay_msg_type_t   type;
+    relay_msg_type_t type;
     relay_session_id_t session_id;
-    uint16_t           payload_len;
+    uint16_t payload_len;
 } relay_header_t;
 
 /**
@@ -97,8 +97,8 @@ int relay_build_hello(const uint8_t *token, bool is_host, uint8_t *buf);
  * @param out_is_host  Receives role flag
  * @return             0 on success, -1 on malformed payload
  */
-int relay_parse_hello(const uint8_t *payload, uint16_t payload_len,
-                      uint8_t *out_token, bool *out_is_host);
+int relay_parse_hello(const uint8_t *payload, uint16_t payload_len, uint8_t *out_token,
+                      bool *out_is_host);
 
 #ifdef __cplusplus
 }

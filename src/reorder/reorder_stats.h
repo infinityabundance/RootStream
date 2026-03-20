@@ -11,8 +11,8 @@
 #ifndef ROOTSTREAM_REORDER_STATS_H
 #define ROOTSTREAM_REORDER_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,11 +20,11 @@ extern "C" {
 
 /** Reorder statistics snapshot */
 typedef struct {
-    uint64_t packets_inserted;    /**< Total packets inserted */
-    uint64_t packets_delivered;   /**< Total packets delivered (in-order) */
-    uint64_t late_flushes;        /**< Packets delivered via timeout flush */
-    uint64_t discards;            /**< Insert failures (buffer full / dup) */
-    int      max_depth;           /**< Maximum observed reorder depth (seq gaps) */
+    uint64_t packets_inserted;  /**< Total packets inserted */
+    uint64_t packets_delivered; /**< Total packets delivered (in-order) */
+    uint64_t late_flushes;      /**< Packets delivered via timeout flush */
+    uint64_t discards;          /**< Insert failures (buffer full / dup) */
+    int max_depth;              /**< Maximum observed reorder depth (seq gaps) */
 } reorder_stats_snapshot_t;
 
 /** Opaque reorder stats context */

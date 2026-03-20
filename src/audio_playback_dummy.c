@@ -9,9 +9,10 @@
  * - 2 channels (stereo)
  */
 
-#include "../include/rootstream.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../include/rootstream.h"
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
@@ -27,8 +28,7 @@ int audio_playback_init_dummy(rootstream_ctx_t *ctx) {
         return -1;
     }
 
-    printf("✓ Dummy audio playback ready (silent): %d Hz, %d channels\n",
-           SAMPLE_RATE, CHANNELS);
+    printf("✓ Dummy audio playback ready (silent): %d Hz, %d channels\n", SAMPLE_RATE, CHANNELS);
 
     return 0;
 }
@@ -41,8 +41,7 @@ int audio_playback_init_dummy(rootstream_ctx_t *ctx) {
  * @param num_samples Sample count per channel
  * @return            0 on success (always succeeds)
  */
-int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples,
-                               size_t num_samples) {
+int audio_playback_write_dummy(rootstream_ctx_t *ctx, const int16_t *samples, size_t num_samples) {
     /* Do nothing - discard audio */
     (void)ctx;
     (void)samples;

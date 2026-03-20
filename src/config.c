@@ -13,20 +13,21 @@
  * - Use $XDG_DATA_HOME for cache/logs if needed
  */
 
-#include "../include/rootstream.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
+#include "../include/rootstream.h"
 
 #ifdef _WIN32
-  #include <direct.h>
-  #include <io.h>
-  #define getuid() 0
+#include <direct.h>
+#include <io.h>
+#define getuid() 0
 #else
-  #include <unistd.h>
-  #include <sys/stat.h>
-  #include <pwd.h>
+#include <pwd.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 /*
@@ -42,11 +43,11 @@
  * Priority (Windows):
  * 1. %APPDATA%\RootStream (via platform layer)
  */
-const char* config_get_dir(void) {
+const char *config_get_dir(void) {
     static char config_dir[512] = {0};
 
     if (config_dir[0] != '\0') {
-        return config_dir;  /* Already computed */
+        return config_dir; /* Already computed */
     }
 
 #ifdef _WIN32
@@ -95,14 +96,14 @@ const char* config_get_dir(void) {
  */
 static void config_init_defaults(settings_t *settings) {
     /* Video defaults */
-    settings->video_bitrate = 10000000;  /* 10 Mbps */
-    settings->video_framerate = 60;      /* 60 fps */
+    settings->video_bitrate = 10000000; /* 10 Mbps */
+    settings->video_framerate = 60;     /* 60 fps */
     strncpy(settings->video_codec, "h264", sizeof(settings->video_codec) - 1);
     settings->display_index = 0;
 
     /* Audio defaults */
     settings->audio_enabled = true;
-    settings->audio_bitrate = 64000;     /* 64 kbps */
+    settings->audio_bitrate = 64000; /* 64 kbps */
 
     /* Network defaults */
     settings->network_port = 9876;
@@ -117,7 +118,8 @@ static void config_init_defaults(settings_t *settings) {
  * Trim whitespace from string
  */
 static void trim(char *str) {
-    if (!str) return;
+    if (!str)
+        return;
 
     /* Trim leading */
     char *start = str;
@@ -149,7 +151,7 @@ static int config_load_ini(settings_t *settings, const char *config_dir) {
     char ini_path[512];
     int len = snprintf(ini_path, sizeof(ini_path), "%s/config.ini", config_dir);
     if (len < 0 || (size_t)len >= sizeof(ini_path)) {
-        return -1;  /* Path too long */
+        return -1; /* Path too long */
     }
 
     FILE *fp = fopen(ini_path, "r");
@@ -189,7 +191,8 @@ static int config_load_ini(settings_t *settings, const char *config_dir) {
 
         /* Parse key=value */
         char *eq = strchr(line, '=');
-        if (!eq) continue;
+        if (!eq)
+            continue;
 
         *eq = '\0';
         char *key = line;
@@ -222,7 +225,8 @@ static int config_load_ini(settings_t *settings, const char *config_dir) {
             if (strcmp(key, "port") == 0) {
                 settings->network_port = (uint16_t)atoi(value);
             } else if (strcmp(key, "discovery") == 0) {
-                settings->discovery_enabled = (strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
+                settings->discovery_enabled =
+                    (strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
             }
         }
         /* Peer history */
@@ -370,15 +374,15 @@ void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_co
                 snprintf(temp, sizeof(temp), "%s", ctx->settings.peer_history[i]);
                 /* Shift others down */
                 for (int j = i; j > 0; j--) {
-                    snprintf(ctx->settings.peer_history[j], ROOTSTREAM_CODE_MAX_LEN,
-                            "%s", ctx->settings.peer_history[j-1]);
+                    snprintf(ctx->settings.peer_history[j], ROOTSTREAM_CODE_MAX_LEN, "%s",
+                             ctx->settings.peer_history[j - 1]);
                 }
                 /* Put at front */
                 snprintf(ctx->settings.peer_history[0], ROOTSTREAM_CODE_MAX_LEN, "%s", temp);
             }
             /* Update last connected */
-            snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected),
-                    "%s", rootstream_code);
+            snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected), "%s",
+                     rootstream_code);
             config_save(ctx);
             return;
         }
@@ -388,15 +392,15 @@ void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_co
     if (ctx->settings.peer_history_count < MAX_PEER_HISTORY) {
         /* Shift all down */
         for (int i = ctx->settings.peer_history_count; i > 0; i--) {
-            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN,
-                    "%s", ctx->settings.peer_history[i-1]);
+            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN, "%s",
+                     ctx->settings.peer_history[i - 1]);
         }
         ctx->settings.peer_history_count++;
     } else {
         /* At max capacity, shift all down (dropping last) */
         for (int i = MAX_PEER_HISTORY - 1; i > 0; i--) {
-            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN,
-                    "%s", ctx->settings.peer_history[i-1]);
+            snprintf(ctx->settings.peer_history[i], ROOTSTREAM_CODE_MAX_LEN, "%s",
+                     ctx->settings.peer_history[i - 1]);
         }
     }
 
@@ -404,8 +408,8 @@ void config_add_peer_to_history(rootstream_ctx_t *ctx, const char *rootstream_co
     snprintf(ctx->settings.peer_history[0], ROOTSTREAM_CODE_MAX_LEN, "%s", rootstream_code);
 
     /* Update last connected */
-    snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected),
-            "%s", rootstream_code);
+    snprintf(ctx->settings.last_connected, sizeof(ctx->settings.last_connected), "%s",
+             rootstream_code);
 
     /* Save to disk */
     config_save(ctx);

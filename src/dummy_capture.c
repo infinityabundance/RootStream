@@ -1,24 +1,25 @@
 /*
  * dummy_capture.c - Test pattern generator
- * 
+ *
  * Generates test images for development/testing:
  * - Allows pipeline validation without real display hardware
  * - Perfect for CI/headless systems
  * - Generates animated patterns for testing
  */
 
-#include "../include/rootstream.h"
+#include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
-#include <stdarg.h>
+
+#include "../include/rootstream.h"
 
 static uint64_t frame_counter = 0;
 static char last_error[256] = {0};
 
-const char* rootstream_get_error_dummy(void) {
+const char *rootstream_get_error_dummy(void) {
     return last_error;
 }
 
@@ -43,7 +44,7 @@ int rootstream_capture_init_dummy(rootstream_ctx_t *ctx) {
         ctx->display.width = 1920;
         ctx->display.height = 1080;
     }
-    
+
     ctx->display.refresh_rate = 60;
     snprintf(ctx->display.name, sizeof(ctx->display.name), "Dummy-TestPattern");
     ctx->display.fd = -1;
@@ -64,8 +65,8 @@ int rootstream_capture_init_dummy(rootstream_ctx_t *ctx) {
 
     frame_counter = 0;
 
-    printf("✓ Dummy test pattern initialized: %dx%d @ %d Hz\n",
-           ctx->display.width, ctx->display.height, ctx->display.refresh_rate);
+    printf("✓ Dummy test pattern initialized: %dx%d @ %d Hz\n", ctx->display.width,
+           ctx->display.height, ctx->display.refresh_rate);
 
     return 0;
 }
@@ -103,15 +104,51 @@ int rootstream_capture_frame_dummy(rootstream_ctx_t *ctx, frame_buffer_t *frame)
                 /* Top quarter: horizontal color bars */
                 int bar = (x * 8) / width;
                 switch (bar) {
-                    case 0: data[idx] = 255; data[idx+1] = 255; data[idx+2] = 255; break; /* White */
-                    case 1: data[idx] = 255; data[idx+1] = 255; data[idx+2] = 0;   break; /* Yellow */
-                    case 2: data[idx] = 0;   data[idx+1] = 255; data[idx+2] = 255; break; /* Cyan */
-                    case 3: data[idx] = 0;   data[idx+1] = 255; data[idx+2] = 0;   break; /* Green */
-                    case 4: data[idx] = 255; data[idx+1] = 0;   data[idx+2] = 255; break; /* Magenta */
-                    case 5: data[idx] = 255; data[idx+1] = 0;   data[idx+2] = 0;   break; /* Red */
-                    case 6: data[idx] = 0;   data[idx+1] = 0;   data[idx+2] = 255; break; /* Blue */
-                    case 7: data[idx] = 0;   data[idx+1] = 0;   data[idx+2] = 0;   break; /* Black */
-                    default: data[idx] = 128; data[idx+1] = 128; data[idx+2] = 128; break;
+                    case 0:
+                        data[idx] = 255;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 255;
+                        break; /* White */
+                    case 1:
+                        data[idx] = 255;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 0;
+                        break; /* Yellow */
+                    case 2:
+                        data[idx] = 0;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 255;
+                        break; /* Cyan */
+                    case 3:
+                        data[idx] = 0;
+                        data[idx + 1] = 255;
+                        data[idx + 2] = 0;
+                        break; /* Green */
+                    case 4:
+                        data[idx] = 255;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 255;
+                        break; /* Magenta */
+                    case 5:
+                        data[idx] = 255;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 0;
+                        break; /* Red */
+                    case 6:
+                        data[idx] = 0;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 255;
+                        break; /* Blue */
+                    case 7:
+                        data[idx] = 0;
+                        data[idx + 1] = 0;
+                        data[idx + 2] = 0;
+                        break; /* Black */
+                    default:
+                        data[idx] = 128;
+                        data[idx + 1] = 128;
+                        data[idx + 2] = 128;
+                        break;
                 }
             } else if (y < height / 2) {
                 /* Second quarter: animated gradient */
@@ -119,8 +156,8 @@ int rootstream_capture_frame_dummy(rootstream_ctx_t *ctx, frame_buffer_t *frame)
                 uint8_t g = (uint8_t)((py % 256 + frame_counter / 2) % 256);
                 uint8_t b = (uint8_t)(((px + py) % 256 + frame_counter / 3) % 256);
                 data[idx] = r;
-                data[idx+1] = g;
-                data[idx+2] = b;
+                data[idx + 1] = g;
+                data[idx + 2] = b;
             } else if (y < (3 * height) / 4) {
                 /* Third quarter: checkerboard */
                 int check_size = 32;
@@ -128,17 +165,17 @@ int rootstream_capture_frame_dummy(rootstream_ctx_t *ctx, frame_buffer_t *frame)
                 int cy = (py / check_size) % 2;
                 uint8_t color = (cx ^ cy) ? 255 : 64;
                 data[idx] = color;
-                data[idx+1] = color;
-                data[idx+2] = color;
+                data[idx + 1] = color;
+                data[idx + 2] = color;
             } else {
                 /* Bottom quarter: solid color with frame counter */
                 uint8_t intensity = (uint8_t)((frame_counter % 256));
                 data[idx] = intensity;
-                data[idx+1] = 128;
-                data[idx+2] = 255 - intensity;
+                data[idx + 1] = 128;
+                data[idx + 2] = 255 - intensity;
             }
 
-            data[idx+3] = 255; /* Alpha */
+            data[idx + 3] = 255; /* Alpha */
         }
     }
 

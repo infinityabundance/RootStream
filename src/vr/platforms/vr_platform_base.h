@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // VR Platform base interface
 typedef struct VRPlatformBase VRPlatformBase;
@@ -29,7 +29,7 @@ typedef struct {
     int (*shutdown)(VRPlatformBase *platform);
     int (*poll_events)(VRPlatformBase *platform);
     VRPlatformCapabilities (*get_capabilities)(VRPlatformBase *platform);
-    const char* (*get_platform_name)(VRPlatformBase *platform);
+    const char *(*get_platform_name)(VRPlatformBase *platform);
 } VRPlatformVTable;
 
 // Base platform structure
@@ -40,7 +40,7 @@ struct VRPlatformBase {
 };
 
 // Base platform functions
-VRPlatformBase* vr_platform_base_create(void);
+VRPlatformBase *vr_platform_base_create(void);
 void vr_platform_base_destroy(VRPlatformBase *platform);
 
 // Virtual method wrappers
@@ -48,10 +48,10 @@ int vr_platform_init(VRPlatformBase *platform);
 int vr_platform_shutdown(VRPlatformBase *platform);
 int vr_platform_poll_events(VRPlatformBase *platform);
 VRPlatformCapabilities vr_platform_get_capabilities(VRPlatformBase *platform);
-const char* vr_platform_get_name(VRPlatformBase *platform);
+const char *vr_platform_get_name(VRPlatformBase *platform);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // VR_PLATFORM_BASE_H
+#endif  // VR_PLATFORM_BASE_H

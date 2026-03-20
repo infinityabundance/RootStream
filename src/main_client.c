@@ -7,12 +7,13 @@
 
 #ifdef _WIN32
 
-#include "../include/rootstream.h"
-#include "platform/platform.h"
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
+
+#include "../include/rootstream.h"
+#include "platform/platform.h"
 
 /* Version info */
 #define VERSION "1.0.0"
@@ -197,26 +198,21 @@ static int parse_args(int argc, char *argv[], client_options_t *opts) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             opts->show_help = true;
             return 0;
-        }
-        else if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-v") == 0) {
+        } else if (strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-v") == 0) {
             opts->show_version = true;
             return 0;
-        }
-        else if (strcmp(argv[i], "--qr") == 0) {
+        } else if (strcmp(argv[i], "--qr") == 0) {
             opts->show_qr = true;
-        }
-        else if (strcmp(argv[i], "--port") == 0) {
+        } else if (strcmp(argv[i], "--port") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "Error: --port requires a value\n");
                 return -1;
             }
             opts->port = (uint16_t)atoi(argv[++i]);
-        }
-        else if (argv[i][0] == '-') {
+        } else if (argv[i][0] == '-') {
             fprintf(stderr, "Unknown option: %s\n", argv[i]);
             return -1;
-        }
-        else {
+        } else {
             /* Peer code */
             strncpy(opts->peer_code, argv[i], sizeof(opts->peer_code) - 1);
         }

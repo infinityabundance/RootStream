@@ -11,23 +11,23 @@
 #ifndef ROOTSTREAM_DQ_ENTRY_H
 #define ROOTSTREAM_DQ_ENTRY_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Entry flags */
-#define DQ_FLAG_HIGH_PRIORITY  0x01u  /**< Drain before normal-priority entries */
-#define DQ_FLAG_FLUSH          0x02u  /**< Flush marker — drain all pending first */
+#define DQ_FLAG_HIGH_PRIORITY 0x01u /**< Drain before normal-priority entries */
+#define DQ_FLAG_FLUSH 0x02u         /**< Flush marker — drain all pending first */
 
 /** Drain queue entry */
 typedef struct {
-    uint64_t    seq;        /**< Monotonically increasing sequence number */
-    void       *data;       /**< Caller-owned payload pointer (may be NULL) */
-    size_t      data_len;   /**< Payload byte length */
-    uint8_t     flags;      /**< DQ_FLAG_* bitmask */
+    uint64_t seq;    /**< Monotonically increasing sequence number */
+    void *data;      /**< Caller-owned payload pointer (may be NULL) */
+    size_t data_len; /**< Payload byte length */
+    uint8_t flags;   /**< DQ_FLAG_* bitmask */
 } dq_entry_t;
 
 #ifdef __cplusplus

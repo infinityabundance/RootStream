@@ -11,9 +11,9 @@
 #ifndef ROOTSTREAM_SESSION_TABLE_H
 #define ROOTSTREAM_SESSION_TABLE_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,26 +27,26 @@ typedef uint32_t session_id_t;
 
 /** Session connection state */
 typedef enum {
-    SESSION_STATE_IDLE        = 0,
-    SESSION_STATE_CONNECTING  = 1,
-    SESSION_STATE_ACTIVE      = 2,
-    SESSION_STATE_DRAINING    = 3,
-    SESSION_STATE_CLOSED      = 4,
+    SESSION_STATE_IDLE = 0,
+    SESSION_STATE_CONNECTING = 1,
+    SESSION_STATE_ACTIVE = 2,
+    SESSION_STATE_DRAINING = 3,
+    SESSION_STATE_CLOSED = 4,
 } session_state_t;
 
 /** Per-client session record */
 typedef struct {
-    session_id_t   id;
+    session_id_t id;
     session_state_t state;
-    int            socket_fd;        /**< Transport socket (-1 = none) */
-    char           peer_addr[48];    /**< Textual address of peer */
-    uint32_t       bitrate_kbps;     /**< Current ABR target */
-    uint32_t       max_bitrate_kbps; /**< Negotiated ceiling */
-    uint64_t       bytes_sent;       /**< Monotonic bytes counter */
-    uint64_t       frames_sent;
-    uint64_t       connected_at_us;  /**< Connection timestamp (monotonic µs) */
-    uint32_t       rtt_ms;           /**< Last measured RTT */
-    float          loss_rate;        /**< Packet loss 0.0–1.0 */
+    int socket_fd;             /**< Transport socket (-1 = none) */
+    char peer_addr[48];        /**< Textual address of peer */
+    uint32_t bitrate_kbps;     /**< Current ABR target */
+    uint32_t max_bitrate_kbps; /**< Negotiated ceiling */
+    uint64_t bytes_sent;       /**< Monotonic bytes counter */
+    uint64_t frames_sent;
+    uint64_t connected_at_us; /**< Connection timestamp (monotonic µs) */
+    uint32_t rtt_ms;          /**< Last measured RTT */
+    float loss_rate;          /**< Packet loss 0.0–1.0 */
 } session_entry_t;
 
 /** Opaque session table handle */
@@ -77,10 +77,8 @@ void session_table_destroy(session_table_t *table);
  * @param out_id     Receives the assigned session ID on success
  * @return           0 on success, -1 if table is full or args invalid
  */
-int session_table_add(session_table_t *table,
-                      int              socket_fd,
-                      const char      *peer_addr,
-                      session_id_t    *out_id);
+int session_table_add(session_table_t *table, int socket_fd, const char *peer_addr,
+                      session_id_t *out_id);
 
 /**
  * session_table_remove — mark a session as closed and release the slot
@@ -99,9 +97,7 @@ int session_table_remove(session_table_t *table, session_id_t id);
  * @param out    Receives a snapshot of the session entry
  * @return       0 on success, -1 if not found
  */
-int session_table_get(const session_table_t *table,
-                      session_id_t           id,
-                      session_entry_t       *out);
+int session_table_get(const session_table_t *table, session_id_t id, session_entry_t *out);
 
 /**
  * session_table_update_bitrate — update ABR bitrate for a session
@@ -111,9 +107,7 @@ int session_table_get(const session_table_t *table,
  * @param bitrate_kbps  New bitrate target
  * @return              0 on success, -1 if not found
  */
-int session_table_update_bitrate(session_table_t *table,
-                                 session_id_t     id,
-                                 uint32_t         bitrate_kbps);
+int session_table_update_bitrate(session_table_t *table, session_id_t id, uint32_t bitrate_kbps);
 
 /**
  * session_table_update_stats — update network stats for a session
@@ -124,10 +118,8 @@ int session_table_update_bitrate(session_table_t *table,
  * @param loss_rate  Packet loss fraction 0.0–1.0
  * @return           0 on success, -1 if not found
  */
-int session_table_update_stats(session_table_t *table,
-                               session_id_t     id,
-                               uint32_t         rtt_ms,
-                               float            loss_rate);
+int session_table_update_stats(session_table_t *table, session_id_t id, uint32_t rtt_ms,
+                               float loss_rate);
 
 /**
  * session_table_count — return number of active sessions
@@ -145,8 +137,7 @@ size_t session_table_count(const session_table_t *table);
  * @param user_data Passed through to @callback
  */
 void session_table_foreach(const session_table_t *table,
-                           void (*callback)(const session_entry_t *entry,
-                                            void *user_data),
+                           void (*callback)(const session_entry_t *entry, void *user_data),
                            void *user_data);
 
 #ifdef __cplusplus

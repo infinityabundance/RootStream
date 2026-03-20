@@ -18,9 +18,10 @@
 #ifndef ROOTSTREAM_FRC_PACER_H
 #define ROOTSTREAM_FRC_PACER_H
 
-#include "frc_clock.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "frc_clock.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,9 +29,9 @@ extern "C" {
 
 /** Frame action returned by the pacer */
 typedef enum {
-    FRC_ACTION_PRESENT   = 0,  /**< Present (send) this frame */
-    FRC_ACTION_DROP      = 1,  /**< Drop this frame (rate too high) */
-    FRC_ACTION_DUPLICATE = 2,  /**< Duplicate previous (rate too low) */
+    FRC_ACTION_PRESENT = 0,   /**< Present (send) this frame */
+    FRC_ACTION_DROP = 1,      /**< Drop this frame (rate too high) */
+    FRC_ACTION_DUPLICATE = 2, /**< Duplicate previous (rate too low) */
 } frc_action_t;
 
 /** Opaque frame rate controller */

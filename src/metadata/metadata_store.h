@@ -16,16 +16,16 @@
 #ifndef ROOTSTREAM_METADATA_STORE_H
 #define ROOTSTREAM_METADATA_STORE_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define METADATA_KV_MAX_KEY        64
-#define METADATA_KV_MAX_VAL        256
-#define METADATA_STORE_CAPACITY    128
+#define METADATA_KV_MAX_KEY 64
+#define METADATA_KV_MAX_VAL 256
+#define METADATA_STORE_CAPACITY 128
 
 /** Opaque metadata store */
 typedef struct metadata_store_s metadata_store_t;
@@ -52,9 +52,7 @@ void metadata_store_destroy(metadata_store_t *store);
  * @param value  Value string
  * @return       0 on success, -1 on full / NULL args / key too long
  */
-int metadata_store_set(metadata_store_t *store,
-                        const char        *key,
-                        const char        *value);
+int metadata_store_set(metadata_store_t *store, const char *key, const char *value);
 
 /**
  * metadata_store_get — look up a value by key
@@ -63,8 +61,7 @@ int metadata_store_set(metadata_store_t *store,
  * @param key    Key to look up
  * @return       Pointer to stored value string, or NULL if not found
  */
-const char *metadata_store_get(const metadata_store_t *store,
-                                 const char              *key);
+const char *metadata_store_get(const metadata_store_t *store, const char *key);
 
 /**
  * metadata_store_delete — remove a key
@@ -109,10 +106,7 @@ bool metadata_store_has(const metadata_store_t *store, const char *key);
  * @param ud     User data passed to @cb
  */
 void metadata_store_foreach(const metadata_store_t *store,
-                              int (*cb)(const char *key,
-                                        const char *value,
-                                        void       *ud),
-                              void *ud);
+                            int (*cb)(const char *key, const char *value, void *ud), void *ud);
 
 #ifdef __cplusplus
 }

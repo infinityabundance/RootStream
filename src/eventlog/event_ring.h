@@ -10,15 +10,16 @@
 #ifndef ROOTSTREAM_EVENT_RING_H
 #define ROOTSTREAM_EVENT_RING_H
 
-#include "event_entry.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "event_entry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define EVENT_RING_CAPACITY  256  /**< Maximum entries in the ring */
+#define EVENT_RING_CAPACITY 256 /**< Maximum entries in the ring */
 
 /** Opaque event ring */
 typedef struct event_ring_s event_ring_t;
@@ -91,10 +92,8 @@ void event_ring_clear(event_ring_t *r);
  * @param max_results  Maximum results to return
  * @return             Number of matches found
  */
-int event_ring_find_level(const event_ring_t *r,
-                            event_level_t       min_level,
-                            int                *out_ages,
-                            int                 max_results);
+int event_ring_find_level(const event_ring_t *r, event_level_t min_level, int *out_ages,
+                          int max_results);
 
 #ifdef __cplusplus
 }

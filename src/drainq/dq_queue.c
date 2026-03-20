@@ -30,17 +30,18 @@
  */
 
 #include "dq_queue.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 /* ── internal struct ──────────────────────────────────────────────── */
 
 struct dq_queue_s {
-    dq_entry_t data[DQ_MAX_ENTRIES];  /* circular buffer of entries        */
-    int        head;                  /* index of next entry to dequeue    */
-    int        tail;                  /* index of next free slot (enqueue) */
-    int        count;                 /* current number of queued entries  */
-    uint64_t   next_seq;              /* sequence counter; never reset     */
+    dq_entry_t data[DQ_MAX_ENTRIES]; /* circular buffer of entries        */
+    int head;                        /* index of next entry to dequeue    */
+    int tail;                        /* index of next free slot (enqueue) */
+    int count;                       /* current number of queued entries  */
+    uint64_t next_seq;               /* sequence counter; never reset     */
 };
 
 /* ── lifecycle ────────────────────────────────────────────────────── */
@@ -56,24 +57,29 @@ void dq_queue_destroy(dq_queue_t *q) {
     free(q);
 }
 
-int dq_queue_count(const dq_queue_t *q) { return q ? q->count : 0; }
+int dq_queue_count(const dq_queue_t *q) {
+    return q ? q->count : 0;
+}
 
 void dq_queue_clear(dq_queue_t *q) {
     /* O(1) discard: just reset the circular buffer indices and count.
      * Sequence counter (next_seq) is intentionally NOT reset — a gap
      * in sequence numbers after clear() is detectable by downstream. */
-    if (q) { q->head = q->tail = q->count = 0; }
+    if (q) {
+        q->head = q->tail = q->count = 0;
+    }
 }
 
 /* ── enqueue ──────────────────────────────────────────────────────── */
 
 int dq_queue_enqueue(dq_queue_t *q, const dq_entry_t *e) {
-    if (!q || !e || q->count >= DQ_MAX_ENTRIES) return -1;
+    if (!q || !e || q->count >= DQ_MAX_ENTRIES)
+        return -1;
 
     /* Copy the caller's entry into the queue slot.
      * The seq field from *e is ignored and overwritten with next_seq.
      * This ensures the queue — not the caller — controls sequence numbering. */
-    q->data[q->tail]     = *e;
+    q->data[q->tail] = *e;
     q->data[q->tail].seq = q->next_seq++;
 
     /* Advance tail with modular arithmetic (circular wrap). */
@@ -85,10 +91,11 @@ int dq_queue_enqueue(dq_queue_t *q, const dq_entry_t *e) {
 /* ── dequeue ──────────────────────────────────────────────────────── */
 
 int dq_queue_dequeue(dq_queue_t *q, dq_entry_t *out) {
-    if (!q || !out || q->count == 0) return -1;
+    if (!q || !out || q->count == 0)
+        return -1;
 
     /* Copy the head entry to *out, then advance head. */
-    *out    = q->data[q->head];
+    *out = q->data[q->head];
     q->head = (q->head + 1) % DQ_MAX_ENTRIES;
     q->count--;
     return 0;
@@ -97,7 +104,8 @@ int dq_queue_dequeue(dq_queue_t *q, dq_entry_t *out) {
 /* ── drain_all ────────────────────────────────────────────────────── */
 
 int dq_queue_drain_all(dq_queue_t *q, dq_drain_fn cb, void *user) {
-    if (!q) return 0;
+    if (!q)
+        return 0;
 
     int n = 0;
     dq_entry_t e;
@@ -108,9 +116,9 @@ int dq_queue_drain_all(dq_queue_t *q, dq_drain_fn cb, void *user) {
      * the head/tail/count invariants are maintained correctly even if
      * cb re-enqueues entries (unusual but not forbidden). */
     while (dq_queue_dequeue(q, &e) == 0) {
-        if (cb) cb(&e, user);
+        if (cb)
+            cb(&e, user);
         n++;
     }
     return n;
 }
-

@@ -29,14 +29,14 @@ typedef struct {
 typedef struct fc_stats_s fc_stats_t;
 
 fc_stats_t *fc_stats_create(void);
-void        fc_stats_destroy(fc_stats_t *st);
+void fc_stats_destroy(fc_stats_t *st);
 
-int  fc_stats_record_send(fc_stats_t *st, uint32_t bytes);
-int  fc_stats_record_drop(fc_stats_t *st, uint32_t bytes);
-int  fc_stats_record_stall(fc_stats_t *st);
-int  fc_stats_record_replenish(fc_stats_t *st);
+int fc_stats_record_send(fc_stats_t *st, uint32_t bytes);
+int fc_stats_record_drop(fc_stats_t *st, uint32_t bytes);
+int fc_stats_record_stall(fc_stats_t *st);
+int fc_stats_record_replenish(fc_stats_t *st);
 
-int  fc_stats_snapshot(const fc_stats_t *st, fc_stats_snapshot_t *out);
+int fc_stats_snapshot(const fc_stats_t *st, fc_stats_snapshot_t *out);
 void fc_stats_reset(fc_stats_t *st);
 
 #ifdef __cplusplus

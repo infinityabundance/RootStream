@@ -16,9 +16,10 @@
 #ifndef ROOTSTREAM_FC_ENGINE_H
 #define ROOTSTREAM_FC_ENGINE_H
 
-#include "fc_params.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+#include "fc_params.h"
 
 #ifdef __cplusplus
 extern "C" {

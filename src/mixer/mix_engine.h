@@ -13,17 +13,18 @@
 #ifndef ROOTSTREAM_MIX_ENGINE_H
 #define ROOTSTREAM_MIX_ENGINE_H
 
-#include "mix_source.h"
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "mix_source.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define MIX_MAX_SOURCES   16   /**< Maximum simultaneously registered sources */
-#define MIX_MAX_FRAMES    4096 /**< Maximum frame count per mix call */
+#define MIX_MAX_SOURCES 16  /**< Maximum simultaneously registered sources */
+#define MIX_MAX_FRAMES 4096 /**< Maximum frame count per mix call */
 
 /** Opaque mixer engine */
 typedef struct mix_engine_s mix_engine_t;
@@ -91,12 +92,8 @@ int mix_engine_source_count(const mix_engine_t *e);
  * @param frames     Number of samples per buffer
  * @return           0 on success, -1 on error
  */
-int mix_engine_mix(mix_engine_t        *e,
-                   const int16_t *const *inputs,
-                   const uint32_t       *src_ids,
-                   int                   src_count,
-                   int16_t              *out,
-                   int                   frames);
+int mix_engine_mix(mix_engine_t *e, const int16_t *const *inputs, const uint32_t *src_ids,
+                   int src_count, int16_t *out, int frames);
 
 /**
  * mix_engine_silence — fill output buffer with zeros

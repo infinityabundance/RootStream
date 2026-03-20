@@ -10,23 +10,23 @@
 #ifndef ROOTSTREAM_PLC_STATS_H
 #define ROOTSTREAM_PLC_STATS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Window size for loss-rate calculation (in frames) */
-#define PLC_STATS_WINDOW  64
+#define PLC_STATS_WINDOW 64
 
 /** PLC statistics snapshot */
 typedef struct {
-    uint64_t frames_received;     /**< Total frames received (good) */
-    uint64_t frames_lost;         /**< Total frames declared lost */
-    uint64_t concealment_events;  /**< Total concealment bursts started */
-    double   loss_rate;           /**< Sliding-window loss rate [0.0, 1.0] */
-    int      max_consecutive_loss; /**< Longest burst of consecutive losses */
+    uint64_t frames_received;    /**< Total frames received (good) */
+    uint64_t frames_lost;        /**< Total frames declared lost */
+    uint64_t concealment_events; /**< Total concealment bursts started */
+    double loss_rate;            /**< Sliding-window loss rate [0.0, 1.0] */
+    int max_consecutive_loss;    /**< Longest burst of consecutive losses */
 } plc_stats_snapshot_t;
 
 /** Opaque PLC stats context */

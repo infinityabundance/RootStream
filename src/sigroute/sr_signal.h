@@ -22,10 +22,10 @@ typedef uint32_t sr_source_id_t;
 
 /** Signal descriptor */
 typedef struct {
-    sr_signal_id_t signal_id;    /**< Numeric signal type */
-    uint8_t        level;        /**< Signal level / severity (0–255) */
-    sr_source_id_t source_id;    /**< Originating component ID */
-    uint64_t       timestamp_us; /**< Wall-clock creation time (µs) */
+    sr_signal_id_t signal_id; /**< Numeric signal type */
+    uint8_t level;            /**< Signal level / severity (0–255) */
+    sr_source_id_t source_id; /**< Originating component ID */
+    uint64_t timestamp_us;    /**< Wall-clock creation time (µs) */
 } sr_signal_t;
 
 /**
@@ -33,11 +33,8 @@ typedef struct {
  *
  * @return 0 on success, -1 on NULL
  */
-int sr_signal_init(sr_signal_t    *s,
-                   sr_signal_id_t  signal_id,
-                   uint8_t         level,
-                   sr_source_id_t  source_id,
-                   uint64_t        timestamp_us);
+int sr_signal_init(sr_signal_t *s, sr_signal_id_t signal_id, uint8_t level,
+                   sr_source_id_t source_id, uint64_t timestamp_us);
 
 #ifdef __cplusplus
 }

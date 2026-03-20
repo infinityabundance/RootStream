@@ -18,11 +18,12 @@
 #ifndef ROOTSTREAM_HLS_SEGMENTER_H
 #define ROOTSTREAM_HLS_SEGMENTER_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "hls_config.h"
 #include "m3u8_writer.h"
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,12 +31,12 @@ extern "C" {
 
 /** HLS segmenter configuration */
 typedef struct {
-    char   output_dir[HLS_MAX_PATH];    /**< Directory for .ts and .m3u8 files */
-    char   base_name[HLS_MAX_SEG_NAME]; /**< Segment base name (e.g. "seg") */
-    char   playlist_name[HLS_MAX_SEG_NAME]; /**< Playlist file name */
-    int    target_duration_s;           /**< Target segment duration */
-    int    window_size;                 /**< Sliding window (live) */
-    bool   vod_mode;                    /**< Write VOD playlist */
+    char output_dir[HLS_MAX_PATH];        /**< Directory for .ts and .m3u8 files */
+    char base_name[HLS_MAX_SEG_NAME];     /**< Segment base name (e.g. "seg") */
+    char playlist_name[HLS_MAX_SEG_NAME]; /**< Playlist file name */
+    int target_duration_s;                /**< Target segment duration */
+    int window_size;                      /**< Sliding window (live) */
+    bool vod_mode;                        /**< Write VOD playlist */
 } hls_segmenter_config_t;
 
 /** Opaque HLS segmenter */
@@ -74,11 +75,8 @@ int hls_segmenter_open_segment(hls_segmenter_t *seg);
  * @param is_kf      True if IDR / keyframe
  * @return           0 on success, -1 on error
  */
-int hls_segmenter_write(hls_segmenter_t *seg,
-                          const uint8_t   *data,
-                          size_t           len,
-                          uint64_t         pts_90khz,
-                          bool             is_kf);
+int hls_segmenter_write(hls_segmenter_t *seg, const uint8_t *data, size_t len, uint64_t pts_90khz,
+                        bool is_kf);
 
 /**
  * hls_segmenter_close_segment — finalise the current segment

@@ -19,18 +19,19 @@
 #ifndef ROOTSTREAM_JITTER_BUFFER_H
 #define ROOTSTREAM_JITTER_BUFFER_H
 
-#include "jitter_packet.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "jitter_packet.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define JITTER_BUF_CAPACITY  256
+#define JITTER_BUF_CAPACITY 256
 
 /** Jitter buffer playout flag: packet was delivered late */
-#define JITTER_FLAG_LATE  0x01
+#define JITTER_FLAG_LATE 0x01
 
 /** Opaque jitter buffer */
 typedef struct jitter_buffer_s jitter_buffer_t;
@@ -57,8 +58,7 @@ void jitter_buffer_destroy(jitter_buffer_t *buf);
  * @param pkt  Packet to enqueue
  * @return     0 on success, -1 on full or NULL args
  */
-int jitter_buffer_push(jitter_buffer_t       *buf,
-                         const jitter_packet_t *pkt);
+int jitter_buffer_push(jitter_buffer_t *buf, const jitter_packet_t *pkt);
 
 /**
  * jitter_buffer_pop — dequeue the next packet due for playout
@@ -71,9 +71,7 @@ int jitter_buffer_push(jitter_buffer_t       *buf,
  * @param out     Output packet
  * @return        0 if a packet was returned, -1 otherwise
  */
-int jitter_buffer_pop(jitter_buffer_t *buf,
-                        uint64_t         now_us,
-                        jitter_packet_t *out);
+int jitter_buffer_pop(jitter_buffer_t *buf, uint64_t now_us, jitter_packet_t *out);
 
 /**
  * jitter_buffer_peek — examine the next packet without dequeueing it

@@ -7,7 +7,8 @@
 #include <string.h>
 
 int lr_rate_init(loss_rate_t *lr) {
-    if (!lr) return -1;
+    if (!lr)
+        return -1;
     memset(lr, 0, sizeof(*lr));
     lw_init(&lr->window);
     return 0;
@@ -17,20 +18,21 @@ void lr_rate_reset(loss_rate_t *lr) {
     if (lr) {
         lw_reset(&lr->window);
         lr->ewma_loss_rate = 0.0;
-        lr->ready          = false;
+        lr->ready = false;
     }
 }
 
 int lr_rate_receive(loss_rate_t *lr, uint16_t seq) {
-    if (!lr) return -1;
+    if (!lr)
+        return -1;
     lw_receive(&lr->window, seq);
     double instant = lw_loss_rate(&lr->window);
     if (!lr->ready) {
         lr->ewma_loss_rate = instant;
-        lr->ready          = true;
+        lr->ready = true;
     } else {
-        lr->ewma_loss_rate = (1.0 - LOSS_RATE_EWMA_ALPHA) * lr->ewma_loss_rate
-                             + LOSS_RATE_EWMA_ALPHA * instant;
+        lr->ewma_loss_rate =
+            (1.0 - LOSS_RATE_EWMA_ALPHA) * lr->ewma_loss_rate + LOSS_RATE_EWMA_ALPHA * instant;
     }
     return 0;
 }

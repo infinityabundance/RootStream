@@ -12,16 +12,17 @@
 #ifndef ROOTSTREAM_EVENT_RING_H
 #define ROOTSTREAM_EVENT_RING_H
 
-#include "analytics_event.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#include "analytics_event.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** Ring buffer capacity (number of events) */
-#define EVENT_RING_CAPACITY  1024
+#define EVENT_RING_CAPACITY 1024
 
 /** Opaque ring buffer handle */
 typedef struct event_ring_s event_ring_t;
@@ -47,8 +48,7 @@ void event_ring_destroy(event_ring_t *r);
  * @param event  Event to enqueue (copied by value)
  * @return       0 on success, -1 on NULL args
  */
-int event_ring_push(event_ring_t            *r,
-                     const analytics_event_t *event);
+int event_ring_push(event_ring_t *r, const analytics_event_t *event);
 
 /**
  * event_ring_pop — dequeue oldest event
@@ -98,9 +98,7 @@ void event_ring_clear(event_ring_t *r);
  * @param max  Maximum events to drain
  * @return     Number of events placed in @out
  */
-size_t event_ring_drain(event_ring_t      *r,
-                         analytics_event_t *out,
-                         size_t             max);
+size_t event_ring_drain(event_ring_t *r, analytics_event_t *out, size_t max);
 
 #ifdef __cplusplus
 }

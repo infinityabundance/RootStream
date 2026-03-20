@@ -11,24 +11,26 @@
 
 #include "frc_pacer.h"
 
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 struct frc_pacer_s {
-    double   target_fps;
-    double   frame_interval_ns;  /* = 1e9 / fps */
-    double   tokens;
+    double target_fps;
+    double frame_interval_ns; /* = 1e9 / fps */
+    double tokens;
     uint64_t last_ns;
 };
 
 frc_pacer_t *frc_pacer_create(double target_fps, uint64_t now_ns) {
-    if (target_fps <= 0.0 || target_fps > 1000.0) return NULL;
+    if (target_fps <= 0.0 || target_fps > 1000.0)
+        return NULL;
     frc_pacer_t *p = malloc(sizeof(*p));
-    if (!p) return NULL;
-    p->target_fps         = target_fps;
-    p->frame_interval_ns  = 1e9 / target_fps;
-    p->tokens             = 1.0; /* First frame is always presented */
-    p->last_ns            = now_ns;
+    if (!p)
+        return NULL;
+    p->target_fps = target_fps;
+    p->frame_interval_ns = 1e9 / target_fps;
+    p->tokens = 1.0; /* First frame is always presented */
+    p->last_ns = now_ns;
     return p;
 }
 
@@ -37,8 +39,9 @@ void frc_pacer_destroy(frc_pacer_t *p) {
 }
 
 int frc_pacer_set_fps(frc_pacer_t *p, double target_fps) {
-    if (!p || target_fps <= 0.0 || target_fps > 1000.0) return -1;
-    p->target_fps        = target_fps;
+    if (!p || target_fps <= 0.0 || target_fps > 1000.0)
+        return -1;
+    p->target_fps = target_fps;
     p->frame_interval_ns = 1e9 / target_fps;
     return 0;
 }
@@ -48,14 +51,16 @@ double frc_pacer_target_fps(const frc_pacer_t *p) {
 }
 
 frc_action_t frc_pacer_tick(frc_pacer_t *p, uint64_t now_ns) {
-    if (!p) return FRC_ACTION_DROP;
+    if (!p)
+        return FRC_ACTION_DROP;
 
     if (now_ns > p->last_ns) {
         double elapsed = (double)(now_ns - p->last_ns);
         p->tokens += elapsed / p->frame_interval_ns;
         p->last_ns = now_ns;
         /* Cap tokens to avoid unbounded accumulation after long pauses */
-        if (p->tokens > 2.0) p->tokens = 2.0;
+        if (p->tokens > 2.0)
+            p->tokens = 2.0;
     }
 
     if (p->tokens >= 1.0) {
@@ -71,9 +76,13 @@ frc_action_t frc_pacer_tick(frc_pacer_t *p, uint64_t now_ns) {
 
 const char *frc_action_name(frc_action_t a) {
     switch (a) {
-    case FRC_ACTION_PRESENT:   return "present";
-    case FRC_ACTION_DROP:      return "drop";
-    case FRC_ACTION_DUPLICATE: return "duplicate";
-    default:                    return "unknown";
+        case FRC_ACTION_PRESENT:
+            return "present";
+        case FRC_ACTION_DROP:
+            return "drop";
+        case FRC_ACTION_DUPLICATE:
+            return "duplicate";
+        default:
+            return "unknown";
     }
 }
